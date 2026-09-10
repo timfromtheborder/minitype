@@ -487,6 +487,63 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(state.activeColIndex).toBe(0);
       expect(state.manifest.outboxCount).toBe(0);
     });
+
+    it('preserves linebreaks and page boundaries across multiple pages during sanitization', () => {
+      const store = useTypingStore.getState();
+      store.resetEngine({ mode: 'temp', pageMode: 'paragraph' });
+
+      for (const c of 'Paragraph 1') store.insertChar(c);
+      store.handleEnter(); // makes new page: Page 2!
+      for (const c of 'Paragraph 2') store.insertChar(c);
+      store.handleEnter(); // makes new page: Page 3!
+      for (const c of 'Paragraph 3') store.insertChar(c);
+
+      const state = useTypingStore.getState();
+      const pages = [
+        ...state.historicalPages,
+        {
+          pageNumber: state.currentPageNumber,
+          lines: state.currentPageLines,
+          completedAt: null,
+        },
+      ];
+
+      const sanitized = sanitizeManuscript(pages);
+      expect(sanitized).toBe('Paragraph 1\n\nParagraph 2\n\nParagraph 3');
+    });
+
+    it('handles intra-page linebreaks on pages past page 1 in notecard mode', () => {
+      const store = useTypingStore.getState();
+      store.resetEngine({ mode: 'temp', pageMode: 'notecard' }); // 10 lines per card
+
+      // Fill Page 1 (10 lines)
+      for (let i = 0; i < 10; i++) {
+        for (const c of `Line ${i}`) store.insertChar(c);
+        store.handleEnter();
+      }
+
+      expect(useTypingStore.getState().currentPageNumber).toBe(2);
+
+      // On Page 2: write multiple lines with Enter
+      for (const c of 'Page 2 line 0') store.insertChar(c);
+      store.handleEnter();
+      for (const c of 'Page 2 line 1') store.insertChar(c);
+      store.handleEnter();
+      for (const c of 'Page 2 line 2') store.insertChar(c);
+
+      const state = useTypingStore.getState();
+      const pages = [
+        ...state.historicalPages,
+        {
+          pageNumber: state.currentPageNumber,
+          lines: state.currentPageLines,
+          completedAt: null,
+        },
+      ];
+
+      const sanitized = sanitizeManuscript(pages);
+      expect(sanitized).toContain('Page 2 line 0\nPage 2 line 1\nPage 2 line 2');
+    });
   });
 });
 

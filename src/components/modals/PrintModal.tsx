@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { PageRecord, ManuscriptManifest } from '@/types';
 import { sanitizeManuscript } from '@/lib/sanitize';
 import { typewriterAudio } from '@/lib/sound';
-import { Printer, Download, X, FastForward, CheckCircle2, RotateCcw, Trash2 } from 'lucide-react';
+import { Printer, Download, X, FastForward, CheckCircle2, Trash2 } from 'lucide-react';
 
 interface PrintModalProps {
   isOpen: boolean;
@@ -56,7 +56,10 @@ export const PrintModal: React.FC<PrintModalProps> = ({
 
     // Extract visual drafted lines for the line-by-line feed animation
     const visualLines: string[] = [];
-    for (const page of pages) {
+    for (let p = 0; p < pages.length; p++) {
+      const page = pages[p];
+      const pageVisualLines: string[] = [];
+
       for (const line of page.lines) {
         const hasStruckOnly =
           line.cells.length > 0 &&
@@ -71,16 +74,25 @@ export const PrintModal: React.FC<PrintModalProps> = ({
 
         if (line.cells.length === 0 || cleanChars === '') {
           if (line.isCommitted || line.wrapType === 'hard') {
-            visualLines.push('');
+            pageVisualLines.push('');
           }
         } else {
-          visualLines.push(cleanChars);
+          pageVisualLines.push(cleanChars);
         }
       }
-    }
 
-    while (visualLines.length > 0 && visualLines[visualLines.length - 1] === '') {
-      visualLines.pop();
+      // Trim trailing empty lines from this page
+      while (pageVisualLines.length > 0 && pageVisualLines[pageVisualLines.length - 1] === '') {
+        pageVisualLines.pop();
+      }
+
+      if (pageVisualLines.length > 0) {
+        if (visualLines.length > 0) {
+          // Visual line break between pages
+          visualLines.push('');
+        }
+        visualLines.push(...pageVisualLines);
+      }
     }
 
     const lines = visualLines.length > 0 ? visualLines : [''];
@@ -110,7 +122,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
         typewriterAudio.playBell();
         onPrintedComplete(fullClean.length);
       }
-    }, 300); // 1 line per 0.3s
+    }, 150); // 1 line per 0.15s (2x faster than 0.3s)
 
     return () => {
       clearInterval(interval);
@@ -133,34 +145,6 @@ export const PrintModal: React.FC<PrintModalProps> = ({
     setIsPrinting(false);
     setIsDone(true);
     onPrintedComplete(sanitizedFullText.length);
-  };
-
-  const handleRestart = () => {
-    printAbortRef.current = false;
-    setPrintedLines([]);
-    setIsPrinting(true);
-    setIsDone(false);
-
-    let lineIdx = 0;
-    const interval = setInterval(() => {
-      if (printAbortRef.current) {
-        clearInterval(interval);
-        return;
-      }
-
-      if (lineIdx < allLines.length) {
-        const nextLine = allLines[lineIdx];
-        setPrintedLines((prev) => [...prev, nextLine]);
-        typewriterAudio.playKeyClick();
-        lineIdx++;
-      } else {
-        clearInterval(interval);
-        setIsPrinting(false);
-        setIsDone(true);
-        typewriterAudio.playBell();
-        onPrintedComplete(sanitizedFullText.length);
-      }
-    }, 300);
   };
 
   const handleDownloadTxt = () => {
@@ -288,21 +272,11 @@ export const PrintModal: React.FC<PrintModalProps> = ({
             )}
 
             <span className="text-muted-foreground">
-              {sanitizedFullText.length} characters · {totalLinesCount} lines
+              {totalLinesCount} {totalLinesCount === 1 ? 'line' : 'lines'}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            {isDone && (
-              <button
-                type="button"
-                onClick={handleRestart}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-card hover:bg-muted text-foreground transition-all cursor-pointer"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                Re-print
-              </button>
-            )}
 
             <button
               type="button"

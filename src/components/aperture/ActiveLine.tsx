@@ -20,7 +20,7 @@ export const ActiveLine: React.FC<ActiveLineProps> = ({
   return (
     <div
       data-line-index={lineIndex}
-      className="flex flex-row items-center font-mono leading-relaxed tracking-wider h-[2rem] whitespace-pre select-none relative"
+      className="flex flex-row items-center font-mono leading-relaxed h-[2rem] whitespace-pre select-none relative w-[71ch]"
     >
       {line.cells.map((cell) => (
         <CharacterCell key={cell.id} cell={cell} />
@@ -30,7 +30,7 @@ export const ActiveLine: React.FC<ActiveLineProps> = ({
       {!isHighlighting && (
         <span
           data-cursor="typing-head"
-          className={`inline-block w-[1ch] h-[1.3em] font-mono select-none pointer-events-none transition-colors duration-200 ${
+          className={`inline-block shrink-0 w-[1ch] h-[1.3em] font-mono select-none pointer-events-none transition-colors duration-200 ${
             isLocked
               ? 'bg-amber-500 animate-pulse'
               : 'animate-[pulse_1s_infinite]'

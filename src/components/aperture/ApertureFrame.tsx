@@ -36,21 +36,27 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
   return (
     <div
       onMouseDown={handleMouseDown}
-      className="relative flex flex-col justify-end w-[72ch] max-w-full px-6 py-4 rounded-xl border border-border/70 bg-card shadow-inner shadow-black/5 overflow-hidden select-none"
+      className="relative flex flex-col justify-end w-fit max-w-[calc(100vw-2rem)] px-8 py-5 rounded-xl border border-border/70 bg-card shadow-inner shadow-black/5 overflow-hidden select-none"
       style={{
-        height: `${containerHeightRem + 2}rem`,
+        height: `${containerHeightRem + 2.5}rem`,
         cursor: isLocked ? 'not-allowed' : 'default',
         userSelect: 'none',
       }}
     >
-      {/* 70-character column guide top ruler marker */}
-      <div className="absolute top-1 left-6 right-6 flex justify-between text-[10px] text-muted-foreground/30 font-mono select-none pointer-events-none">
-        <span>01</span>
-        <span>· · · · · · · · · · 35 · · · · · · · · · ·</span>
-        <span>70</span>
+      {/* 70-character column guide top ruler marker (aligned precisely with 70 columns below) */}
+      <div className="relative w-[70ch] h-4 mb-2 font-mono text-muted-foreground/40 select-none pointer-events-none">
+        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 border-b border-border/40" />
+        <span className="absolute left-0 bg-card pr-1 text-[10px] leading-none">01</span>
+        <span
+          className="absolute bg-card px-1 text-[10px] leading-none"
+          style={{ left: '35ch', transform: 'translateX(-50%)' }}
+        >
+          35
+        </span>
+        <span className="absolute right-0 bg-card pl-1 text-[10px] leading-none">70</span>
       </div>
 
-      <div className="flex flex-col justify-end w-full">
+      <div className="flex flex-col justify-end w-[71ch]">
         {visibleLines.map((line, idx) => {
           const actualIndex = startIdx + idx;
           const isActive = actualIndex === activeLineIndex;

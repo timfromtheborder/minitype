@@ -18,83 +18,78 @@ export function sanitizeLine(line: LineRecord): string {
  * Also eliminates struck-out text and collapses lines created by full-line strikeouts.
  */
 export function sanitizeManuscript(pages: PageRecord[]): string {
-  // Flatten all lines across pages
-  const allLines: LineRecord[] = [];
+  const pageTexts: string[] = [];
+
   for (const page of pages) {
-    for (const line of page.lines) {
-      allLines.push(line);
-    }
-  }
+    const pageLines = [...page.lines];
 
-  // Remove unwritten empty lines at the very end of the manuscript
-  while (
-    allLines.length > 0 &&
-    allLines[allLines.length - 1].cells.length === 0 &&
-    !allLines[allLines.length - 1].isCommitted
-  ) {
-    allLines.pop();
-  }
-
-  const paragraphs: string[] = [];
-  let currentParagraph = '';
-
-  for (let i = 0; i < allLines.length; i++) {
-    const line = allLines[i];
-
-    // Check if line was entirely struck out (had cells, but all struck/padding)
-    const hasStruckOnly =
-      line.cells.length > 0 &&
-      line.cells.every((c) => c.state === 'struck' || c.isSoftPadding);
-
-    if (hasStruckOnly) {
-      // Eliminate orphaned blank lines created by full-line strikeouts
-      continue;
+    // Remove unwritten empty lines at the end of the page
+    while (
+      pageLines.length > 0 &&
+      pageLines[pageLines.length - 1].cells.length === 0 &&
+      !pageLines[pageLines.length - 1].isCommitted
+    ) {
+      pageLines.pop();
     }
 
-    const rawLine = sanitizeLine(line);
-    const lineText = rawLine.trimEnd();
+    if (pageLines.length === 0) continue;
 
-    // Check for intentional empty line (e.g. user pressed Enter on an empty line)
-    if (line.cells.length === 0 || lineText === '') {
-      if (currentParagraph !== '') {
+    const paragraphs: string[] = [];
+    let currentParagraph = '';
+
+    for (let i = 0; i < pageLines.length; i++) {
+      const line = pageLines[i];
+
+      const hasStruckOnly =
+        line.cells.length > 0 &&
+        line.cells.every((c) => c.state === 'struck' || c.isSoftPadding);
+
+      if (hasStruckOnly) continue;
+
+      const rawLine = sanitizeLine(line);
+      const lineText = rawLine.trimEnd();
+
+      // Intentional empty line (e.g. user pressed Enter on an empty line)
+      if (line.cells.length === 0 || lineText === '') {
+        if (currentParagraph !== '') {
+          paragraphs.push(currentParagraph);
+          currentParagraph = '';
+        }
+        paragraphs.push('');
+        continue;
+      }
+
+      if (currentParagraph === '') {
+        currentParagraph = lineText;
+      } else {
+        if (currentParagraph.endsWith('-')) {
+          currentParagraph += lineText.trimStart();
+        } else {
+          currentParagraph += ' ' + lineText.trimStart();
+        }
+      }
+
+      if (line.wrapType === 'hard') {
         paragraphs.push(currentParagraph);
         currentParagraph = '';
       }
-      paragraphs.push('');
-      continue;
     }
 
-    // Append to current paragraph
-    if (currentParagraph === '') {
-      currentParagraph = lineText;
-    } else {
-      // Joining soft-wrapped text within paragraph
-      if (currentParagraph.endsWith('-')) {
-        // Hyphenated wrap: connect directly (e.g. "life-" + "like" = "life-like")
-        currentParagraph += lineText.trimStart();
-      } else {
-        // Space wrap: connect with a single space
-        currentParagraph += ' ' + lineText.trimStart();
-      }
-    }
-
-    // If this line ended with a hard return (Enter), commit current paragraph
-    if (line.wrapType === 'hard') {
+    if (currentParagraph !== '') {
       paragraphs.push(currentParagraph);
-      currentParagraph = '';
+    }
+
+    // Trim trailing blank lines within this page
+    while (paragraphs.length > 0 && paragraphs[paragraphs.length - 1] === '') {
+      paragraphs.pop();
+    }
+
+    if (paragraphs.length > 0) {
+      pageTexts.push(paragraphs.join('\n'));
     }
   }
 
-  if (currentParagraph !== '') {
-    paragraphs.push(currentParagraph);
-  }
-
-  // Trim trailing blank lines
-  while (paragraphs.length > 0 && paragraphs[paragraphs.length - 1] === '') {
-    paragraphs.pop();
-  }
-
-  return paragraphs.join('\n');
+  return pageTexts.join('\n\n');
 }
 
 /**

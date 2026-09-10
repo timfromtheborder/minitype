@@ -14,7 +14,7 @@ export const HistoricalLine = React.memo(function HistoricalLine({
   return (
     <div
       data-line-index={lineIndex}
-      className="flex flex-row items-center font-mono leading-relaxed tracking-wider h-[2rem] whitespace-pre select-none"
+      className="flex flex-row items-center font-mono leading-relaxed h-[2rem] whitespace-pre select-none w-[71ch]"
     >
       {line.cells.map((cell) => (
         <CharacterCell key={cell.id} cell={cell} />
