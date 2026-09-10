@@ -51,8 +51,8 @@ export const DEFAULT_MANIFEST: ManuscriptManifest = {
   pageMode: 'page',
   colorScheme: 'typewriter',
   typeface: 'courier-prime',
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
 };
 
 const SETTINGS_KEY = 'minitype_settings';
@@ -88,7 +88,7 @@ export interface TypingStore extends TypingEngineState, TypingEngineActions {
 }
 
 export const useTypingStore = create<TypingStore>((set, get) => ({
-  manifest: getInitialManifest(),
+  manifest: { ...DEFAULT_MANIFEST },
   currentPageNumber: 1,
   historicalPages: [],
   currentPageLines: [createEmptyLine(1, 0)],
@@ -735,14 +735,26 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
   rehydrate: async () => {
     if (typeof window === 'undefined') return;
 
-    const state = get();
+    // 1. Rehydrate settings from localStorage first on client mount
+    let currentManifest = get().manifest;
+    try {
+      const cached = localStorage.getItem(SETTINGS_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        currentManifest = { ...currentManifest, ...parsed };
+        set({ manifest: currentManifest });
+      }
+    } catch (e) {
+      console.error('Failed to parse cached settings from localStorage:', e);
+    }
+
     // Rule 7.3: In temp mode, ignore database entries and keep memory sterile
-    if (state.manifest.mode === 'temp') return;
+    if (currentManifest.mode === 'temp') return;
 
     try {
       const [savedManifest, pages] = await Promise.all([
-        getManuscript(state.manifest.id),
-        getPagesForManuscript(state.manifest.id),
+        getManuscript(currentManifest.id),
+        getPagesForManuscript(currentManifest.id),
       ]);
 
       if (!pages || pages.length === 0) {
@@ -778,12 +790,12 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
 
       const outboxCount = historicalPages.length;
       const updatedManifest: ManuscriptManifest = {
-        ...state.manifest,
+        ...currentManifest,
         outboxCount,
         lastPrintedCharIndex:
-          savedManifest?.lastPrintedCharIndex ?? state.manifest.lastPrintedCharIndex ?? 0,
+          savedManifest?.lastPrintedCharIndex ?? currentManifest.lastPrintedCharIndex ?? 0,
         printedPagesCount:
-          savedManifest?.printedPagesCount ?? state.manifest.printedPagesCount ?? 0,
+          savedManifest?.printedPagesCount ?? currentManifest.printedPagesCount ?? 0,
       };
       persistSettings(updatedManifest);
 

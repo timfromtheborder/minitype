@@ -43,13 +43,17 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
         userSelect: 'none',
       }}
     >
-      {/* 70-character column guide top ruler marker (faint dots aesthetic, perfectly locked to 70 monospace columns) */}
-      <div className="w-[70ch] text-[10px] leading-none font-mono select-none pointer-events-none mb-2.5 whitespace-pre flex tracking-normal">
-        <span className="text-muted-foreground/40 font-semibold">01</span>
-        <span className="text-muted-foreground/25">{' ·'.repeat(16)}</span>
-        <span className="text-muted-foreground/55 font-semibold">35</span>
-        <span className="text-muted-foreground/25">{' ·'.repeat(16)}</span>
-        <span className="text-muted-foreground/40 font-semibold">70</span>
+      {/* 70-character column guide top ruler marker (faint dots aesthetic, spanning across entire entry box) */}
+      <div className="flex items-center justify-between w-full font-mono select-none pointer-events-none mb-2.5">
+        <span className="text-[10px] font-semibold text-muted-foreground/45">01</span>
+        <span className="flex-1 text-[10px] text-center overflow-hidden tracking-widest text-muted-foreground/25 opacity-70 px-2">
+          · · · · · · · · · · · · · · · · · · · ·
+        </span>
+        <span className="text-[10px] font-semibold text-muted-foreground/60 px-1">35</span>
+        <span className="flex-1 text-[10px] text-center overflow-hidden tracking-widest text-muted-foreground/25 opacity-70 px-2">
+          · · · · · · · · · · · · · · · · · · · ·
+        </span>
+        <span className="text-[10px] font-semibold text-muted-foreground/45">70</span>
       </div>
 
       <div className="flex flex-col justify-end w-[71ch]">

@@ -51,6 +51,7 @@ export default function Home() {
 
   return (
     <main
+      suppressHydrationWarning
       data-theme={engine.manifest.colorScheme}
       className="relative w-full h-screen overflow-hidden flex flex-col justify-between p-6 transition-colors duration-300 bg-background text-foreground font-mono"
     >
