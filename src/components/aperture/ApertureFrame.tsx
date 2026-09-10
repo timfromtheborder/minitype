@@ -37,7 +37,7 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
   return (
     <div
       onMouseDown={handleMouseDown}
-      className="relative flex flex-col justify-start w-fit max-w-[calc(100vw-2rem)] px-8 pt-2.5 pb-2 rounded-xl border border-border/70 bg-card text-card-foreground shadow-inner shadow-black/5 overflow-hidden select-none"
+      className="relative flex flex-col justify-start w-fit max-w-[calc(100vw-2rem)] px-8 pt-2.5 pb-2 rounded-none border border-border/70 bg-card text-card-foreground shadow-inner shadow-black/5 overflow-hidden select-none"
       style={{
         cursor: isLocked ? 'not-allowed' : 'default',
         userSelect: 'none',

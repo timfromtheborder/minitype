@@ -19,11 +19,21 @@ const BLOCKED_KEYS = new Set([
   'Tab',
 ]);
 
-export function useTypingEngine() {
+export interface UseTypingEngineOptions {
+  isPaused?: boolean;
+}
+
+export function useTypingEngine(options?: UseTypingEngineOptions) {
   const store = useTypingStore();
+  const isPaused = options?.isPaused ?? false;
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
+      // If typing is paused (e.g. print dialog or settings modal is open), do not draft
+      if (isPaused) {
+        return;
+      }
+
       // 0. Ignore events originating from interactive inputs (e.g. document title input in modals)
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
@@ -82,7 +92,7 @@ export function useTypingEngine() {
         store.insertChar(e.key);
       }
     },
-    [store]
+    [store, isPaused]
   );
 
   // Global window keyboard listener

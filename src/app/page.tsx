@@ -9,9 +9,9 @@ import { PrintModal } from '@/components/modals/PrintModal';
 import { Settings, Printer, Database, Zap } from 'lucide-react';
 
 export default function Home() {
-  const engine = useTypingEngine();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
+  const engine = useTypingEngine({ isPaused: isPrintOpen || isSettingsOpen });
 
   // Sync active palette data-theme attribute with document root
   useEffect(() => {
