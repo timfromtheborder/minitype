@@ -597,6 +597,42 @@ describe('Typing Engine & State Machine Invariants', () => {
       // Paragraph 1 and Paragraph 2 should be separated by a newline
       expect(sanitized).toContain('\nParagraph 2');
     });
+
+    it('rejoins lines when backspacing to previous lines across soft-wrap boundaries without manual linebreaks', () => {
+      const store = useTypingStore.getState();
+      store.resetEngine({ mode: 'temp', activeApertureHeight: 3, wrapMode: 'soft' });
+
+      // Fill line 0 with 65 chars, then space, then 'WRAPPED' which wraps to line 1
+      for (let i = 0; i < 65; i++) store.insertChar('A');
+      store.insertChar(' '); // col 65
+      for (const c of 'WRAPPED') store.insertChar(c);
+
+      expect(useTypingStore.getState().currentPageLines).toHaveLength(2);
+      expect(useTypingStore.getState().activeLineIndex).toBe(1);
+
+      // On line 1, backspace over 'WRAPPED' and into line 0
+      for (let i = 0; i < 7; i++) store.handleBackspace(); // highlights 'WRAPPED' on line 1
+      store.handleBackspace(); // highlights space on line 0
+      store.handleBackspace(); // highlights 'A' on line 0
+
+      // Strike out with Enter
+      store.handleEnter();
+
+      // In the aperture, typing head snaps back to active line 1
+      expect(useTypingStore.getState().activeLineIndex).toBe(1);
+
+      // Continue drafting forward on line 1 without manual enter
+      for (const c of 'CORRECT') store.insertChar(c);
+
+      const state = useTypingStore.getState();
+      const sanitized = sanitizeManuscript([
+        { pageNumber: 1, lines: state.currentPageLines, completedAt: null },
+      ]);
+
+      // When compiling, it rejoins into ONE continuous paragraph without any newline!
+      expect(sanitized.includes('\n')).toBe(false);
+      expect(sanitized.endsWith('CORRECT')).toBe(true);
+    });
   });
 
   describe('Settings Persistence & Local Mode Rehydration', () => {
