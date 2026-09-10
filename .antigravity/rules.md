@@ -1,0 +1,4 @@
+- Always read and follow GEMINI.md before modifying or generating code.
+- Run `npm run typecheck` and `npm run test:unit` after editing.
+- Do not ask for user confirmation if automated verification tests pass.
+- On Windows environments, always execute commands using `npm.cmd` and `npx.cmd` instead of `npm` and `npx`.

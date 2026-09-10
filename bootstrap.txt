@@ -1,0 +1,1 @@
+Read GEMINI.md and initialize the project architecture. Set up the type definitions in src/types/, create the Dexie.js database schema in src/db/index.ts, and implement src/hooks/useTypingEngine.ts with comprehensive unit tests in tests/unit/engine.test.ts. Run all checks to ensure clean builds with zero TypeScript errors.
