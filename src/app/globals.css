@@ -158,30 +158,30 @@
   --cursor-color: #000000;
 }
 
-/* 5. Dark Mode (Gray text on very dark gray background) */
+/* 5. Dark Mode (Bright text on very dark gray background) */
 [data-theme="dark-mode"] {
   --background: #121214;
-  --foreground: #A1A1AA;
-  --card: #1B1B1E;
-  --card-foreground: #A1A1AA;
+  --foreground: #EDEDED;
+  --card: #1C1C20;
+  --card-foreground: #EDEDED;
   --popover: #18181B;
-  --popover-foreground: #A1A1AA;
-  --primary: #A1A1AA;
+  --popover-foreground: #EDEDED;
+  --primary: #F4F4F5;
   --primary-foreground: #121214;
-  --secondary: #27272A;
-  --secondary-foreground: #E4E4E7;
+  --secondary: #2A2A30;
+  --secondary-foreground: #EDEDED;
   --muted: #222226;
-  --muted-foreground: #71717A;
-  --accent: #2A2A30;
-  --accent-foreground: #F4F4F5;
+  --muted-foreground: #9A9AA6;
+  --accent: #2E2E36;
+  --accent-foreground: #FFFFFF;
   --destructive: #EF4444;
-  --border: #2B2B32;
-  --input: #2B2B32;
-  --ring: #71717A;
-  --highlight-bg: #383840;
-  --highlight-text: #F4F4F5;
+  --border: #32323A;
+  --input: #32323A;
+  --ring: #EDEDED;
+  --highlight-bg: #3F3F4C;
+  --highlight-text: #FFFFFF;
   --struck-color: #EF4444;
-  --cursor-color: #A1A1AA;
+  --cursor-color: #EDEDED;
 }
 
 /* 6. Low Contrast (Slate gray background, lighter text box, charcoal text) */

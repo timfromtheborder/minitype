@@ -19,16 +19,15 @@ export const PaperTrayStack: React.FC<PaperTrayStackProps> = ({ count }) => {
   const p3 = '8,44';
   const basePoints = `${p0} ${p1} ${p2} ${p3}`;
 
-  // Limit rendering up to 20 sheets visually so it doesn't clip
-  const visibleSheets = Math.min(count, 20);
+  // Limit rendering up to 24 sheets visually so it doesn't clip
+  const visibleSheets = Math.min(count, 24);
 
-  // Calculate cumulative compressed vertical offsets
+  // Spacing between pages is uniform across all sheets in the stack,
+  // but dynamically compresses as more pages appear (e.g. 5px down to 0.9px).
+  const step = visibleSheets <= 1 ? 4 : Math.max(0.9, Math.min(5, 20 / (visibleSheets - 1)));
   const sheets: number[] = [];
-  let currentOffset = 0;
   for (let i = 0; i < visibleSheets; i++) {
-    const gap = Math.max(1, 5.5 / (1 + 0.35 * i));
-    currentOffset += gap;
-    sheets.push(currentOffset);
+    sheets.push(i * step + 2);
   }
 
   return (
@@ -50,7 +49,7 @@ export const PaperTrayStack: React.FC<PaperTrayStackProps> = ({ count }) => {
           className="opacity-25 transition-opacity"
         />
 
-        {/* Stacked Paper Sheets (Outlines with compressed spacing) */}
+        {/* Stacked Paper Sheets (Opaque background fill, identical spacing, dynamically compressed) */}
         {sheets.map((offset, idx) => {
           const isTop = idx === sheets.length - 1;
           return (
@@ -58,13 +57,13 @@ export const PaperTrayStack: React.FC<PaperTrayStackProps> = ({ count }) => {
               key={idx}
               points={basePoints}
               transform={`translate(0, ${-offset})`}
-              fill="none"
+              fill="var(--background)"
               stroke="currentColor"
               strokeWidth="1"
               className={`transition-all duration-200 ${
                 isTop
-                  ? 'opacity-80'
-                  : 'opacity-40'
+                  ? 'opacity-90'
+                  : 'opacity-50'
               }`}
             />
           );

@@ -7,11 +7,18 @@ import {
   ApertureHeight,
   WrapMode,
   PageSize,
+  PageMode,
   TypingEngineState,
   TypingEngineActions,
 } from '@/types';
 import { wrapLine, getLastPrintableCellIndex, createCellId, MAX_COLUMNS } from '@/lib/wrap';
 import { saveManuscript, savePage } from '@/db';
+
+export function getPageLineLimit(mode?: PageMode, customSize?: number): number {
+  if (mode === 'notecard') return 10;
+  if (mode === 'paragraph') return 9999;
+  return customSize || 54;
+}
 
 export function createEmptyLine(pageNumber: number, lineIndex: number): LineRecord {
   return {
@@ -33,6 +40,7 @@ export const DEFAULT_MANIFEST: ManuscriptManifest = {
   activeApertureHeight: 1,
   wrapMode: 'soft',
   pageSize: 54,
+  pageMode: 'page',
   colorScheme: 'typewriter',
   typeface: 'courier-prime',
   createdAt: new Date().toISOString(),
@@ -98,6 +106,17 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
   setPageSize: (pageSize: PageSize) => {
     set((state) => {
       const updated = { ...state.manifest, pageSize };
+      if (updated.mode === 'local') {
+        saveManuscript(updated).catch(console.error);
+      }
+      return { manifest: updated };
+    });
+  },
+
+  setPageMode: (pageMode: PageMode) => {
+    set((state) => {
+      const pageSize = pageMode === 'notecard' ? 10 : pageMode === 'page' ? 54 : 9999;
+      const updated = { ...state.manifest, pageMode, pageSize };
       if (updated.mode === 'local') {
         saveManuscript(updated).catch(console.error);
       }
@@ -185,7 +204,8 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
 
     // Check if advancing to the next line completes the page
     const nextLineIndex = activeLineIndex + 1;
-    if (nextLineIndex >= state.manifest.pageSize) {
+    const pageLineLimit = getPageLineLimit(state.manifest.pageMode, state.manifest.pageSize);
+    if (nextLineIndex >= pageLineLimit) {
       const completedPage: PageRecord = {
         id: `${state.manifest.id}-page-${state.currentPageNumber}`,
         manuscriptId: state.manifest.id,
@@ -416,7 +436,11 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
     }
 
     const nextLineIndex = state.activeLineIndex + 1;
-    if (nextLineIndex >= state.manifest.pageSize) {
+    const isParagraphMode = state.manifest.pageMode === 'paragraph';
+    const pageLineLimit = getPageLineLimit(state.manifest.pageMode, state.manifest.pageSize);
+    const shouldCompletePage = isParagraphMode || nextLineIndex >= pageLineLimit;
+
+    if (shouldCompletePage) {
       // Page completed on Enter
       const completedPage: PageRecord = {
         id: `${state.manifest.id}-page-${state.currentPageNumber}`,

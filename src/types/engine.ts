@@ -1,5 +1,5 @@
 import { CharacterCell, LineRecord } from './aperture';
-import { ManuscriptManifest } from './manuscript';
+import { ManuscriptManifest, PageMode } from './manuscript';
 
 export interface CursorPosition {
   lineIndex: number;
@@ -30,6 +30,7 @@ export interface TypingEngineActions {
   feedPaper: (amount?: number) => void;
   setApertureHeight: (height: ManuscriptManifest['activeApertureHeight']) => void;
   setPageSize: (size: ManuscriptManifest['pageSize']) => void;
+  setPageMode: (mode: PageMode) => void;
   setManifest: (manifest: Partial<ManuscriptManifest>) => void;
   resetEngine: (newManifest?: Partial<ManuscriptManifest>) => void;
 }

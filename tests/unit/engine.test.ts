@@ -285,6 +285,41 @@ describe('Typing Engine & State Machine Invariants', () => {
       store.insertChar('N');
       expect(useTypingStore.getState().currentPageLines[0].cells[0].char).toBe('N');
     });
+
+    it('advances page every 10 lines in notecard mode', () => {
+      const store = useTypingStore.getState();
+      store.setPageMode('notecard');
+
+      for (let i = 0; i < 9; i++) {
+        store.insertChar('C');
+        store.handleEnter();
+      }
+      expect(useTypingStore.getState().currentPageNumber).toBe(1);
+
+      // 10th line completes notecard
+      store.insertChar('C');
+      store.handleEnter();
+
+      expect(useTypingStore.getState().currentPageNumber).toBe(2);
+      expect(useTypingStore.getState().manifest.outboxCount).toBe(1);
+    });
+
+    it('advances page on every line break in paragraph mode', () => {
+      const store = useTypingStore.getState();
+      store.setPageMode('paragraph');
+
+      store.insertChar('A');
+      store.handleEnter(); // Linebreak makes a new page
+
+      expect(useTypingStore.getState().currentPageNumber).toBe(2);
+      expect(useTypingStore.getState().manifest.outboxCount).toBe(1);
+
+      store.insertChar('B');
+      store.handleEnter();
+
+      expect(useTypingStore.getState().currentPageNumber).toBe(3);
+      expect(useTypingStore.getState().manifest.outboxCount).toBe(2);
+    });
   });
 
   describe('Content Sanitization & Print Speed Formula', () => {

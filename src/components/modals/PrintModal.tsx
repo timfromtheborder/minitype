@@ -49,7 +49,37 @@ export const PrintModal: React.FC<PrintModalProps> = ({
 
     const fullClean = sanitizeManuscript(pages);
     setSanitizedFullText(fullClean);
-    const lines = fullClean.length > 0 ? fullClean.split('\n') : [''];
+
+    // Extract visual drafted lines for the line-by-line feed animation
+    const visualLines: string[] = [];
+    for (const page of pages) {
+      for (const line of page.lines) {
+        const hasStruckOnly =
+          line.cells.length > 0 &&
+          line.cells.every((c) => c.state === 'struck' || c.isSoftPadding);
+        if (hasStruckOnly) continue;
+
+        const cleanChars = line.cells
+          .filter((c) => c.state !== 'struck' && !c.isSoftPadding)
+          .map((c) => c.char)
+          .join('')
+          .trimEnd();
+
+        if (line.cells.length === 0 || cleanChars === '') {
+          if (line.isCommitted || line.wrapType === 'hard') {
+            visualLines.push('');
+          }
+        } else {
+          visualLines.push(cleanChars);
+        }
+      }
+    }
+
+    while (visualLines.length > 0 && visualLines[visualLines.length - 1] === '') {
+      visualLines.pop();
+    }
+
+    const lines = visualLines.length > 0 ? visualLines : [''];
     setAllLines(lines);
 
     printAbortRef.current = false;
@@ -154,7 +184,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl max-h-[85vh] p-6 rounded-2xl border border-border bg-background shadow-2xl flex flex-col gap-4 select-none"
+        className="w-full max-w-2xl h-[560px] p-6 rounded-2xl border border-border bg-background shadow-2xl flex flex-col justify-between select-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -201,8 +231,8 @@ export const PrintModal: React.FC<PrintModalProps> = ({
           </div>
         </div>
 
-        {/* Clean, Non-skeumorphic Manuscript Sheet Area (Lines emerge one-by-one from the bottom) */}
-        <div className="relative flex-1 min-h-[340px] max-h-[480px] p-6 rounded-xl border border-border bg-card/70 font-mono text-sm leading-relaxed overflow-y-auto whitespace-pre-wrap select-text flex flex-col justify-end">
+        {/* Clean, Non-skeumorphic Manuscript Sheet Area (Fixed size, lines emerge one-by-one from the bottom) */}
+        <div className="relative w-full h-[380px] p-6 rounded-xl border border-border bg-card font-mono text-sm leading-relaxed overflow-y-auto whitespace-pre-wrap select-text flex flex-col justify-end">
           <div className="flex-1 flex flex-col justify-end">
             {printedLines.map((line, idx) => {
               const isLatest = idx === printedLines.length - 1 && isPrinting;

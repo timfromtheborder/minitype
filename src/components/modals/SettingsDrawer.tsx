@@ -3,6 +3,7 @@ import {
   ApertureHeight,
   WrapMode,
   PageSize,
+  PageMode,
   ColorScheme,
   Typeface,
   ManuscriptMode,
@@ -89,22 +90,25 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
             </div>
           </div>
 
-          {/* Page Size */}
+          {/* Page Mode */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-muted-foreground">Sheet Page Length:</label>
-            <div className="grid grid-cols-4 gap-1.5">
-              {([30, 40, 54, 60] as PageSize[]).map((size) => (
+            <label className="text-muted-foreground">Page Mode:</label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {(['notecard', 'paragraph', 'page'] as PageMode[]).map((mode) => (
                 <button
-                  key={size}
+                  key={mode}
                   type="button"
-                  onClick={() => onUpdatePageSize(size)}
+                  onClick={() => {
+                    const pageSize = mode === 'notecard' ? 10 : mode === 'page' ? 54 : 9999;
+                    onUpdateManifest({ pageMode: mode, pageSize });
+                  }}
                   className={`py-1.5 rounded-md border text-center transition-all cursor-pointer ${
-                    manifest.pageSize === size
+                    (manifest.pageMode || 'page') === mode
                       ? 'border-primary bg-primary text-primary-foreground font-bold shadow-xs'
                       : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground'
                   }`}
                 >
-                  {size} lines
+                  {mode}
                 </button>
               ))}
             </div>
@@ -117,21 +121,14 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
               {[
                 {
                   id: 'typewriter',
-                  label: 'Typewriter Paper',
+                  label: 'Typewriter',
                   bg: '#F5F2EB',
                   fg: '#1E1E1E',
                   border: '#DCD1BE',
                 },
                 {
-                  id: 'dark-amber',
-                  label: 'Dark Amber',
-                  bg: '#121212',
-                  fg: '#FFB000',
-                  border: '#FFB000',
-                },
-                {
                   id: 'phosphor',
-                  label: 'Phosphor Green',
+                  label: 'Phosphor',
                   bg: '#0A120A',
                   fg: '#33FF33',
                   border: '#33FF33',
@@ -144,11 +141,11 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   border: '#666666',
                 },
                 {
-                  id: 'dark-mode',
-                  label: 'Dark Mode',
-                  bg: '#121214',
-                  fg: '#A1A1AA',
-                  border: '#3F3F46',
+                  id: 'dark-amber',
+                  label: 'Amber',
+                  bg: '#121212',
+                  fg: '#FFB000',
+                  border: '#FFB000',
                 },
                 {
                   id: 'low-contrast',
@@ -156,6 +153,13 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   bg: '#5B6A78',
                   fg: '#24282C',
                   border: '#748494',
+                },
+                {
+                  id: 'dark-mode',
+                  label: 'Dark Mode',
+                  bg: '#121214',
+                  fg: '#EDEDED',
+                  border: '#EDEDED',
                 },
               ].map((scheme) => {
                 const isSelected = manifest.colorScheme === scheme.id;

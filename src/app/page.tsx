@@ -20,11 +20,21 @@ export default function Home() {
     }
   }, [engine.manifest.colorScheme]);
 
-  // Compute total characters drafted on current page
-  const totalCharsOnPage = engine.currentPageLines.reduce(
-    (acc, line) => acc + line.cells.filter((c) => c.state !== 'struck' && !c.isSoftPadding).length,
-    0
+  // Compute total characters and wordcount on current page: (character / 5 minus blank spaces)
+  const validCellsOnPage = useMemo(
+    () =>
+      engine.currentPageLines.flatMap((line) =>
+        line.cells.filter((c) => c.state !== 'struck' && !c.isSoftPadding)
+      ),
+    [engine.currentPageLines]
   );
+  const totalCharsOnPage = validCellsOnPage.length;
+  const blankSpacesOnPage = useMemo(
+    () => validCellsOnPage.filter((c) => c.char === ' ').length,
+    [validCellsOnPage]
+  );
+  const nonSpaceChars = totalCharsOnPage - blankSpacesOnPage;
+  const wordCount = Math.max(0, Math.round(nonSpaceChars / 5));
 
   // Stable pages array for print compilation
   const manuscriptPages = useMemo(
@@ -85,12 +95,18 @@ export default function Home() {
         </button>
 
         {/* Live Drafting Metadata */}
-        <div className="flex items-center gap-4 text-muted-foreground text-[11px] font-mono">
+        <div className="flex items-center gap-3.5 text-muted-foreground text-[11px] font-mono">
           <span>
-            Sheet {engine.currentPageNumber} · Line {engine.activeLineIndex + 1}/{engine.manifest.pageSize}
+            {engine.manifest.pageMode === 'paragraph'
+              ? `Page ${engine.currentPageNumber} · Line ${engine.activeLineIndex + 1}`
+              : engine.manifest.pageMode === 'notecard'
+              ? `Card ${engine.currentPageNumber} · Line ${engine.activeLineIndex + 1}/10`
+              : `Sheet ${engine.currentPageNumber} · Line ${engine.activeLineIndex + 1}/${engine.manifest.pageSize || 54}`}
           </span>
           <span>·</span>
           <span>Col {Math.min(engine.activeColIndex + 1, 70)}/70</span>
+          <span>·</span>
+          <span className="text-foreground/90 font-medium">{wordCount} words</span>
           <span>·</span>
           <span>{totalCharsOnPage} chars</span>
         </div>
