@@ -114,13 +114,13 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
     let highlightHead = state.highlightHead;
     let activeLineIndex = state.activeLineIndex;
 
-    // 1. If currently in highlight mode, printable key aborts the highlight sequence:
-    // Reverts all 'highlighted' cells to 'standard', snaps cursor to drafting head.
+    // 1. If currently in highlight mode, any keystroke immediately strikes out highlighted text:
+    // Converts all 'highlighted' cells to 'struck', clears highlight mode, and snaps cursor to drafting head.
     if (isHighlighting) {
       lines = lines.map((line) => ({
         ...line,
         cells: line.cells.map((cell) =>
-          cell.state === 'highlighted' ? { ...cell, state: 'standard' as const } : cell
+          cell.state === 'highlighted' ? { ...cell, state: 'struck' as const } : cell
         ),
       }));
       isHighlighting = false;

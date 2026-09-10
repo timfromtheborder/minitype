@@ -115,25 +115,76 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
             <label className="text-muted-foreground">Palette & Aesthetic:</label>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { id: 'typewriter', label: 'Typewriter Paper', preview: 'bg-[#F5F2EB] text-[#1E1E1E]' },
-                { id: 'dark-amber', label: 'Dark Amber', preview: 'bg-[#121212] text-[#FFB000]' },
-                { id: 'phosphor', label: 'Phosphor Green', preview: 'bg-[#0A120A] text-[#33FF33]' },
-                { id: 'high-contrast', label: 'High Contrast', preview: 'bg-white text-black' },
-              ].map((scheme) => (
-                <button
-                  key={scheme.id}
-                  type="button"
-                  onClick={() => onUpdateManifest({ colorScheme: scheme.id as ColorScheme })}
-                  className={`py-1.5 px-2.5 rounded-md border text-left flex items-center justify-between transition-all cursor-pointer ${
-                    manifest.colorScheme === scheme.id
-                      ? 'border-primary ring-1 ring-primary font-bold'
-                      : 'border-border/80 hover:bg-muted/70'
-                  }`}
-                >
-                  <span>{scheme.label}</span>
-                  <span className={`w-3.5 h-3.5 rounded-full border border-black/20 ${scheme.preview}`} />
-                </button>
-              ))}
+                {
+                  id: 'typewriter',
+                  label: 'Typewriter Paper',
+                  bg: '#F5F2EB',
+                  fg: '#1E1E1E',
+                  border: '#DCD1BE',
+                },
+                {
+                  id: 'dark-amber',
+                  label: 'Dark Amber',
+                  bg: '#121212',
+                  fg: '#FFB000',
+                  border: '#FFB000',
+                },
+                {
+                  id: 'phosphor',
+                  label: 'Phosphor Green',
+                  bg: '#0A120A',
+                  fg: '#33FF33',
+                  border: '#33FF33',
+                },
+                {
+                  id: 'high-contrast',
+                  label: 'High Contrast',
+                  bg: '#FFFFFF',
+                  fg: '#000000',
+                  border: '#666666',
+                },
+              ].map((scheme) => {
+                const isSelected = manifest.colorScheme === scheme.id;
+                return (
+                  <button
+                    key={scheme.id}
+                    type="button"
+                    onClick={() => onUpdateManifest({ colorScheme: scheme.id as ColorScheme })}
+                    className={`py-2 px-3 rounded-lg border text-left flex items-center justify-between transition-all cursor-pointer ${
+                      isSelected
+                        ? 'border-primary ring-1 ring-primary bg-primary/10 text-foreground font-semibold shadow-xs'
+                        : 'border-border/80 hover:bg-muted/60 text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="w-4 h-4 rounded-full border shadow-xs flex items-center justify-center text-[8px] font-mono font-bold shrink-0"
+                        style={{
+                          backgroundColor: scheme.bg,
+                          color: scheme.fg,
+                          borderColor: scheme.border,
+                        }}
+                      >
+                        Aa
+                      </span>
+                      <span className="truncate">{scheme.label}</span>
+                    </div>
+
+                    {/* Functional Radio Button Indicator */}
+                    <div
+                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ml-1.5 ${
+                        isSelected
+                          ? 'border-primary bg-primary'
+                          : 'border-muted-foreground/40 bg-transparent'
+                      }`}
+                    >
+                      {isSelected && (
+                        <div className="w-1.5 h-1.5 rounded-full bg-background" />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 

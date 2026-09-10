@@ -189,7 +189,7 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(state.activeColIndex).toBe(3);
     });
 
-    it('aborts highlight and restores standard state when printable key is pressed', () => {
+    it('strikes out highlighted cells and appends typed character when any keystroke is entered', () => {
       const store = useTypingStore.getState();
       store.insertChar('H');
       store.insertChar('I');
@@ -197,12 +197,13 @@ describe('Typing Engine & State Machine Invariants', () => {
       store.handleBackspace(); // highlight 'I'
       expect(useTypingStore.getState().currentPageLines[0].cells[1].state).toBe('highlighted');
 
-      // Typing printable char aborts highlight
+      // Typing printable char strikes out highlighted text and appends new char
       store.insertChar('!');
 
       const state = useTypingStore.getState();
       expect(state.isHighlighting).toBe(false);
-      expect(state.currentPageLines[0].cells[1].state).toBe('standard');
+      expect(state.currentPageLines[0].cells[0].state).toBe('standard');
+      expect(state.currentPageLines[0].cells[1].state).toBe('struck');
       expect(state.currentPageLines[0].cells[2].char).toBe('!');
       expect(state.currentPageLines[0].cells[2].state).toBe('standard');
     });

@@ -65,7 +65,9 @@ export function useTypingEngine() {
       // 6. Printable character entry (length 1, no modifier keys)
       if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
         e.preventDefault();
-        if (e.key === ' ') {
+        if (store.isHighlighting) {
+          typewriterAudio.playStrike();
+        } else if (e.key === ' ') {
           typewriterAudio.playSpace();
         } else {
           typewriterAudio.playKeyClick();
