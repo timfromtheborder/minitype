@@ -7,6 +7,7 @@ export interface CharacterCell {
   colIndex: number;        // 0 to 69
   lineIndex: number;
   isSoftPadding?: boolean; // True if created by soft word-wrap
+  isStruck?: boolean;      // True once cell has been struck out; prevents strikeout reversion
 }
 
 export interface LineRecord {

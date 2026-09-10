@@ -12,7 +12,7 @@ import {
   TypingEngineActions,
 } from '@/types';
 import { wrapLine, getLastPrintableCellIndex, createCellId, MAX_COLUMNS } from '@/lib/wrap';
-import { saveManuscript, savePage } from '@/db';
+import { saveManuscript, savePage, clearManuscriptData } from '@/db';
 
 export function getPageLineLimit(mode?: PageMode, customSize?: number): number {
   if (mode === 'notecard') return 10;
@@ -134,12 +134,12 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
     let activeLineIndex = state.activeLineIndex;
 
     // 1. If currently in highlight mode, any keystroke immediately strikes out highlighted text:
-    // Converts all 'highlighted' cells to 'struck', clears highlight mode, and snaps cursor to drafting head.
+    // Converts all 'highlighted' cells to 'struck', permanently marks isStruck: true, clears highlight mode, and snaps cursor.
     if (isHighlighting) {
       lines = lines.map((line) => ({
         ...line,
         cells: line.cells.map((cell) =>
-          cell.state === 'highlighted' ? { ...cell, state: 'struck' as const } : cell
+          cell.state === 'highlighted' ? { ...cell, state: 'struck' as const, isStruck: true } : cell
         ),
       }));
       isHighlighting = false;
@@ -291,7 +291,9 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
         lines[activeLineIndex] = {
           ...currentLine,
           cells: currentLine.cells.map((cell, idx) =>
-            idx === printableIndex ? { ...cell, state: 'highlighted' as const } : cell
+            idx === printableIndex
+              ? { ...cell, state: 'highlighted' as const, isStruck: cell.isStruck || cell.state === 'struck' }
+              : cell
           ),
         };
 
@@ -313,7 +315,9 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
             lines[prevLineIndex] = {
               ...prevLine,
               cells: prevLine.cells.map((cell, idx) =>
-                idx === prevPrintableIndex ? { ...cell, state: 'highlighted' as const } : cell
+                idx === prevPrintableIndex
+                  ? { ...cell, state: 'highlighted' as const, isStruck: cell.isStruck || cell.state === 'struck' }
+                  : cell
               ),
             };
 
@@ -348,7 +352,9 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
       lines[head.lineIndex] = {
         ...currentHeadLine,
         cells: currentHeadLine.cells.map((cell, idx) =>
-          idx === nextCol ? { ...cell, state: 'highlighted' as const } : cell
+          idx === nextCol
+            ? { ...cell, state: 'highlighted' as const, isStruck: cell.isStruck || cell.state === 'struck' }
+            : cell
         ),
       };
 
@@ -370,7 +376,9 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
           lines[prevLineIndex] = {
             ...prevLine,
             cells: prevLine.cells.map((cell, idx) =>
-              idx === prevPrintableIndex ? { ...cell, state: 'highlighted' as const } : cell
+              idx === prevPrintableIndex
+                ? { ...cell, state: 'highlighted' as const, isStruck: cell.isStruck || cell.state === 'struck' }
+                : cell
             ),
           };
 
@@ -395,12 +403,12 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
 
     if (state.isHighlighting) {
       // Enter with active highlight:
-      // Converts all 'highlighted' cells to 'struck', clears selection,
+      // Converts all 'highlighted' cells to 'struck', permanently marks isStruck: true, clears selection,
       // snaps cursor to end of active line without creating a newline.
       lines = lines.map((line) => ({
         ...line,
         cells: line.cells.map((cell) =>
-          cell.state === 'highlighted' ? { ...cell, state: 'struck' as const } : cell
+          cell.state === 'highlighted' ? { ...cell, state: 'struck' as const, isStruck: true } : cell
         ),
       }));
 
@@ -562,6 +570,31 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
     if (key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
       get().insertChar(key);
     }
+  },
+
+  clearText: () => {
+    const state = get();
+    if (state.manifest.mode === 'local') {
+      clearManuscriptData(state.manifest.id).catch(console.error);
+    }
+    set({
+      currentPageNumber: 1,
+      historicalPages: [],
+      currentPageLines: [createEmptyLine(1, 0)],
+      activeLineIndex: 0,
+      activeColIndex: 0,
+      isHighlighting: false,
+      highlightHead: null,
+      isLocked: false,
+      lockReason: null,
+      pendingWrappedCells: null,
+      manifest: {
+        ...state.manifest,
+        outboxCount: 0,
+        lastPrintedCharIndex: 0,
+        printedPagesCount: 0,
+      },
+    });
   },
 
   resetEngine: (newManifest) => {

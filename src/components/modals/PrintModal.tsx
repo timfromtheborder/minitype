@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { PageRecord, ManuscriptManifest } from '@/types';
 import { sanitizeManuscript } from '@/lib/sanitize';
 import { typewriterAudio } from '@/lib/sound';
-import { Printer, Download, X, FastForward, CheckCircle2, RotateCcw } from 'lucide-react';
+import { Printer, Download, X, FastForward, CheckCircle2, RotateCcw, Trash2 } from 'lucide-react';
 
 interface PrintModalProps {
   isOpen: boolean;
@@ -10,6 +10,7 @@ interface PrintModalProps {
   pages: PageRecord[];
   manifest: ManuscriptManifest;
   onPrintedComplete: (printedCharCount: number) => void;
+  onClearText?: () => void;
 }
 
 export const PrintModal: React.FC<PrintModalProps> = ({
@@ -18,12 +19,14 @@ export const PrintModal: React.FC<PrintModalProps> = ({
   pages,
   manifest,
   onPrintedComplete,
+  onClearText,
 }) => {
   const [allLines, setAllLines] = useState<string[]>([]);
   const [printedLines, setPrintedLines] = useState<string[]>([]);
   const [isPrinting, setIsPrinting] = useState<boolean>(false);
   const [isDone, setIsDone] = useState<boolean>(false);
   const [sanitizedFullText, setSanitizedFullText] = useState<string>('');
+  const [isConfirmingClear, setIsConfirmingClear] = useState<boolean>(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const printAbortRef = useRef<boolean>(false);
@@ -37,6 +40,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
       setAllLines([]);
       setIsPrinting(false);
       setIsDone(false);
+      setIsConfirmingClear(false);
       printAbortRef.current = true;
       return;
     }
@@ -173,6 +177,18 @@ export const PrintModal: React.FC<PrintModalProps> = ({
     window.print();
   };
 
+  const handleClearText = () => {
+    if (!isConfirmingClear) {
+      setIsConfirmingClear(true);
+      return;
+    }
+    setIsConfirmingClear(false);
+    if (onClearText) {
+      onClearText();
+    }
+    onClose();
+  };
+
   const totalLinesCount = allLines.length;
   const currentCount = printedLines.length;
 
@@ -253,8 +269,27 @@ export const PrintModal: React.FC<PrintModalProps> = ({
 
         {/* Actions Footer */}
         <div className="flex items-center justify-between pt-2 border-t border-border text-xs font-mono">
-          <div className="text-muted-foreground">
-            {sanitizedFullText.length} characters · {totalLinesCount} lines
+          <div className="flex items-center gap-3">
+            {onClearText && (
+              <button
+                type="button"
+                onClick={handleClearText}
+                onBlur={() => setIsConfirmingClear(false)}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs font-mono transition-all cursor-pointer ${
+                  isConfirmingClear
+                    ? 'border-destructive bg-destructive text-destructive-foreground font-bold shadow-xs'
+                    : 'border-border/80 text-muted-foreground hover:text-destructive hover:border-destructive/60 hover:bg-destructive/10'
+                }`}
+                title="Clear all drafted text and reset manuscript"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{isConfirmingClear ? 'Confirm Clear?' : 'Clear Text'}</span>
+              </button>
+            )}
+
+            <span className="text-muted-foreground">
+              {sanitizedFullText.length} characters · {totalLinesCount} lines
+            </span>
           </div>
 
           <div className="flex items-center gap-2">

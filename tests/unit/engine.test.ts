@@ -110,6 +110,42 @@ describe('Typing Engine & State Machine Invariants', () => {
       const line1 = state.currentPageLines[1];
       expect(line1.cells.map((c) => c.char).join('')).toBe('li');
     });
+
+    it('does not soft-wrap struck-out text when typing overflows past 70 columns', () => {
+      const store = useTypingStore.getState();
+
+      // Type 60 characters
+      for (let i = 0; i < 60; i++) {
+        store.insertChar('A');
+      }
+
+      // Type word 'STRUCK' (cols 60..65), then strike it out
+      for (const ch of 'STRUCK') {
+        store.insertChar(ch);
+      }
+      for (let i = 0; i < 6; i++) {
+        store.handleBackspace();
+      }
+      store.handleEnter(); // 'STRUCK' is now struck out at cols 60..65
+
+      // Now type unstruck word 'OVERFLOW':
+      // 'O'(66), 'V'(67), 'E'(68), 'R'(69), 'F'(70 - triggers wrap)
+      for (const ch of 'OVERFLOW') {
+        store.insertChar(ch);
+      }
+
+      const state = useTypingStore.getState();
+      expect(state.currentPageLines).toHaveLength(2);
+
+      // Struck-out 'STRUCK' must remain on line 0
+      const line0 = state.currentPageLines[0];
+      const line0Struck = line0.cells.filter((c) => c.isStruck || c.state === 'struck');
+      expect(line0Struck.map((c) => c.char).join('')).toBe('STRUCK');
+
+      // Line 1 should start with the unstruck wrapped word 'OVERFLOW'
+      const line1 = state.currentPageLines[1];
+      expect(line1.cells.map((c) => c.char).join('')).toBe('OVERFLOW');
+    });
   });
 
   describe('Backspace & Highlight Mode', () => {
@@ -239,6 +275,26 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(state.currentPageLines[0].cells[1].state).toBe('struck');
       expect(state.currentPageLines[0].cells[2].char).toBe('!');
       expect(state.currentPageLines[0].cells[2].state).toBe('standard');
+    });
+
+    it('preserves isStruck flag and strikethrough when backspacing over previously struck-out text', () => {
+      const store = useTypingStore.getState();
+      store.insertChar('A');
+      store.insertChar('B');
+      store.handleBackspace(); // highlight 'B'
+      store.handleEnter();     // strikes 'B', isStruck = true
+
+      let state = useTypingStore.getState();
+      expect(state.currentPageLines[0].cells[1].state).toBe('struck');
+      expect(state.currentPageLines[0].cells[1].isStruck).toBe(true);
+
+      // Backspacing over struck 'B' enters highlight mode on that cell
+      store.handleBackspace();
+      state = useTypingStore.getState();
+      expect(state.isHighlighting).toBe(true);
+      expect(state.currentPageLines[0].cells[1].state).toBe('highlighted');
+      // Crucial: isStruck flag remains true so strikethrough line does not temporarily revert!
+      expect(state.currentPageLines[0].cells[1].isStruck).toBe(true);
     });
 
     it('cancels highlight and clamps cursor when aperture height is dynamically resized', () => {
@@ -409,4 +465,28 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(sanitized.includes('\n')).toBe(false);
     });
   });
+
+  describe('Manuscript Reset / Clear Text', () => {
+    it('resets manuscript and clears lines and outbox count on clearText()', async () => {
+      const store = useTypingStore.getState();
+      store.insertChar('A');
+      store.handleEnter();
+      store.insertChar('B');
+
+      let state = useTypingStore.getState();
+      expect(state.currentPageLines[0].cells).toHaveLength(1);
+
+      await store.clearText();
+
+      state = useTypingStore.getState();
+      expect(state.currentPageLines).toHaveLength(1);
+      expect(state.currentPageLines[0].cells).toHaveLength(0);
+      expect(state.historicalPages).toHaveLength(0);
+      expect(state.currentPageNumber).toBe(1);
+      expect(state.activeLineIndex).toBe(0);
+      expect(state.activeColIndex).toBe(0);
+      expect(state.manifest.outboxCount).toBe(0);
+    });
+  });
 });
+

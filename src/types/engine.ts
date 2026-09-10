@@ -32,5 +32,6 @@ export interface TypingEngineActions {
   setPageSize: (size: ManuscriptManifest['pageSize']) => void;
   setPageMode: (mode: PageMode) => void;
   setManifest: (manifest: Partial<ManuscriptManifest>) => void;
+  clearText: () => void;
   resetEngine: (newManifest?: Partial<ManuscriptManifest>) => void;
 }

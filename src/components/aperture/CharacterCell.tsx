@@ -7,7 +7,7 @@ interface CharacterCellProps {
 
 export const CharacterCell = React.memo(function CharacterCell({ cell }: CharacterCellProps) {
   const isHighlighted = cell.state === 'highlighted';
-  const isStruck = cell.state === 'struck';
+  const isStruck = cell.state === 'struck' || Boolean(cell.isStruck);
 
   // For soft-padding or regular space, render non-breaking space so layout does not collapse
   const displayChar = cell.char === ' ' || cell.isSoftPadding ? '\u00A0' : cell.char;

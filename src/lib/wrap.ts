@@ -41,21 +41,27 @@ export function wrapLine(
   }
 
   // Look backward on currentLine to find the start of the word or segment that is overflowing.
-  // Respects standard ASCII hyphens '-' as break points (leaving the hyphen on current line),
-  // while en-dashes ('–' / \u2013) and em-dashes do not break.
+  // Respects standard ASCII hyphens '-' as break points (leaving the hyphen on current line).
+  // Struck-out text must never softwrap to the next line and acts as a boundary.
   let breakIndex = -1;
   for (let i = currentCells.length - 1; i >= 0; i--) {
-    const c = currentCells[i].char;
-    if (!currentCells[i].isSoftPadding) {
-      if (c === ' ' || c === '-') {
-        breakIndex = i;
-        break;
-      }
+    const cell = currentCells[i];
+    if (cell.isSoftPadding) continue;
+
+    // Struck-out cell is an unmovable boundary on the current line
+    if (cell.state === 'struck' || cell.isStruck) {
+      breakIndex = i;
+      break;
+    }
+
+    if (cell.char === ' ' || cell.char === '-') {
+      breakIndex = i;
+      break;
     }
   }
 
-  // If no space or hyphen exists on the current line, the word spans the entire line (>= 70 chars).
-  // Under mechanical constraints, it must break at the 70-column boundary.
+  // If no space, hyphen, or struck cell exists on the current line, the word spans the entire line.
+  // Under mechanical constraints, it breaks at the 70-column boundary.
   if (breakIndex === -1) {
     const nextCell: CharacterCell = {
       id: createCellId(pageNumber, nextLineIndex, 0),
@@ -75,9 +81,12 @@ export function wrapLine(
     };
   }
 
-  // The wrapped segment starts at breakIndex + 1 (keeping the hyphen or space on current line)
+  // The wrapped segment starts at breakIndex + 1 (keeping the hyphen, space, or struck text on current line).
+  // Strictly filter out any struck-out cells so they never soft-wrap.
   const wordStartIndex = breakIndex + 1;
-  const wordCells = currentCells.slice(wordStartIndex);
+  const wordCells = currentCells
+    .slice(wordStartIndex)
+    .filter((cell) => cell.state !== 'struck' && !cell.isStruck);
 
   // Pad the vacated trailing cells of currentLine with isSoftPadding: true
   const updatedCells: CharacterCell[] = [
@@ -95,7 +104,7 @@ export function wrapLine(
     });
   }
 
-  // Move the carried word cells to nextLine, starting at colIndex 0
+  // Move the carried non-struck word cells to nextLine, starting at colIndex 0
   const nextLineCells: CharacterCell[] = wordCells.map((cell, idx) => ({
     ...cell,
     id: createCellId(pageNumber, nextLineIndex, idx),

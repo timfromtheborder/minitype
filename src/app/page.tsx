@@ -162,6 +162,7 @@ export default function Home() {
             printedPagesCount: engine.manifest.outboxCount,
           });
         }}
+        onClearText={engine.clearText}
       />
     </main>
   );
