@@ -31,6 +31,12 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
 }) => {
   const [isMuted, setIsMuted] = React.useState(typewriterAudio.getMuted());
 
+  React.useEffect(() => {
+    if (isOpen) {
+      setIsMuted(typewriterAudio.getMuted());
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleToggleMute = () => {

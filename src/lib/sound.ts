@@ -2,7 +2,22 @@
 
 class TypewriterAudio {
   private ctx: AudioContext | null = null;
-  private isMuted: boolean = false;
+  private isMuted: boolean = true; // Turned off by default
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('minitype_sound_muted');
+        if (saved !== null) {
+          this.isMuted = saved === 'true';
+        } else {
+          this.isMuted = true;
+        }
+      } catch {
+        this.isMuted = true;
+      }
+    }
+  }
 
   private getContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
@@ -20,6 +35,11 @@ class TypewriterAudio {
 
   public setMuted(muted: boolean) {
     this.isMuted = muted;
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('minitype_sound_muted', String(muted));
+      } catch {}
+    }
   }
 
   public getMuted(): boolean {
@@ -27,12 +47,12 @@ class TypewriterAudio {
   }
 
   public toggleMute(): boolean {
-    this.isMuted = !this.isMuted;
+    this.setMuted(!this.isMuted);
     return this.isMuted;
   }
 
   /**
-   * Synthesizes a mechanical typewriter key click.
+   * Synthesizes a mechanical typewriter key click (hammer striking platen).
    */
   public playKeyClick() {
     if (this.isMuted) return;
@@ -43,7 +63,7 @@ class TypewriterAudio {
       const t = ctx.currentTime;
 
       // Noise burst for mechanical strike
-      const bufferSize = ctx.sampleRate * 0.03; // 30ms
+      const bufferSize = Math.floor(ctx.sampleRate * 0.03); // 30ms
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const data = buffer.getChannelData(0);
       for (let i = 0; i < bufferSize; i++) {
@@ -56,7 +76,7 @@ class TypewriterAudio {
       // Resonant bandpass filter
       const filter = ctx.createBiquadFilter();
       filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(1400 + Math.random() * 400, t);
+      filter.frequency.setValueAtTime(1400 + Math.random() * 300, t);
       filter.Q.setValueAtTime(3.5, t);
 
       const gain = ctx.createGain();
@@ -68,9 +88,7 @@ class TypewriterAudio {
       gain.connect(ctx.destination);
 
       noise.start(t);
-    } catch {
-      // Audio context might be restricted before interaction
-    }
+    } catch {}
   }
 
   /**
@@ -102,34 +120,63 @@ class TypewriterAudio {
   }
 
   /**
-   * Synthesizes a mechanical bell/chime on Enter (carriage return).
+   * Synthesizes a mechanical pawl/escapement click for Backspace.
+   * Lighter, sharper, and more of a distinct latch click than the main key strike.
    */
-  public playBell() {
+  public playBackspace() {
     if (this.isMuted) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
     try {
       const t = ctx.currentTime;
-      const osc = ctx.createOscillator();
+
+      // Sharp transient click
+      const bufferSize = Math.floor(ctx.sampleRate * 0.018); // 18ms
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.15));
+      }
+
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(3200, t);
+      filter.Q.setValueAtTime(4.0, t);
+
       const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.3, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.018);
 
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(2200, t);
-
-      gain.gain.setValueAtTime(0.2, t);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
-
-      osc.connect(gain);
+      noise.connect(filter);
+      filter.connect(gain);
       gain.connect(ctx.destination);
 
+      noise.start(t);
+
+      // Subtle metallic body pitch notch
+      const osc = ctx.createOscillator();
+      const oscGain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(920, t);
+      osc.frequency.exponentialRampToValueAtTime(540, t + 0.02);
+
+      oscGain.gain.setValueAtTime(0.12, t);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.02);
+
+      osc.connect(oscGain);
+      oscGain.connect(ctx.destination);
       osc.start(t);
-      osc.stop(t + 0.6);
+      osc.stop(t + 0.02);
     } catch {}
   }
 
   /**
-   * Synthesizes a backspace / strikeout metal clack.
+   * Synthesizes a 'paper rip' shh sound for strikeout.
+   * Textured frictional noise burst simulating ribbon scraping or paper tearing.
    */
   public playStrike() {
     if (this.isMuted) return;
@@ -138,22 +185,136 @@ class TypewriterAudio {
 
     try {
       const t = ctx.currentTime;
-      const osc = ctx.createOscillator();
+      const duration = 0.095; // 95ms
+      const bufferSize = Math.floor(ctx.sampleRate * duration);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+
+      // Textured frictional rip with fibrous roughness
+      for (let i = 0; i < bufferSize; i++) {
+        const progress = i / bufferSize;
+        // Envelope: quick 10ms rise, textured decay
+        const env = progress < 0.1 ? progress / 0.1 : Math.exp(-(progress - 0.1) * 4);
+        const texture = 1 + 0.3 * Math.sin(progress * 80 * Math.PI);
+        data[i] = (Math.random() * 2 - 1) * env * texture;
+      }
+
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      // Bandpass sweeping downward to create the "shhh" friction texture
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(2400, t);
+      filter.frequency.exponentialRampToValueAtTime(1200, t + duration);
+      filter.Q.setValueAtTime(1.8, t);
+
       const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.32, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
 
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(320, t);
-      osc.frequency.exponentialRampToValueAtTime(120, t + 0.04);
-
-      gain.gain.setValueAtTime(0.25, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
-
-      osc.connect(gain);
+      noise.connect(filter);
+      filter.connect(gain);
       gain.connect(ctx.destination);
 
-      osc.start(t);
-      osc.stop(t + 0.04);
+      noise.start(t);
     } catch {}
+  }
+
+  /**
+   * Synthesizes a mechanical "zip-clunk" for Carriage Return (Enter).
+   * - Zip: rapid ratcheting tooth clicks as carriage slides across rails
+   * - Clunk: solid mechanical margin stop thud at the end
+   */
+  public playCarriageReturn() {
+    if (this.isMuted) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    try {
+      const t = ctx.currentTime;
+
+      // 1. The "Zip" (rapid ratchet wheel sliding from t to t + 0.11s)
+      const zipDuration = 0.11;
+      const zipBuffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * zipDuration), ctx.sampleRate);
+      const zipData = zipBuffer.getChannelData(0);
+      const zipSize = zipData.length;
+
+      // 7 rapid tooth clicks in the burst
+      for (let i = 0; i < zipSize; i++) {
+        const p = i / zipSize;
+        // Tooth repetition every ~15ms
+        const tooth = Math.sin(p * Math.PI * 14);
+        const toothEnv = tooth > 0.6 ? 1 : 0.05;
+        zipData[i] = (Math.random() * 2 - 1) * toothEnv * (0.5 + 0.5 * p);
+      }
+
+      const zipSource = ctx.createBufferSource();
+      zipSource.buffer = zipBuffer;
+
+      const zipFilter = ctx.createBiquadFilter();
+      zipFilter.type = 'bandpass';
+      zipFilter.frequency.setValueAtTime(1800, t);
+      zipFilter.frequency.exponentialRampToValueAtTime(2800, t + zipDuration);
+      zipFilter.Q.setValueAtTime(2.5, t);
+
+      const zipGain = ctx.createGain();
+      zipGain.gain.setValueAtTime(0.24, t);
+      zipGain.gain.exponentialRampToValueAtTime(0.005, t + zipDuration);
+
+      zipSource.connect(zipFilter);
+      zipFilter.connect(zipGain);
+      zipGain.connect(ctx.destination);
+      zipSource.start(t);
+
+      // 2. The "Clunk" (solid margin stop impact at t + 0.11s)
+      const clunkTime = t + 0.105;
+
+      // Low platen thud
+      const thudOsc = ctx.createOscillator();
+      const thudGain = ctx.createGain();
+      thudOsc.type = 'triangle';
+      thudOsc.frequency.setValueAtTime(130, clunkTime);
+      thudOsc.frequency.exponentialRampToValueAtTime(42, clunkTime + 0.07);
+
+      thudGain.gain.setValueAtTime(0.48, clunkTime);
+      thudGain.gain.exponentialRampToValueAtTime(0.001, clunkTime + 0.07);
+
+      thudOsc.connect(thudGain);
+      thudGain.connect(ctx.destination);
+      thudOsc.start(clunkTime);
+      thudOsc.stop(clunkTime + 0.07);
+
+      // Metallic stop latch impact
+      const metalBuffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.035), ctx.sampleRate);
+      const metalData = metalBuffer.getChannelData(0);
+      for (let i = 0; i < metalData.length; i++) {
+        metalData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (metalData.length * 0.2));
+      }
+      const metalSource = ctx.createBufferSource();
+      metalSource.buffer = metalBuffer;
+
+      const metalFilter = ctx.createBiquadFilter();
+      metalFilter.type = 'bandpass';
+      metalFilter.frequency.setValueAtTime(1100, clunkTime);
+      metalFilter.Q.setValueAtTime(3.0, clunkTime);
+
+      const metalGain = ctx.createGain();
+      metalGain.gain.setValueAtTime(0.35, clunkTime);
+      metalGain.gain.exponentialRampToValueAtTime(0.001, clunkTime + 0.035);
+
+      metalSource.connect(metalFilter);
+      metalFilter.connect(metalGain);
+      metalGain.connect(ctx.destination);
+      metalSource.start(clunkTime);
+    } catch {}
+  }
+
+  /**
+   * Mechanical bell/chime (kept available for vintage chime variant).
+   */
+  public playBell() {
+    this.playCarriageReturn();
   }
 
   /**

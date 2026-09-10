@@ -52,7 +52,7 @@ export function useTypingEngine() {
       // 4. Backspace Trigger
       if (e.key === 'Backspace') {
         e.preventDefault();
-        typewriterAudio.playStrike();
+        typewriterAudio.playBackspace();
         store.handleBackspace();
         return;
       }
@@ -63,7 +63,7 @@ export function useTypingEngine() {
         if (store.isHighlighting) {
           typewriterAudio.playStrike();
         } else {
-          typewriterAudio.playBell();
+          typewriterAudio.playCarriageReturn();
         }
         store.handleEnter();
         return;

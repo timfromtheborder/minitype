@@ -647,6 +647,22 @@ describe('Typing Engine & State Machine Invariants', () => {
       await store.rehydrate();
       expect(useTypingStore.getState().manifest.mode).toBe('temp');
     });
+
+    it('defaults audio to muted and persists sound toggle to localStorage', async () => {
+      const { typewriterAudio } = await import('@/lib/sound');
+      typewriterAudio.setMuted(true);
+      expect(typewriterAudio.getMuted()).toBe(true);
+      expect(localStorage.getItem('minitype_sound_muted')).toBe('true');
+
+      const toggled = typewriterAudio.toggleMute();
+      expect(toggled).toBe(false);
+      expect(typewriterAudio.getMuted()).toBe(false);
+      expect(localStorage.getItem('minitype_sound_muted')).toBe('false');
+
+      // Reset back to muted default
+      typewriterAudio.setMuted(true);
+      expect(typewriterAudio.getMuted()).toBe(true);
+    });
   });
 });
 
