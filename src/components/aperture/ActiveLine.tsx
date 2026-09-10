@@ -20,7 +20,7 @@ export const ActiveLine: React.FC<ActiveLineProps> = ({
   return (
     <div
       data-line-index={lineIndex}
-      className="flex flex-row items-center font-mono leading-[1.1] h-[1.25rem] whitespace-pre select-none relative w-[71ch]"
+      className="flex flex-row items-center font-mono leading-[1.1] h-[1.25rem] whitespace-pre select-none relative w-full"
     >
       {line.cells.map((cell) => (
         <CharacterCell key={cell.id} cell={cell} />

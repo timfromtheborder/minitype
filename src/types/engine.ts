@@ -20,6 +20,7 @@ export interface TypingEngineState {
   highlightHead: HighlightTarget | null; // Tracks backward cursor during highlight mode
   isLocked: boolean;
   lockReason: 'page_exhaustion' | null;
+  activeColumnLimit: number; // 70 for desktop/landscape, 35 for mobile portrait
 }
 
 export interface TypingEngineActions {
@@ -32,6 +33,7 @@ export interface TypingEngineActions {
   setPageSize: (size: ManuscriptManifest['pageSize']) => void;
   setPageMode: (mode: PageMode) => void;
   setManifest: (manifest: Partial<ManuscriptManifest>) => void;
+  setActiveColumnLimit: (limit: number) => void;
   clearText: () => void;
   resetEngine: (newManifest?: Partial<ManuscriptManifest>) => void;
   rehydrate: () => Promise<void>;

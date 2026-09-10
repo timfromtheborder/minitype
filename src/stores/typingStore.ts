@@ -99,7 +99,10 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
   highlightHead: null,
   isLocked: false,
   lockReason: null,
+  activeColumnLimit: 70,
   pendingWrappedCells: null,
+
+  setActiveColumnLimit: (limit: number) => set({ activeColumnLimit: limit }),
 
   setManifest: (newManifest) => {
     set((state) => {
@@ -203,11 +206,12 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
     const currentLine = lines[activeLineIndex] || createEmptyLine(state.currentPageNumber, activeLineIndex);
     const lineCells = [...currentLine.cells];
     const colCount = lineCells.length;
+    const columnLimit = state.activeColumnLimit ?? MAX_COLUMNS;
 
     // Soft word wrap boundary check:
-    // Exactly 70 character cells fit in a line (columns 0 to 69).
-    // Typing the 71st character (colCount >= MAX_COLUMNS) triggers soft word wrap.
-    const needsWrap = colCount >= MAX_COLUMNS;
+    // Exactly columnLimit character cells fit in a line (columns 0 to columnLimit - 1).
+    // Typing character at colCount >= columnLimit triggers soft word wrap.
+    const needsWrap = colCount >= columnLimit;
 
     if (!needsWrap) {
       // Append directly to current line
@@ -252,7 +256,8 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
       char,
       state.currentPageNumber,
       activeLineIndex + 1,
-      'soft'
+      'soft',
+      columnLimit
     );
 
     lines[activeLineIndex] = wrapResult.updatedCurrentLine;

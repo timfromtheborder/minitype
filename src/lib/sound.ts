@@ -16,6 +16,23 @@ class TypewriterAudio {
       } catch {
         this.isMuted = true;
       }
+
+      // iOS Safari Web Audio user gesture unlock
+      const unlock = () => {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+          if (AudioCtx) {
+            this.ctx = new AudioCtx();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+      };
+
+      window.addEventListener('touchstart', unlock, { once: true, passive: true });
+      window.addEventListener('pointerdown', unlock, { once: true, passive: true });
+      window.addEventListener('keydown', unlock, { once: true });
     }
   }
 

@@ -906,5 +906,62 @@ describe('Typing Engine & State Machine Invariants', () => {
       spy.mockRestore();
     });
   });
+
+  describe('Mobile Portrait Adaptive 35-Column Mode', () => {
+    it('wraps at 35 columns when activeColumnLimit is set to 35', () => {
+      const store = useTypingStore.getState();
+      store.setActiveColumnLimit(35);
+      expect(useTypingStore.getState().activeColumnLimit).toBe(35);
+
+      // Type 35 characters
+      for (let i = 0; i < 35; i++) {
+        store.insertChar('A');
+      }
+
+      let state = useTypingStore.getState();
+      expect(state.currentPageLines[0].cells).toHaveLength(35);
+      expect(state.currentPageLines).toHaveLength(1);
+
+      // 36th character triggers wrap to line 1 at column 0
+      store.insertChar('B');
+      state = useTypingStore.getState();
+      expect(state.currentPageLines).toHaveLength(2);
+      expect(state.activeLineIndex).toBe(1);
+      expect(state.activeColIndex).toBe(1);
+      expect(state.currentPageLines[1].cells[0].char).toBe('B');
+
+      // Reset back to 70
+      store.setActiveColumnLimit(70);
+    });
+
+    it('soft-wraps words at 35 columns and seamlessly unwraps them in sanitizer', () => {
+      const store = useTypingStore.getState();
+      store.setActiveColumnLimit(35);
+
+      // Type "The quick brown fox jumps over the lazy" (overflows 35 chars)
+      const text = 'The quick brown fox jumps over the lazy dog';
+      for (const char of text) {
+        store.insertChar(char);
+      }
+
+      const state = useTypingStore.getState();
+      expect(state.currentPageLines.length).toBeGreaterThan(1);
+      // Line 0 was padded to 35 columns
+      expect(state.currentPageLines[0].cells).toHaveLength(35);
+
+      // When sanitized/compiled, soft wraps are joined seamlessly without artificial newlines
+      const compiled = sanitizeManuscript([{
+        pageNumber: 1,
+        lines: state.currentPageLines,
+        completedAt: null,
+      }]);
+
+      expect(compiled.trim()).toBe('The quick brown fox jumps over the lazy dog');
+
+      // Reset back to 70
+      store.setActiveColumnLimit(70);
+    });
+  });
 });
+
 

@@ -55,7 +55,7 @@ export default function Home() {
     <main
       suppressHydrationWarning
       data-theme={engine.manifest.colorScheme}
-      className="relative w-full h-screen overflow-hidden flex flex-col justify-between p-6 transition-colors duration-300 bg-background text-foreground font-mono"
+      className="relative w-full h-[100dvh] min-h-[100dvh] overflow-hidden flex flex-col justify-between p-3 sm:p-6 transition-colors duration-300 bg-background text-foreground font-mono"
     >
       {/* 1. TOP STAGE: Visual Wireframe Isometric Paper Outbox Tray */}
       <header className="flex items-center justify-center w-full pt-4 select-none">
@@ -63,22 +63,22 @@ export default function Home() {
       </header>
 
       {/* 2. CENTER STAGE: Settings Gear + Monospace Aperture */}
-      <section className="flex items-center justify-center w-full gap-4 my-auto">
+      <section className="flex items-center justify-center w-full gap-3 sm:gap-4 my-auto">
         {/* Settings Gear Button */}
         <button
           type="button"
           onClick={() => setIsSettingsOpen(true)}
           title="Settings (Aperture, Palette, Page Size)"
-          className={`p-3 rounded-full border shadow-xs transition-all cursor-pointer hover:rotate-45 active:scale-95 ${
+          className={`p-2.5 sm:p-3 rounded-full border shadow-xs transition-all cursor-pointer hover:rotate-45 active:scale-95 shrink-0 ${
             isSpotlight
               ? 'border-border/80 bg-muted/70 text-muted-foreground hover:bg-card hover:text-card-foreground'
               : 'border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground'
           }`}
         >
-          <Settings className="w-5 h-5" />
+          <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
 
-        {/* 70-Character Monospace Typing Aperture */}
+        {/* Monospace Typing Aperture */}
         <ApertureFrame
           lines={engine.currentPageLines}
           activeLineIndex={engine.activeLineIndex}
@@ -86,6 +86,7 @@ export default function Home() {
           height={engine.manifest.activeApertureHeight}
           isLocked={engine.isLocked}
           isHighlighting={engine.isHighlighting}
+          isPaused={isPrintOpen || isSettingsOpen}
         />
       </section>
 
@@ -95,7 +96,7 @@ export default function Home() {
         <button
           type="button"
           onClick={() => setIsPrintOpen(true)}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg border font-mono transition-all cursor-pointer shadow-xs active:scale-95 z-10 ${
+          className={`flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg border font-mono transition-all cursor-pointer shadow-xs active:scale-95 z-10 text-[11px] sm:text-xs ${
             isSpotlight
               ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground'
               : 'border-border/70 bg-card hover:bg-muted text-card-foreground'
@@ -106,7 +107,7 @@ export default function Home() {
         </button>
 
         {/* Live Drafting Metadata (Centered) */}
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3.5 text-muted-foreground text-[11px] font-mono pointer-events-none">
+        <div className="hidden sm:flex absolute left-1/2 -translate-x-1/2 items-center gap-3.5 text-muted-foreground text-[11px] font-mono pointer-events-none">
           <span>
             {engine.manifest.pageMode === 'paragraph'
               ? `Paragraph ${engine.currentPageNumber} · Line ${engine.activeLineIndex + 1}`
@@ -115,7 +116,7 @@ export default function Home() {
               : `Page ${engine.currentPageNumber} · Line ${engine.activeLineIndex + 1}/${engine.manifest.pageSize || 54}`}
           </span>
           <span>·</span>
-          <span>Col {Math.min(engine.activeColIndex + 1, 70)}/70</span>
+          <span>Col {Math.min(engine.activeColIndex + 1, engine.activeColumnLimit ?? 70)}/{engine.activeColumnLimit ?? 70}</span>
           <span>·</span>
           <span className="text-foreground/90 font-medium">{wordCount} words</span>
           <span>·</span>

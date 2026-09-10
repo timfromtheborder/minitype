@@ -1,6 +1,7 @@
 import { CharacterCell, LineRecord, WrapMode } from '@/types';
 
 export const MAX_COLUMNS = 70;
+export const PORTRAIT_COLUMNS = 35;
 
 export interface WrapResult {
   updatedCurrentLine: LineRecord;
@@ -16,14 +17,15 @@ export function createCellId(pageNumber: number, lineIndex: number, colIndex: nu
 
 /**
  * Wraps an overflowing line based on WrapMode ('hard' | 'soft').
- * Invoked when typing at column 69 or when a word exceeds column bounds.
+ * Invoked when typing at column boundary or when a word exceeds column bounds.
  */
 export function wrapLine(
   currentLine: LineRecord,
   incomingChar: string,
   pageNumber: number,
   nextLineIndex: number,
-  _wrapMode: WrapMode = 'soft'
+  _wrapMode: WrapMode = 'soft',
+  maxColumns: number = MAX_COLUMNS
 ): WrapResult {
   const currentCells = [...currentLine.cells];
 
@@ -93,7 +95,7 @@ export function wrapLine(
     ...currentCells.slice(0, wordStartIndex),
   ];
 
-  for (let i = wordStartIndex; i < MAX_COLUMNS; i++) {
+  for (let i = wordStartIndex; i < maxColumns; i++) {
     updatedCells.push({
       id: createCellId(pageNumber, currentLine.lineIndex, i),
       char: ' ',
