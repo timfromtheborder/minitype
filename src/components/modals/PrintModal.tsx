@@ -24,7 +24,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
   const [sanitizedFullText, setSanitizedFullText] = useState<string>('');
   const [isConfirmingNewProject, setIsConfirmingNewProject] = useState<boolean>(false);
 
-  // Sync title when modal opens or manifest updates
+  // Sync title and compile manuscript when modal opens
   useEffect(() => {
     if (isOpen) {
       setTitle(manifest.title || 'Untitled Manuscript');
@@ -34,11 +34,8 @@ export const PrintModal: React.FC<PrintModalProps> = ({
         doubleSpaceLinebreaks: manifest.doubleSpaceLinebreaks,
       });
       setSanitizedFullText(fullClean);
-      if (onPrintedComplete) {
-        onPrintedComplete(fullClean.length);
-      }
     }
-  }, [isOpen, manifest.title, manifest.doubleSpaceLinebreaks, pages, onPrintedComplete]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -51,10 +48,16 @@ export const PrintModal: React.FC<PrintModalProps> = ({
     link.download = `${safeTitle}.txt`;
     link.click();
     URL.revokeObjectURL(url);
+    if (onPrintedComplete) {
+      onPrintedComplete(sanitizedFullText.length);
+    }
   };
 
   const handleBrowserPrint = () => {
     window.print();
+    if (onPrintedComplete) {
+      onPrintedComplete(sanitizedFullText.length);
+    }
   };
 
   const handleNewProject = async () => {

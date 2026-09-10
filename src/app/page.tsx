@@ -49,9 +49,21 @@ export default function Home() {
     [engine.historicalPages, engine.currentPageNumber, engine.currentPageLines]
   );
 
+  const handlePrintedComplete = React.useCallback(
+    (printedCount: number) => {
+      engine.setManifest({
+        lastPrintedCharIndex: printedCount,
+        printedPagesCount: engine.manifest.outboxCount,
+      });
+    },
+    [engine.setManifest, engine.manifest.outboxCount]
+  );
+
   const isSpotlight = engine.manifest.colorScheme === 'spotlight';
   const isPortrait = (engine.activeColumnLimit ?? 70) === 35;
-  const boxWidthClass = isPortrait ? 'w-[36ch]' : 'w-[71ch]';
+  const boxWidthClass = isPortrait
+    ? 'w-[calc(36ch+1.5rem)] max-w-[calc(100vw-1.5rem)]'
+    : 'w-[calc(71ch+4rem)] max-w-[calc(100vw-1.5rem)]';
 
   return (
     <main
@@ -181,12 +193,7 @@ export default function Home() {
         onClose={() => setIsPrintOpen(false)}
         pages={manuscriptPages}
         manifest={engine.manifest}
-        onPrintedComplete={(printedCount) => {
-          engine.setManifest({
-            lastPrintedCharIndex: printedCount,
-            printedPagesCount: engine.manifest.outboxCount,
-          });
-        }}
+        onPrintedComplete={handlePrintedComplete}
         onClearText={engine.clearText}
       />
     </main>
