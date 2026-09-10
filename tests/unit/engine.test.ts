@@ -1,0 +1,326 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { useTypingStore, createEmptyLine } from '@/stores/typingStore';
+import { sanitizeManuscript, calculatePrintDelayMs } from '@/lib/sanitize';
+import { wrapLine, MAX_COLUMNS } from '@/lib/wrap';
+
+describe('Typing Engine & State Machine Invariants', () => {
+  beforeEach(() => {
+    useTypingStore.getState().resetEngine({
+      mode: 'temp',
+      inboxCount: 2,
+      outboxCount: 0,
+      activeApertureHeight: 3,
+      wrapMode: 'soft',
+      pageSize: 54,
+    });
+  });
+
+  describe('Character Insertion & Strict Column Bounds', () => {
+    it('appends characters to the active line up to 70 columns', () => {
+      const store = useTypingStore.getState();
+      for (let i = 0; i < 10; i++) {
+        store.insertChar('A');
+      }
+
+      const state = useTypingStore.getState();
+      expect(state.currentPageLines[0].cells).toHaveLength(10);
+      expect(state.activeColIndex).toBe(10);
+      expect(state.currentPageLines[0].cells.map((c) => c.char).join('')).toBe('AAAAAAAAAA');
+    });
+
+    it('handles Hard Break by wrapping at column 70 without mid-word hyphens', () => {
+      useTypingStore.getState().setWrapMode('hard');
+      const store = useTypingStore.getState();
+
+      // Fill first line with 70 characters
+      for (let i = 0; i < 70; i++) {
+        store.insertChar('X');
+      }
+
+      let state = useTypingStore.getState();
+      expect(state.currentPageLines[0].cells).toHaveLength(70);
+      expect(state.currentPageLines).toHaveLength(1);
+
+      // 71st character should be placed at column 0 of line 1
+      store.insertChar('Y');
+      state = useTypingStore.getState();
+      expect(state.currentPageLines).toHaveLength(2);
+      expect(state.activeLineIndex).toBe(1);
+      expect(state.activeColIndex).toBe(1);
+      expect(state.currentPageLines[1].cells[0].char).toBe('Y');
+    });
+
+    it('handles Soft Word Wrap carrying overflowing word to next line and padding previous line', () => {
+      useTypingStore.getState().setWrapMode('soft');
+      const store = useTypingStore.getState();
+
+      // Type 65 characters of filler followed by a space (66 chars total)
+      for (let i = 0; i < 65; i++) {
+        store.insertChar('A');
+      }
+      store.insertChar(' '); // col 65
+
+      // Type word 'HELLO' starting at col 66: 'H'(66), 'E'(67), 'L'(68), 'L'(69 - triggers wrap)
+      store.insertChar('H');
+      store.insertChar('E');
+      store.insertChar('L');
+      store.insertChar('L'); // boundary hit!
+
+      const state = useTypingStore.getState();
+      expect(state.currentPageLines).toHaveLength(2);
+      expect(state.activeLineIndex).toBe(1);
+
+      // Line 0 should have padded trailing cells
+      const line0 = state.currentPageLines[0];
+      expect(line0.cells).toHaveLength(MAX_COLUMNS);
+      expect(line0.cells[66].isSoftPadding).toBe(true);
+
+      // Line 1 should start with 'HELL'
+      const line1 = state.currentPageLines[1];
+      expect(line1.cells.map((c) => c.char).join('')).toBe('HELL');
+    });
+  });
+
+  describe('Backspace & Highlight Mode', () => {
+    it('enters Highlight Mode on Backspace without erasing characters', () => {
+      const store = useTypingStore.getState();
+      store.insertChar('H');
+      store.insertChar('I');
+
+      store.handleBackspace();
+
+      const state = useTypingStore.getState();
+      expect(state.isHighlighting).toBe(true);
+      expect(state.currentPageLines[0].cells).toHaveLength(2);
+      expect(state.currentPageLines[0].cells[1].state).toBe('highlighted');
+      expect(state.currentPageLines[0].cells[0].state).toBe('standard');
+    });
+
+    it('expands highlight backwards on sequential Backspaces', () => {
+      const store = useTypingStore.getState();
+      store.insertChar('C');
+      store.insertChar('A');
+      store.insertChar('T');
+
+      store.handleBackspace(); // highlights 'T'
+      store.handleBackspace(); // highlights 'A'
+      store.handleBackspace(); // highlights 'C'
+
+      const state = useTypingStore.getState();
+      expect(state.isHighlighting).toBe(true);
+      expect(state.currentPageLines[0].cells[2].state).toBe('highlighted');
+      expect(state.currentPageLines[0].cells[1].state).toBe('highlighted');
+      expect(state.currentPageLines[0].cells[0].state).toBe('highlighted');
+    });
+
+    it('clamps Backspace highlighting to the visible frame ceiling', () => {
+      // Set aperture height to 2 lines
+      useTypingStore.getState().setApertureHeight(2);
+      const store = useTypingStore.getState();
+
+      // Create 3 lines: line 0, line 1, line 2
+      // Visible frame for height=2 on line 2 is: line 1 and line 2 (minVisibleLine = 2 - 2 + 1 = 1)
+      store.insertChar('A');
+      store.handleEnter(); // advances to line 1
+      store.insertChar('B');
+      store.handleEnter(); // advances to line 2
+      store.insertChar('C');
+
+      // Now on line 2 with char 'C'
+      store.handleBackspace(); // highlights 'C' on line 2
+      store.handleBackspace(); // navigates into line 1, highlights 'B'
+      store.handleBackspace(); // tries to go to line 0 - should be DROPPED due to visible ceiling
+
+      const state = useTypingStore.getState();
+      expect(state.currentPageLines[2].cells[0].state).toBe('highlighted');
+      expect(state.currentPageLines[1].cells[0].state).toBe('highlighted');
+      // Line 0 is scrolled off-screen: MUST remain 'standard'!
+      expect(state.currentPageLines[0].cells[0].state).toBe('standard');
+    });
+
+    it('skips soft-wrap padding cells when backspacing across line boundaries', () => {
+      useTypingStore.getState().setWrapMode('soft');
+      const store = useTypingStore.getState();
+
+      // Write text that soft-wraps
+      for (let i = 0; i < 65; i++) {
+        store.insertChar('A');
+      }
+      store.insertChar(' '); // col 65
+      store.insertChar('W'); // 66
+      store.insertChar('O'); // 67
+      store.insertChar('R'); // 68
+      store.insertChar('D'); // 69 (wraps 'WORD' to line 1)
+
+      // Backspace 4 times on line 1: highlights 'D', 'R', 'O', 'W'
+      store.handleBackspace();
+      store.handleBackspace();
+      store.handleBackspace();
+      store.handleBackspace();
+
+      // 5th backspace should traverse into line 0, skipping the padding cells and highlighting space/A
+      store.handleBackspace();
+
+      const state = useTypingStore.getState();
+      const line0 = state.currentPageLines[0];
+      // Target should land on printable char (col 65 space), not padding
+      expect(state.highlightHead?.lineIndex).toBe(0);
+      expect(state.highlightHead?.colIndex).toBe(65);
+      expect(line0.cells[65].state).toBe('highlighted');
+    });
+  });
+
+  describe('Highlight Resolution', () => {
+    it('converts highlighted cells to struck when Enter is pressed with active highlight', () => {
+      const store = useTypingStore.getState();
+      store.insertChar('A');
+      store.insertChar('B');
+      store.insertChar('C');
+
+      store.handleBackspace(); // highlight 'C'
+      store.handleBackspace(); // highlight 'B'
+
+      store.handleEnter(); // resolve highlight
+
+      const state = useTypingStore.getState();
+      expect(state.isHighlighting).toBe(false);
+      expect(state.currentPageLines[0].cells[0].state).toBe('standard');
+      expect(state.currentPageLines[0].cells[1].state).toBe('struck');
+      expect(state.currentPageLines[0].cells[2].state).toBe('struck');
+      // Cursor should snap to end of active line without creating a new line
+      expect(state.currentPageLines).toHaveLength(1);
+      expect(state.activeColIndex).toBe(3);
+    });
+
+    it('aborts highlight and restores standard state when printable key is pressed', () => {
+      const store = useTypingStore.getState();
+      store.insertChar('H');
+      store.insertChar('I');
+
+      store.handleBackspace(); // highlight 'I'
+      expect(useTypingStore.getState().currentPageLines[0].cells[1].state).toBe('highlighted');
+
+      // Typing printable char aborts highlight
+      store.insertChar('!');
+
+      const state = useTypingStore.getState();
+      expect(state.isHighlighting).toBe(false);
+      expect(state.currentPageLines[0].cells[1].state).toBe('standard');
+      expect(state.currentPageLines[0].cells[2].char).toBe('!');
+      expect(state.currentPageLines[0].cells[2].state).toBe('standard');
+    });
+
+    it('cancels highlight and clamps cursor when aperture height is dynamically resized', () => {
+      useTypingStore.getState().setApertureHeight(5);
+      const store = useTypingStore.getState();
+      store.insertChar('X');
+      store.handleBackspace(); // enter highlight
+
+      expect(useTypingStore.getState().isHighlighting).toBe(true);
+
+      // User changes aperture height in settings
+      store.setApertureHeight(2);
+
+      const state = useTypingStore.getState();
+      expect(state.isHighlighting).toBe(false);
+      expect(state.currentPageLines[0].cells[0].state).toBe('standard');
+      expect(state.manifest.activeApertureHeight).toBe(2);
+    });
+  });
+
+  describe('Page Progression & Paper Feeder Mechanics', () => {
+    it('commits page and decrements inbox when page size limit is reached', () => {
+      useTypingStore.getState().setPageSize(30);
+      const store = useTypingStore.getState();
+
+      // Enter 29 lines
+      for (let i = 0; i < 29; i++) {
+        store.insertChar('L');
+        store.handleEnter();
+      }
+
+      // Now at line 29 (30th line). Committing this line reaches pageSize=30
+      store.insertChar('E');
+      store.handleEnter();
+
+      const state = useTypingStore.getState();
+      expect(state.historicalPages).toHaveLength(1);
+      expect(state.manifest.outboxCount).toBe(1);
+      expect(state.manifest.inboxCount).toBe(1); // was 2, decremented by 1
+      expect(state.currentPageNumber).toBe(2);
+      expect(state.activeLineIndex).toBe(0);
+      expect(state.isLocked).toBe(false);
+    });
+
+    it('locks aperture when page completes and inbox is empty', () => {
+      useTypingStore.getState().resetEngine({
+        pageSize: 30,
+        inboxCount: 0,
+        outboxCount: 0,
+      });
+      const store = useTypingStore.getState();
+
+      // Enter 29 lines
+      for (let i = 0; i < 29; i++) {
+        store.handleEnter();
+      }
+
+      // Line 29 (final line of page)
+      store.handleEnter();
+
+      let state = useTypingStore.getState();
+      expect(state.isLocked).toBe(true);
+      expect(state.lockReason).toBe('page_exhaustion');
+      expect(state.manifest.outboxCount).toBe(1);
+
+      // Typing while locked is ignored
+      store.insertChar('Z');
+      expect(useTypingStore.getState().currentPageLines[0].cells).toHaveLength(0);
+
+      // User clicks inbox to feed paper
+      store.feedPaper(1);
+      state = useTypingStore.getState();
+      expect(state.isLocked).toBe(false);
+      expect(state.lockReason).toBeNull();
+      expect(state.currentPageNumber).toBe(2);
+    });
+  });
+
+  describe('Content Sanitization & Print Speed Formula', () => {
+    it('strips struck-out cells in sanitization pipeline', () => {
+      const store = useTypingStore.getState();
+      store.insertChar('H');
+      store.insertChar('E');
+      store.insertChar('L');
+      store.insertChar('L');
+      store.insertChar('O');
+
+      // Strike out last two letters 'LO'
+      store.handleBackspace();
+      store.handleBackspace();
+      store.handleEnter();
+
+      const state = useTypingStore.getState();
+      const page = {
+        pageNumber: 1,
+        lines: state.currentPageLines,
+        completedAt: null,
+      };
+
+      const sanitized = sanitizeManuscript([page]);
+      expect(sanitized).toBe('HEL');
+    });
+
+    it('computes rubber-band print delay correctly', () => {
+      expect(calculatePrintDelayMs(0)).toBe(0);
+      // For 100 characters: 30 / (1 + log10(2)) = 30 / 1.30103 ~= 23ms
+      const delay100 = calculatePrintDelayMs(100);
+      expect(delay100).toBeGreaterThan(20);
+      expect(delay100).toBeLessThan(25);
+
+      // Large document: delay is clamped to minimum 2ms
+      const delayHuge = calculatePrintDelayMs(100000);
+      expect(delayHuge).toBeGreaterThanOrEqual(2);
+    });
+  });
+});
