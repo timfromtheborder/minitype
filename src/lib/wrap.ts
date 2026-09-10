@@ -123,13 +123,14 @@ export function wrapLine(
     isSoftPadding: false,
   });
 
+  const brokeOnSpace = breakIndex >= 0 && currentCells[breakIndex].char === ' ';
   return {
     updatedCurrentLine: {
       ...currentLine,
       cells: updatedCells,
       isCommitted: true,
       wrapType: 'soft',
-      explicitTrailingWhitespace: true,
+      explicitTrailingWhitespace: brokeOnSpace,
     },
     nextLineCells,
   };

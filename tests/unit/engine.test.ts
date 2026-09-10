@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useTypingStore, createEmptyLine } from '@/stores/typingStore';
+import { LineRecord } from '@/types';
 import { sanitizeManuscript, calculatePrintDelayMs } from '@/lib/sanitize';
 import { wrapLine, MAX_COLUMNS } from '@/lib/wrap';
 
@@ -741,9 +742,90 @@ describe('Typing Engine & State Machine Invariants', () => {
       const sanitized = sanitizeManuscript([
         { pageNumber: 1, lines: [line0, line1], completedAt: null },
       ]);
-
-      // Should be "I am testing", NOT "I am test ing"
       expect(sanitized).toBe('I am testing');
+    });
+
+    it('handles double strikeout scenarios cleanly without leaving artificial whitespace', () => {
+      // Case 1: Space before struck cell on line 0, rejoining with line 1 (e.g. "test " + struck("x"), next line "ing")
+      const case1_l0: LineRecord = {
+        id: 'c1-l0',
+        lineIndex: 0,
+        isCommitted: true,
+        wrapType: 'soft',
+        cells: [
+          ...Array.from('test').map((char, i) => ({ id: `c1-0-${i}`, char, state: 'standard' as const, colIndex: i, lineIndex: 0 })),
+          { id: 'c1-0-space', char: ' ', state: 'standard' as const, colIndex: 4, lineIndex: 0 },
+          { id: 'c1-0-s1', char: 'x', state: 'struck' as const, colIndex: 5, lineIndex: 0 },
+        ],
+      };
+      const case1_l1: LineRecord = {
+        id: 'c1-l1',
+        lineIndex: 1,
+        isCommitted: false,
+        cells: Array.from('ing').map((char, i) => ({ id: `c1-1-${i}`, char, state: 'standard' as const, colIndex: i, lineIndex: 1 })),
+      };
+      expect(sanitizeManuscript([{ pageNumber: 1, lines: [case1_l0, case1_l1], completedAt: null }])).toBe('testing');
+
+      // Case 2: Space between two struck cells on same line: "test" + struck("x") + " " + struck("y") + "ing"
+      const case2_l0: LineRecord = {
+        id: 'c2-l0',
+        lineIndex: 0,
+        isCommitted: false,
+        cells: [
+          ...Array.from('test').map((char, i) => ({ id: `c2-0-${i}`, char, state: 'standard' as const, colIndex: i, lineIndex: 0 })),
+          { id: 'c2-0-s1', char: 'x', state: 'struck' as const, colIndex: 4, lineIndex: 0 },
+          { id: 'c2-0-space', char: ' ', state: 'standard' as const, colIndex: 5, lineIndex: 0 },
+          { id: 'c2-0-s2', char: 'y', state: 'struck' as const, colIndex: 6, lineIndex: 0 },
+          ...Array.from('ing').map((char, i) => ({ id: `c2-0-${i}`, char, state: 'standard' as const, colIndex: 7 + i, lineIndex: 0 })),
+        ],
+      };
+      expect(sanitizeManuscript([{ pageNumber: 1, lines: [case2_l0], completedAt: null }])).toBe('testing');
+
+      // Case 3: Space after struck cell at line start: line 0: "test" + struck("x"), line 1: struck("y") + " " + "ing"
+      const case3_l0: LineRecord = {
+        id: 'c3-l0',
+        lineIndex: 0,
+        isCommitted: true,
+        wrapType: 'soft',
+        cells: [
+          ...Array.from('test').map((char, i) => ({ id: `c3-0-${i}`, char, state: 'standard' as const, colIndex: i, lineIndex: 0 })),
+          { id: 'c3-0-s1', char: 'x', state: 'struck' as const, colIndex: 4, lineIndex: 0 },
+        ],
+      };
+      const case3_l1: LineRecord = {
+        id: 'c3-l1',
+        lineIndex: 1,
+        isCommitted: false,
+        cells: [
+          { id: 'c3-1-s2', char: 'y', state: 'struck' as const, colIndex: 0, lineIndex: 1 },
+          { id: 'c3-1-space', char: ' ', state: 'standard' as const, colIndex: 1, lineIndex: 1 },
+          ...Array.from('ing').map((char, i) => ({ id: `c3-1-${i}`, char, state: 'standard' as const, colIndex: 2 + i, lineIndex: 1 })),
+        ],
+      };
+      expect(sanitizeManuscript([{ pageNumber: 1, lines: [case3_l0, case3_l1], completedAt: null }])).toBe('testing');
+
+      // Case 4: Middle line entirely struck out with wrapType: 'hard': line 0: "test", line 1: struck("bad") (hard), line 2: "ing"
+      const case4_l0: LineRecord = {
+        id: 'c4-l0',
+        lineIndex: 0,
+        isCommitted: true,
+        wrapType: 'soft',
+        cells: Array.from('test').map((char, i) => ({ id: `c4-0-${i}`, char, state: 'standard' as const, colIndex: i, lineIndex: 0 })),
+      };
+      const case4_l1: LineRecord = {
+        id: 'c4-l1',
+        lineIndex: 1,
+        isCommitted: true,
+        wrapType: 'hard',
+        cells: Array.from('bad').map((char, i) => ({ id: `c4-1-${i}`, char, state: 'struck' as const, colIndex: i, lineIndex: 1 })),
+      };
+      const case4_l2: LineRecord = {
+        id: 'c4-l2',
+        lineIndex: 2,
+        isCommitted: false,
+        cells: Array.from('ing').map((char, i) => ({ id: `c4-2-${i}`, char, state: 'standard' as const, colIndex: i, lineIndex: 2 })),
+      };
+      expect(sanitizeManuscript([{ pageNumber: 1, lines: [case4_l0, case4_l1, case4_l2], completedAt: null }])).toBe('testing');
     });
   });
 

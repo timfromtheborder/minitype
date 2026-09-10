@@ -1,15 +1,94 @@
-import { LineRecord, PageRecord } from '@/types';
+import { CharacterCell, LineRecord, PageRecord } from '@/types';
 
 /**
  * Sanitizes a single line by removing struck cells and trimming soft padding.
  */
+/**
+ * Sanitizes a single line by removing struck cells, trimming soft padding,
+ * and eliminating orphaned whitespace between or adjacent to struck cells.
+ */
 export function sanitizeLine(line: LineRecord): string {
-  // Collect chars that are not struck and not soft-wrap padding
-  const validChars = line.cells
-    .filter((cell) => cell.state !== 'struck' && !cell.isSoftPadding)
-    .map((cell) => cell.char);
+  const cells = line.cells;
 
-  return validChars.join('');
+  // Filter out soft padding cells
+  const nonPaddingCells = cells.filter((c) => !c.isSoftPadding);
+  if (nonPaddingCells.length === 0) return '';
+
+  const chars: string[] = [];
+
+  for (let i = 0; i < nonPaddingCells.length; i++) {
+    const cell = nonPaddingCells[i];
+
+    if (cell.state === 'struck' || cell.isStruck) {
+      continue;
+    }
+
+    if (cell.char === ' ') {
+      // Look backward for the nearest non-space cell
+      let prevCell: CharacterCell | null = null;
+      for (let p = i - 1; p >= 0; p--) {
+        if (nonPaddingCells[p].char === ' ') continue;
+        prevCell = nonPaddingCells[p];
+        break;
+      }
+
+      // Look forward for the nearest non-space cell
+      let nextCell: CharacterCell | null = null;
+      for (let n = i + 1; n < nonPaddingCells.length; n++) {
+        if (nonPaddingCells[n].char === ' ') continue;
+        nextCell = nonPaddingCells[n];
+        break;
+      }
+
+      const prevIsStruck = Boolean(prevCell && (prevCell.state === 'struck' || prevCell.isStruck));
+      const nextIsStruck = Boolean(nextCell && (nextCell.state === 'struck' || nextCell.isStruck));
+
+      // 1. Space between two struck cells: e.g. struck("x") + " " + struck("y")
+      if (prevIsStruck && nextIsStruck) {
+        continue;
+      }
+
+      // 2. Space at the start of line followed by struck cells: e.g. " " + struck("x")
+      if (!prevCell && nextIsStruck) {
+        continue;
+      }
+
+      // 3. Space at the end of line preceded by struck cells: e.g. struck("x") + " "
+      if (prevIsStruck && !nextCell) {
+        continue;
+      }
+
+      // 4. Space preceded by struck cells at the start of line before regular text:
+      // e.g. line starts with struck("y") then space then "ing"
+      let hasPriorValidText = false;
+      for (let p = i - 1; p >= 0; p--) {
+        if (nonPaddingCells[p].state !== 'struck' && !nonPaddingCells[p].isStruck && nonPaddingCells[p].char !== ' ') {
+          hasPriorValidText = true;
+          break;
+        }
+      }
+      if (!hasPriorValidText && prevIsStruck) {
+        continue;
+      }
+
+      // 5. Space followed by struck cells that extend to the end of the line:
+      // e.g. "test" + " " + struck("x") (where everything after space is struck)
+      let hasSubsequentValidText = false;
+      for (let n = i + 1; n < nonPaddingCells.length; n++) {
+        if (nonPaddingCells[n].state !== 'struck' && !nonPaddingCells[n].isStruck && nonPaddingCells[n].char !== ' ') {
+          hasSubsequentValidText = true;
+          break;
+        }
+      }
+      if (nextIsStruck && !hasSubsequentValidText) {
+        continue;
+      }
+    }
+
+    chars.push(cell.char);
+  }
+
+  return chars.join('');
 }
 
 /**
@@ -50,12 +129,7 @@ export function sanitizeManuscript(pages: PageRecord[]): string {
         line.cells.every((c) => c.state === 'struck' || c.isSoftPadding || c.char === ' ');
 
       if (hasOnlyStruckOrEmpty && hasStruckCells) {
-        // This entire line was struck out. Collapse it without adding an unwanted empty line.
-        // If this line ended with a hard break (Enter), flush any accumulated soft-wrap paragraph.
-        if (line.wrapType === 'hard' && currentParagraph !== '') {
-          paragraphs.push(currentParagraph);
-          currentParagraph = '';
-        }
+        // This entire line was struck out. Collapse it without adding an unwanted empty line or breaking paragraphs.
         continue;
       }
 
@@ -72,7 +146,7 @@ export function sanitizeManuscript(pages: PageRecord[]): string {
       if (currentParagraph === '') {
         currentParagraph = rawLine;
       } else {
-        const hasTrailingSpace = currentParagraph.endsWith(' ') || Boolean(line.explicitTrailingWhitespace);
+        const hasTrailingSpace = currentParagraph.endsWith(' ');
         const hasLeadingSpace = rawLine.startsWith(' ');
         const isHyphenated = currentParagraph.endsWith('-');
 
