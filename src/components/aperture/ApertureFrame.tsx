@@ -47,10 +47,7 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
       <div className="relative w-[70ch] h-4 mb-2 font-mono text-muted-foreground/40 select-none pointer-events-none">
         <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 border-b border-border/40" />
         <span className="absolute left-0 bg-card pr-1 text-[10px] leading-none">01</span>
-        <span
-          className="absolute bg-card px-1 text-[10px] leading-none"
-          style={{ left: '35ch', transform: 'translateX(-50%)' }}
-        >
+        <span className="absolute left-1/2 -translate-x-1/2 bg-card px-1.5 text-[10px] leading-none">
           35
         </span>
         <span className="absolute right-0 bg-card pl-1 text-[10px] leading-none">70</span>
