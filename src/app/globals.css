@@ -106,30 +106,31 @@
   --cursor-color: #FFB000;
 }
 
-/* 3. Phosphor Green (Classic green CRT screen) */
+/* 3. Spotlight Theme: very dark gray bg, light-gray box, black font */
+[data-theme="spotlight"],
 [data-theme="phosphor"] {
-  --background: #0A120A;
-  --foreground: #33FF33;
-  --card: #0E1C0E;
-  --card-foreground: #33FF33;
-  --popover: #0C170C;
-  --popover-foreground: #33FF33;
-  --primary: #33FF33;
-  --primary-foreground: #0A120A;
-  --secondary: #142E14;
-  --secondary-foreground: #33FF33;
-  --muted: #122812;
-  --muted-foreground: #1EAA1E;
-  --accent: #193819;
-  --accent-foreground: #33FF33;
-  --destructive: #FF3333;
-  --border: #1E461E;
-  --input: #1E461E;
-  --ring: #33FF33;
-  --highlight-bg: #104010;
-  --highlight-text: #88FF88;
-  --struck-color: #FF3333;
-  --cursor-color: #33FF33;
+  --background: #141416;
+  --foreground: #A1A1AA;
+  --card: #E4E4E7;
+  --card-foreground: #09090B;
+  --popover: #E4E4E7;
+  --popover-foreground: #09090B;
+  --primary: #09090B;
+  --primary-foreground: #F4F4F5;
+  --secondary: #D4D4D8;
+  --secondary-foreground: #09090B;
+  --muted: #27272A;
+  --muted-foreground: #71717A;
+  --accent: #27272A;
+  --accent-foreground: #F4F4F5;
+  --destructive: #EF4444;
+  --border: #2E2E33;
+  --input: #2E2E33;
+  --ring: #09090B;
+  --highlight-bg: #CBD5E1;
+  --highlight-text: #09090B;
+  --struck-color: #DC2626;
+  --cursor-color: #09090B;
 }
 
 /* 4. High Contrast (Crisp Monochrome) */

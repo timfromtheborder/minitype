@@ -30,21 +30,21 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
   const startIdx = Math.max(0, total - height);
   const visibleLines = lines.slice(startIdx);
 
-  // Height of each line is 2rem (32px)
-  const containerHeightRem = height * 2;
+  // Height of each line is 1.35rem with tightened 1.1x line spacing
+  const LINE_HEIGHT_REM = 1.35;
+  const viewportHeightRem = height * LINE_HEIGHT_REM;
 
   return (
     <div
       onMouseDown={handleMouseDown}
-      className="relative flex flex-col justify-end w-fit max-w-[calc(100vw-2rem)] px-8 py-5 rounded-xl border border-border/70 bg-card shadow-inner shadow-black/5 overflow-hidden select-none"
+      className="relative flex flex-col justify-start w-fit max-w-[calc(100vw-2rem)] px-8 pt-4 pb-4 rounded-xl border border-border/70 bg-card text-card-foreground shadow-inner shadow-black/5 overflow-hidden select-none"
       style={{
-        height: `${containerHeightRem + 2.5}rem`,
         cursor: isLocked ? 'not-allowed' : 'default',
         userSelect: 'none',
       }}
     >
-      {/* 70-character column guide top ruler marker (faint dots aesthetic, spanning across entire entry box) */}
-      <div className="flex items-center justify-between w-full font-mono select-none pointer-events-none mb-2.5">
+      {/* 70-character column guide top ruler marker (permanently fixed at the top of the box) */}
+      <div className="flex items-center justify-between w-[71ch] font-mono select-none pointer-events-none mb-3 shrink-0">
         <span className="text-[10px] font-semibold text-muted-foreground/45">01</span>
         <span className="flex-1 text-[10px] text-center overflow-hidden tracking-widest text-muted-foreground/25 opacity-70 px-2">
           · · · · · · · · · · · · · · · · · · · ·
@@ -56,7 +56,11 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
         <span className="text-[10px] font-semibold text-muted-foreground/45">70</span>
       </div>
 
-      <div className="flex flex-col justify-end w-[71ch]">
+      {/* Drafting lines viewport: fixed height based on aperture capacity, scrolling upward from bottom platen */}
+      <div
+        className="flex flex-col justify-end w-[71ch] overflow-hidden"
+        style={{ height: `${viewportHeightRem}rem` }}
+      >
         {visibleLines.map((line, idx) => {
           const actualIndex = startIdx + idx;
           const isActive = actualIndex === activeLineIndex;

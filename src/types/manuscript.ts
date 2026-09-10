@@ -12,7 +12,7 @@ export type ApertureHeight = 1 | 2 | 3 | 4 | 5;
 export type WrapMode = 'soft';
 export type PageSize = 30 | 40 | 54 | 60 | number;
 export type PageMode = 'notecard' | 'paragraph' | 'page';
-export type ColorScheme = 'typewriter' | 'dark-amber' | 'phosphor' | 'high-contrast' | 'dark-mode' | 'low-contrast';
+export type ColorScheme = 'typewriter' | 'dark-amber' | 'spotlight' | 'high-contrast' | 'dark-mode' | 'low-contrast' | 'phosphor';
 export type Typeface = 'courier-prime' | 'jetbrains-mono' | 'ibm-plex-mono';
 export type ManuscriptMode = 'local' | 'temp';
 

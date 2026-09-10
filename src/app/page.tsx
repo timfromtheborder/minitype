@@ -84,19 +84,19 @@ export default function Home() {
       </section>
 
       {/* 3. UTILITY DECK: Viewport Base */}
-      <footer className="flex items-center justify-between w-full border-t border-border pt-3 select-none text-xs">
+      <footer className="relative flex items-center justify-between w-full border-t border-border pt-3 select-none text-xs">
         {/* Print / Compile Trigger */}
         <button
           type="button"
           onClick={() => setIsPrintOpen(true)}
-          className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg border border-border bg-card hover:bg-muted text-foreground font-mono transition-all cursor-pointer shadow-xs active:scale-95"
+          className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg border border-border bg-card hover:bg-muted text-foreground font-mono transition-all cursor-pointer shadow-xs active:scale-95 z-10"
         >
           <Printer className="w-3.5 h-3.5 opacity-70" />
           <span>Print / Compile</span>
         </button>
 
-        {/* Live Drafting Metadata */}
-        <div className="flex items-center gap-3.5 text-muted-foreground text-[11px] font-mono">
+        {/* Live Drafting Metadata (Centered) */}
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3.5 text-muted-foreground text-[11px] font-mono pointer-events-none">
           <span>
             {engine.manifest.pageMode === 'paragraph'
               ? `Page ${engine.currentPageNumber} · Line ${engine.activeLineIndex + 1}`

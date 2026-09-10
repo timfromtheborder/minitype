@@ -127,11 +127,11 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   border: '#DCD1BE',
                 },
                 {
-                  id: 'phosphor',
-                  label: 'Phosphor',
-                  bg: '#0A120A',
-                  fg: '#33FF33',
-                  border: '#33FF33',
+                  id: 'spotlight',
+                  label: 'Spotlight',
+                  bg: '#E4E4E7',
+                  fg: '#09090B',
+                  border: '#141416',
                 },
                 {
                   id: 'high-contrast',
