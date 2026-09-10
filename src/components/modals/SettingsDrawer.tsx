@@ -58,7 +58,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
         <div className="flex items-center justify-between border-b border-border/60 pb-3">
           <div className="flex items-center gap-2">
             <Sliders className="w-4 h-4 text-muted-foreground" />
-            <h2 className="text-sm font-mono font-semibold tracking-wider uppercase text-foreground">
+            <h2 className="text-sm font-sans font-semibold tracking-wider uppercase text-foreground">
               Typewriter Settings
             </h2>
           </div>
@@ -72,7 +72,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           </button>
         </div>
 
-        <div className="flex flex-col gap-4 text-xs font-mono">
+        <div className="flex flex-col gap-4 text-xs font-sans">
           {/* Aperture Visible Lines Slider (1 to 8 lines) */}
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
@@ -250,7 +250,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
               <button
                 type="button"
                 onClick={() => onUpdateManifest({ showStats: !showStats })}
-                className={`px-3 py-1 rounded-none border text-xs font-mono transition-all cursor-pointer ${
+                className={`px-3 py-1 rounded-none border text-xs transition-all cursor-pointer ${
                   showStats
                     ? 'border-primary bg-primary text-primary-foreground font-bold shadow-xs'
                     : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-muted-foreground'
@@ -266,7 +266,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
               <button
                 type="button"
                 onClick={() => onUpdateManifest({ doubleSpaceLinebreaks: !isDoubleSpace })}
-                className={`px-3 py-1 rounded-none border text-xs font-mono transition-all cursor-pointer ${
+                className={`px-3 py-1 rounded-none border text-xs transition-all cursor-pointer ${
                   isDoubleSpace
                     ? 'border-primary bg-primary text-primary-foreground font-bold shadow-xs'
                     : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-muted-foreground'

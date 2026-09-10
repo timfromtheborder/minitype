@@ -69,7 +69,7 @@ export default function Home() {
     <main
       suppressHydrationWarning
       data-theme={engine.manifest.colorScheme}
-      className="relative w-full h-[100dvh] min-h-[100dvh] overflow-hidden flex flex-col justify-between p-3 sm:p-6 transition-colors duration-300 bg-background text-foreground font-mono"
+      className="relative w-full h-[100dvh] min-h-[100dvh] overflow-hidden flex flex-col justify-between p-3 sm:p-6 transition-colors duration-300 bg-background text-foreground font-sans"
     >
       {/* 1. TOP STAGE: Visual Wireframe Isometric Paper Outbox Tray */}
       <header className="flex items-center justify-center w-full pt-4 select-none">
@@ -91,7 +91,7 @@ export default function Home() {
 
           {/* Live Drafting Metadata (immediately beneath input box, left-aligned with ruler start) */}
           {engine.manifest.showStats !== false && (
-            <div className={`flex items-center justify-start ${boxWidthClass} px-3 sm:px-8 mt-1.5 text-muted-foreground text-[11px] font-mono pointer-events-none select-none`}>
+            <div className={`flex items-center justify-start ${boxWidthClass} px-3 sm:px-8 mt-1.5 text-muted-foreground text-[11px] font-sans pointer-events-none select-none`}>
               <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                 <span>
                   {engine.manifest.pageMode === 'paragraph'
@@ -119,7 +119,7 @@ export default function Home() {
           <button
             type="button"
             onClick={() => setIsPrintOpen(true)}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-none border font-mono transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-none border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs ${
               isSpotlight
                 ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground'
                 : 'border-border/70 bg-card hover:bg-muted text-card-foreground'
@@ -134,7 +134,7 @@ export default function Home() {
           <button
             type="button"
             onClick={() => setIsSettingsOpen(true)}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-none border font-mono transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-none border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs ${
               isSpotlight
                 ? 'border-border/80 bg-muted/70 text-muted-foreground hover:bg-card hover:text-card-foreground'
                 : 'border-border/70 bg-card hover:bg-muted text-muted-foreground hover:text-foreground'
@@ -153,11 +153,11 @@ export default function Home() {
                 mode: engine.manifest.mode === 'local' ? 'temp' : 'local',
               })
             }
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-none border font-mono transition-all cursor-pointer text-[11px] sm:text-xs ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-none border font-sans font-medium transition-all cursor-pointer text-[11px] sm:text-xs ${
               engine.manifest.mode === 'local'
                 ? isSpotlight
-                  ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground font-medium shadow-xs'
-                  : 'border-border/70 bg-card text-card-foreground font-medium shadow-xs'
+                  ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground shadow-xs'
+                  : 'border-border/70 bg-card text-card-foreground shadow-xs'
                 : 'border-amber-500/80 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold shadow-xs hover:bg-amber-500/20'
             }`}
             title="Click to toggle between IndexedDB persistence and volatile RAM"

@@ -80,10 +80,10 @@ export const PrintModal: React.FC<PrintModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border/60 pb-3 gap-3">
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
-            <span className="text-xs font-mono font-bold tracking-widest uppercase text-muted-foreground shrink-0">
+            <span className="text-xs font-sans font-bold tracking-widest uppercase text-muted-foreground shrink-0">
               Project
             </span>
-            <span className="text-muted-foreground/40 font-mono text-xs">/</span>
+            <span className="text-muted-foreground/40 font-sans text-xs">/</span>
             <input
               type="text"
               data-modal-input="true"
@@ -94,7 +94,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
                 useTypingStore.getState().setManifest({ title: val });
               }}
               placeholder="Untitled Manuscript"
-              className="bg-transparent text-sm font-mono font-semibold tracking-wide text-foreground border-b border-dashed border-border/80 hover:border-foreground focus:border-foreground focus:outline-none px-1 py-0.5 w-full max-w-[280px] sm:max-w-[340px] truncate transition-colors cursor-text"
+              className="bg-transparent text-sm font-sans font-semibold tracking-wide text-foreground border-b border-dashed border-border/80 hover:border-foreground focus:border-foreground focus:outline-none px-1 py-0.5 w-full max-w-[280px] sm:max-w-[340px] truncate transition-colors cursor-text"
               title="Click to edit document title"
             />
           </div>
@@ -121,7 +121,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
         </div>
 
         {/* Bottom Actions Row */}
-        <div className="relative flex items-center justify-between pt-2 border-t border-border/60 text-xs font-mono">
+        <div className="relative flex items-center justify-between pt-2 border-t border-border/60 text-xs font-sans">
           {/* New Project Button with Pop-Over Confirmation */}
           <div className="relative">
             <button
@@ -136,7 +136,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
 
             {/* Pop-Over Confirmation Card */}
             {isConfirmingNewProject && (
-              <div className="absolute bottom-11 left-0 z-30 p-4 rounded-none border border-border bg-popover text-popover-foreground shadow-2xl flex flex-col gap-3 w-72 font-mono text-xs animate-in fade-in zoom-in-95 duration-100">
+              <div className="absolute bottom-11 left-0 z-30 p-4 rounded-none border border-border bg-popover text-popover-foreground shadow-2xl flex flex-col gap-3 w-72 font-sans text-xs animate-in fade-in zoom-in-95 duration-100">
                 <p className="font-bold text-foreground">Start a new project?</p>
                 <p className="text-muted-foreground text-[11px] leading-relaxed">
                   This will erase all drafted text, completed pages, and reset the manuscript title.
