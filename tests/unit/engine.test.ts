@@ -58,11 +58,12 @@ describe('Typing Engine & State Machine Invariants', () => {
       }
       store.insertChar(' '); // col 65
 
-      // Type word 'HELLO' starting at col 66: 'H'(66), 'E'(67), 'L'(68), 'L'(69 - triggers wrap)
+      // Type word 'HELLO' starting at col 66: 'H'(66), 'E'(67), 'L'(68), 'L'(69), 'O'(70 - overflows 70-col boundary)
       store.insertChar('H');
       store.insertChar('E');
       store.insertChar('L');
-      store.insertChar('L'); // boundary hit!
+      store.insertChar('L');
+      store.insertChar('O'); // 71st char on line triggers wrap
 
       const state = useTypingStore.getState();
       expect(state.currentPageLines).toHaveLength(2);
@@ -73,9 +74,9 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(line0.cells).toHaveLength(MAX_COLUMNS);
       expect(line0.cells[66].isSoftPadding).toBe(true);
 
-      // Line 1 should start with 'HELL'
+      // Line 1 should start with 'HELLO'
       const line1 = state.currentPageLines[1];
-      expect(line1.cells.map((c) => c.char).join('')).toBe('HELL');
+      expect(line1.cells.map((c) => c.char).join('')).toBe('HELLO');
     });
 
     it('breaks words at hyphens leaving hyphen on previous line and does not break at en-dashes', () => {
@@ -87,13 +88,14 @@ describe('Typing Engine & State Machine Invariants', () => {
       }
       // Line now has 64 chars.
       // Type "life-like":
-      // 'l'(64), 'i'(65), 'f'(66), 'e'(67), '-'(68), 'l'(69 - boundary hit!)
+      // 'l'(64), 'i'(65), 'f'(66), 'e'(67), '-'(68), 'l'(69), 'i'(70 - overflows 70-col boundary)
       store.insertChar('l');
       store.insertChar('i');
       store.insertChar('f');
       store.insertChar('e');
       store.insertChar('-'); // hyphen at col 68
-      store.insertChar('l'); // 'l' overflows col 69 -> wraps 'l' to next line while keeping 'life-' on line 0!
+      store.insertChar('l'); // col 69
+      store.insertChar('i'); // overflows past 70 columns -> wraps 'li' to next line while keeping 'life-' on line 0!
 
       const state = useTypingStore.getState();
       expect(state.currentPageLines).toHaveLength(2);
@@ -104,9 +106,9 @@ describe('Typing Engine & State Machine Invariants', () => {
       const line0Str = line0.cells.filter((c) => !c.isSoftPadding).map((c) => c.char).join('');
       expect(line0Str.endsWith('life-')).toBe(true);
 
-      // Line 1 should start with 'l'
+      // Line 1 should start with 'li'
       const line1 = state.currentPageLines[1];
-      expect(line1.cells[0].char).toBe('l');
+      expect(line1.cells.map((c) => c.char).join('')).toBe('li');
     });
   });
 
@@ -320,6 +322,56 @@ describe('Typing Engine & State Machine Invariants', () => {
       // Large document: delay is clamped to minimum 2ms
       const delayHuge = calculatePrintDelayMs(100000);
       expect(delayHuge).toBeGreaterThanOrEqual(2);
+    });
+
+    it('unwraps soft-wrapped lines into continuous paragraphs, creating linebreaks only on Enter', () => {
+      const store = useTypingStore.getState();
+      store.resetEngine({ mode: 'temp', wrapMode: 'soft' });
+
+      // 1. Soft-wrapped lines should unwrap into a single continuous paragraph without newlines
+      for (let i = 0; i < 60; i++) store.insertChar('a');
+      store.insertChar(' ');
+      for (const c of 'testing') store.insertChar(c);
+      store.insertChar(' ');
+      for (const c of 'wrap') store.insertChar(c);
+
+      let state = useTypingStore.getState();
+      expect(state.currentPageLines).toHaveLength(2);
+      let sanitized = sanitizeManuscript([{ pageNumber: 1, lines: state.currentPageLines, completedAt: null }]);
+      expect(sanitized).toBe('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa testing wrap');
+      expect(sanitized.includes('\n')).toBe(false);
+
+      // 2. Hard Enter should create linebreaks
+      store.resetEngine({ mode: 'temp', wrapMode: 'soft' });
+      for (const c of 'First line') store.insertChar(c);
+      store.handleEnter();
+      for (const c of 'Second line') store.insertChar(c);
+
+      state = useTypingStore.getState();
+      sanitized = sanitizeManuscript([{ pageNumber: 1, lines: state.currentPageLines, completedAt: null }]);
+      expect(sanitized).toBe('First line\nSecond line');
+
+      // 3. Double Enter should create paragraph breaks with an empty line
+      store.resetEngine({ mode: 'temp', wrapMode: 'soft' });
+      for (const c of 'Paragraph 1') store.insertChar(c);
+      store.handleEnter();
+      store.handleEnter();
+      for (const c of 'Paragraph 2') store.insertChar(c);
+
+      state = useTypingStore.getState();
+      sanitized = sanitizeManuscript([{ pageNumber: 1, lines: state.currentPageLines, completedAt: null }]);
+      expect(sanitized).toBe('Paragraph 1\n\nParagraph 2');
+
+      // 4. Hyphenated wrap should connect directly without introducing a space
+      store.resetEngine({ mode: 'temp', wrapMode: 'soft' });
+      for (let i = 0; i < 64; i++) store.insertChar('a');
+      for (const c of 'life-like') store.insertChar(c);
+
+      state = useTypingStore.getState();
+      sanitized = sanitizeManuscript([{ pageNumber: 1, lines: state.currentPageLines, completedAt: null }]);
+      expect(sanitized.endsWith('life-like')).toBe(true);
+      expect(sanitized.includes('life- like')).toBe(false);
+      expect(sanitized.includes('\n')).toBe(false);
     });
   });
 });

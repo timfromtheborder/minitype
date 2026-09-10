@@ -132,12 +132,9 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
     const colCount = lineCells.length;
 
     // Soft word wrap boundary check:
-    // If line has preceding break points (spaces or hyphens '-') and an unfinished word crosses column 69, wrap that word.
-    // If line has no spaces or hyphens, let it fill column 69 and wrap on the 71st char.
-    const hasBreakOnLine = lineCells.some((c) => (c.char === ' ' || c.char === '-') && !c.isSoftPadding);
-    const needsWrap =
-      colCount >= MAX_COLUMNS ||
-      (hasBreakOnLine && colCount === MAX_COLUMNS - 1 && char !== ' ' && char !== '-');
+    // Exactly 70 character cells fit in a line (columns 0 to 69).
+    // Typing the 71st character (colCount >= MAX_COLUMNS) triggers soft word wrap.
+    const needsWrap = colCount >= MAX_COLUMNS;
 
     if (!needsWrap) {
       // Append directly to current line
@@ -404,6 +401,7 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
     lines[state.activeLineIndex] = {
       ...currentLine,
       isCommitted: true,
+      wrapType: 'hard',
     };
 
     if (state.manifest.mode === 'local') {

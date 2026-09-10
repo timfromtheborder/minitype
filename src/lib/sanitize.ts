@@ -13,38 +13,88 @@ export function sanitizeLine(line: LineRecord): string {
 }
 
 /**
- * Sanitizes an array of pages or lines, stripping struck text and
- * collapsing consecutive empty lines created by full-line strikeouts.
+ * Sanitizes an array of pages or lines, unwrapping soft-wrapped lines into
+ * continuous paragraphs so that only explicit 'Enter' keystrokes create linebreaks.
+ * Also eliminates struck-out text and collapses lines created by full-line strikeouts.
  */
 export function sanitizeManuscript(pages: PageRecord[]): string {
-  const allSanitizedLines: string[] = [];
-
+  // Flatten all lines across pages
+  const allLines: LineRecord[] = [];
   for (const page of pages) {
     for (const line of page.lines) {
-      const lineText = sanitizeLine(line).trimEnd();
-      allSanitizedLines.push(lineText);
+      allLines.push(line);
     }
   }
 
-  // Eliminate trailing empty lines and trim excess blanks
-  // Preserve intentional blank lines (e.g. paragraph breaks) but collapse
-  // lines that were entirely struck out.
-  const resultLines: string[] = [];
-  let prevWasEmpty = false;
+  // Remove unwritten empty lines at the very end of the manuscript
+  while (
+    allLines.length > 0 &&
+    allLines[allLines.length - 1].cells.length === 0 &&
+    !allLines[allLines.length - 1].isCommitted
+  ) {
+    allLines.pop();
+  }
 
-  for (const line of allSanitizedLines) {
-    if (line.trim() === '') {
-      if (!prevWasEmpty && resultLines.length > 0) {
-        resultLines.push('');
-        prevWasEmpty = true;
+  const paragraphs: string[] = [];
+  let currentParagraph = '';
+
+  for (let i = 0; i < allLines.length; i++) {
+    const line = allLines[i];
+
+    // Check if line was entirely struck out (had cells, but all struck/padding)
+    const hasStruckOnly =
+      line.cells.length > 0 &&
+      line.cells.every((c) => c.state === 'struck' || c.isSoftPadding);
+
+    if (hasStruckOnly) {
+      // Eliminate orphaned blank lines created by full-line strikeouts
+      continue;
+    }
+
+    const rawLine = sanitizeLine(line);
+    const lineText = rawLine.trimEnd();
+
+    // Check for intentional empty line (e.g. user pressed Enter on an empty line)
+    if (line.cells.length === 0 || lineText === '') {
+      if (currentParagraph !== '') {
+        paragraphs.push(currentParagraph);
+        currentParagraph = '';
       }
+      paragraphs.push('');
+      continue;
+    }
+
+    // Append to current paragraph
+    if (currentParagraph === '') {
+      currentParagraph = lineText;
     } else {
-      resultLines.push(line);
-      prevWasEmpty = false;
+      // Joining soft-wrapped text within paragraph
+      if (currentParagraph.endsWith('-')) {
+        // Hyphenated wrap: connect directly (e.g. "life-" + "like" = "life-like")
+        currentParagraph += lineText.trimStart();
+      } else {
+        // Space wrap: connect with a single space
+        currentParagraph += ' ' + lineText.trimStart();
+      }
+    }
+
+    // If this line ended with a hard return (Enter), commit current paragraph
+    if (line.wrapType === 'hard') {
+      paragraphs.push(currentParagraph);
+      currentParagraph = '';
     }
   }
 
-  return resultLines.join('\n');
+  if (currentParagraph !== '') {
+    paragraphs.push(currentParagraph);
+  }
+
+  // Trim trailing blank lines
+  while (paragraphs.length > 0 && paragraphs[paragraphs.length - 1] === '') {
+    paragraphs.pop();
+  }
+
+  return paragraphs.join('\n');
 }
 
 /**

@@ -14,5 +14,6 @@ export interface LineRecord {
   lineIndex: number;
   cells: CharacterCell[];
   isCommitted: boolean;
+  wrapType?: 'soft' | 'hard';
   explicitTrailingWhitespace?: boolean;
 }

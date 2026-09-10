@@ -30,18 +30,11 @@ export function wrapLine(
   // Soft Word Wrap:
   // If incomingChar is a space, it naturally ends the line cleanly.
   if (incomingChar === ' ') {
-    const nextCell: CharacterCell = {
-      id: createCellId(pageNumber, nextLineIndex, 0),
-      char: ' ',
-      state: 'standard',
-      colIndex: 0,
-      lineIndex: nextLineIndex,
-      isSoftPadding: false,
-    };
     return {
       updatedCurrentLine: {
         ...currentLine,
         isCommitted: true,
+        wrapType: 'soft',
       },
       nextLineCells: [],
     };
@@ -76,6 +69,7 @@ export function wrapLine(
       updatedCurrentLine: {
         ...currentLine,
         isCommitted: true,
+        wrapType: 'soft',
       },
       nextLineCells: [nextCell],
     };
@@ -125,6 +119,7 @@ export function wrapLine(
       ...currentLine,
       cells: updatedCells,
       isCommitted: true,
+      wrapType: 'soft',
       explicitTrailingWhitespace: true,
     },
     nextLineCells,
