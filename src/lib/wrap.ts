@@ -47,18 +47,23 @@ export function wrapLine(
     };
   }
 
-  // Look backward on currentLine to find the start of the word that is overflowing.
-  let lastSpaceIndex = -1;
+  // Look backward on currentLine to find the start of the word or segment that is overflowing.
+  // Respects standard ASCII hyphens '-' as break points (leaving the hyphen on current line),
+  // while en-dashes ('–' / \u2013) and em-dashes do not break.
+  let breakIndex = -1;
   for (let i = currentCells.length - 1; i >= 0; i--) {
-    if (currentCells[i].char === ' ' && !currentCells[i].isSoftPadding) {
-      lastSpaceIndex = i;
-      break;
+    const c = currentCells[i].char;
+    if (!currentCells[i].isSoftPadding) {
+      if (c === ' ' || c === '-') {
+        breakIndex = i;
+        break;
+      }
     }
   }
 
-  // If no space exists on the current line, the word spans the entire line (>= 70 chars).
-  // Under mechanical constraints, it must hard-break at the boundary.
-  if (lastSpaceIndex === -1) {
+  // If no space or hyphen exists on the current line, the word spans the entire line (>= 70 chars).
+  // Under mechanical constraints, it must break at the 70-column boundary.
+  if (breakIndex === -1) {
     const nextCell: CharacterCell = {
       id: createCellId(pageNumber, nextLineIndex, 0),
       char: incomingChar,
@@ -76,8 +81,8 @@ export function wrapLine(
     };
   }
 
-  // The word starts at lastSpaceIndex + 1
-  const wordStartIndex = lastSpaceIndex + 1;
+  // The wrapped segment starts at breakIndex + 1 (keeping the hyphen or space on current line)
+  const wordStartIndex = breakIndex + 1;
   const wordCells = currentCells.slice(wordStartIndex);
 
   // Pad the vacated trailing cells of currentLine with isSoftPadding: true

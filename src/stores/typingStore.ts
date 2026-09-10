@@ -26,11 +26,11 @@ export const DEFAULT_MANIFEST: ManuscriptManifest = {
   id: 'default-manuscript',
   title: 'Untitled Manuscript',
   mode: 'local',
-  inboxCount: 3,
+  inboxCount: 0,
   outboxCount: 0,
   lastPrintedCharIndex: 0,
   printedPagesCount: 0,
-  activeApertureHeight: 3,
+  activeApertureHeight: 1,
   wrapMode: 'soft',
   pageSize: 54,
   colorScheme: 'typewriter',
@@ -132,12 +132,12 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
     const colCount = lineCells.length;
 
     // Soft word wrap boundary check:
-    // If line has preceding spaces and an unfinished word crosses column 69, wrap that word.
-    // If line has no spaces (word spans entire 70 columns), let it fill column 69 and wrap on the 71st char.
-    const hasSpaceOnLine = lineCells.some((c) => c.char === ' ' && !c.isSoftPadding);
+    // If line has preceding break points (spaces or hyphens '-') and an unfinished word crosses column 69, wrap that word.
+    // If line has no spaces or hyphens, let it fill column 69 and wrap on the 71st char.
+    const hasBreakOnLine = lineCells.some((c) => (c.char === ' ' || c.char === '-') && !c.isSoftPadding);
     const needsWrap =
       colCount >= MAX_COLUMNS ||
-      (hasSpaceOnLine && colCount === MAX_COLUMNS - 1 && char !== ' ');
+      (hasBreakOnLine && colCount === MAX_COLUMNS - 1 && char !== ' ' && char !== '-');
 
     if (!needsWrap) {
       // Append directly to current line
@@ -186,10 +186,9 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
       savePage(pageToSave).catch(console.error);
     }
 
-    // Check if advancing to the next line exceeds page size
+    // Check if advancing to the next line completes the page
     const nextLineIndex = activeLineIndex + 1;
     if (nextLineIndex >= state.manifest.pageSize) {
-      // Page exhausted!
       const completedPage: PageRecord = {
         id: `${state.manifest.id}-page-${state.currentPageNumber}`,
         manuscriptId: state.manifest.id,
@@ -205,60 +204,36 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
         savePage(completedPage).catch(console.error);
       }
 
-      if (state.manifest.inboxCount > 0) {
-        // Feed sheet from inbox automatically
-        const newInbox = state.manifest.inboxCount - 1;
-        const newPageNum = state.currentPageNumber + 1;
-        const firstLine: LineRecord = {
-          id: `p${newPageNum}-line-0`,
-          lineIndex: 0,
-          cells: wrapResult.nextLineCells,
-          isCommitted: false,
-        };
+      // Automatically advance to next page seamlessly (no inbox locking)
+      const newPageNum = state.currentPageNumber + 1;
+      const firstLine: LineRecord = {
+        id: `p${newPageNum}-line-0`,
+        lineIndex: 0,
+        cells: wrapResult.nextLineCells,
+        isCommitted: false,
+      };
 
-        const updatedManifest = {
-          ...state.manifest,
-          inboxCount: newInbox,
-          outboxCount: newOutbox,
-        };
-        if (updatedManifest.mode === 'local') {
-          saveManuscript(updatedManifest).catch(console.error);
-        }
-
-        set({
-          manifest: updatedManifest,
-          historicalPages: historical,
-          currentPageNumber: newPageNum,
-          currentPageLines: [firstLine],
-          activeLineIndex: 0,
-          activeColIndex: wrapResult.nextLineCells.length,
-          isHighlighting: false,
-          highlightHead: null,
-          isLocked: false,
-          lockReason: null,
-          pendingWrappedCells: null,
-        });
-      } else {
-        // Lock aperture: paper required
-        const updatedManifest = {
-          ...state.manifest,
-          outboxCount: newOutbox,
-        };
-        if (updatedManifest.mode === 'local') {
-          saveManuscript(updatedManifest).catch(console.error);
-        }
-
-        set({
-          manifest: updatedManifest,
-          historicalPages: historical,
-          currentPageLines: lines,
-          isHighlighting: false,
-          highlightHead: null,
-          isLocked: true,
-          lockReason: 'page_exhaustion',
-          pendingWrappedCells: wrapResult.nextLineCells,
-        });
+      const updatedManifest = {
+        ...state.manifest,
+        outboxCount: newOutbox,
+      };
+      if (updatedManifest.mode === 'local') {
+        saveManuscript(updatedManifest).catch(console.error);
       }
+
+      set({
+        manifest: updatedManifest,
+        historicalPages: historical,
+        currentPageNumber: newPageNum,
+        currentPageLines: [firstLine],
+        activeLineIndex: 0,
+        activeColIndex: wrapResult.nextLineCells.length,
+        isHighlighting: false,
+        highlightHead: null,
+        isLocked: false,
+        lockReason: null,
+        pendingWrappedCells: null,
+      });
       return;
     }
 
@@ -444,7 +419,7 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
 
     const nextLineIndex = state.activeLineIndex + 1;
     if (nextLineIndex >= state.manifest.pageSize) {
-      // Page exhaustion triggered by Enter
+      // Page completed on Enter
       const completedPage: PageRecord = {
         id: `${state.manifest.id}-page-${state.currentPageNumber}`,
         manuscriptId: state.manifest.id,
@@ -460,51 +435,29 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
         savePage(completedPage).catch(console.error);
       }
 
-      if (state.manifest.inboxCount > 0) {
-        const newInbox = state.manifest.inboxCount - 1;
-        const newPageNum = state.currentPageNumber + 1;
-        const firstLine = createEmptyLine(newPageNum, 0);
+      const newPageNum = state.currentPageNumber + 1;
+      const firstLine = createEmptyLine(newPageNum, 0);
 
-        const updatedManifest = {
-          ...state.manifest,
-          inboxCount: newInbox,
-          outboxCount: newOutbox,
-        };
-        if (updatedManifest.mode === 'local') {
-          saveManuscript(updatedManifest).catch(console.error);
-        }
-
-        set({
-          manifest: updatedManifest,
-          historicalPages: historical,
-          currentPageNumber: newPageNum,
-          currentPageLines: [firstLine],
-          activeLineIndex: 0,
-          activeColIndex: 0,
-          isHighlighting: false,
-          highlightHead: null,
-          isLocked: false,
-          lockReason: null,
-        });
-      } else {
-        const updatedManifest = {
-          ...state.manifest,
-          outboxCount: newOutbox,
-        };
-        if (updatedManifest.mode === 'local') {
-          saveManuscript(updatedManifest).catch(console.error);
-        }
-
-        set({
-          manifest: updatedManifest,
-          historicalPages: historical,
-          currentPageLines: lines,
-          isHighlighting: false,
-          highlightHead: null,
-          isLocked: true,
-          lockReason: 'page_exhaustion',
-        });
+      const updatedManifest = {
+        ...state.manifest,
+        outboxCount: newOutbox,
+      };
+      if (updatedManifest.mode === 'local') {
+        saveManuscript(updatedManifest).catch(console.error);
       }
+
+      set({
+        manifest: updatedManifest,
+        historicalPages: historical,
+        currentPageNumber: newPageNum,
+        currentPageLines: [firstLine],
+        activeLineIndex: 0,
+        activeColIndex: 0,
+        isHighlighting: false,
+        highlightHead: null,
+        isLocked: false,
+        lockReason: null,
+      });
       return;
     }
 

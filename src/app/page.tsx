@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTypingEngine } from '@/hooks/useTypingEngine';
 import { ApertureFrame } from '@/components/aperture/ApertureFrame';
-import { OutboxCounter } from '@/components/stages/OutboxCounter';
-import { InboxCounter } from '@/components/stages/InboxCounter';
+import { PaperTrayStack } from '@/components/stages/PaperTrayStack';
 import { SettingsDrawer } from '@/components/modals/SettingsDrawer';
 import { PrintModal } from '@/components/modals/PrintModal';
 import { Settings, Printer, Database, Zap } from 'lucide-react';
@@ -27,17 +26,30 @@ export default function Home() {
     0
   );
 
+  // Stable pages array for print compilation
+  const manuscriptPages = useMemo(
+    () => [
+      ...engine.historicalPages,
+      {
+        pageNumber: engine.currentPageNumber,
+        lines: engine.currentPageLines,
+        completedAt: null,
+      },
+    ],
+    [engine.historicalPages, engine.currentPageNumber, engine.currentPageLines]
+  );
+
   return (
     <main
       data-theme={engine.manifest.colorScheme}
       className="relative w-full h-screen overflow-hidden flex flex-col justify-between p-6 transition-colors duration-300 bg-background text-foreground font-mono"
     >
-      {/* 1. TOP DECK: Outbox Counter (Top Center) */}
-      <header className="flex items-center justify-center w-full pt-2 select-none">
-        <OutboxCounter count={engine.manifest.outboxCount} />
+      {/* 1. TOP STAGE: Visual Wireframe Isometric Paper Outbox Tray */}
+      <header className="flex items-center justify-center w-full pt-4 select-none">
+        <PaperTrayStack count={engine.manifest.outboxCount} />
       </header>
 
-      {/* 2. CENTER STAGE: Settings Gear + Aperture */}
+      {/* 2. CENTER STAGE: Settings Gear + Monospace Aperture */}
       <section className="flex items-center justify-center w-full gap-4 my-auto">
         {/* Settings Gear Button */}
         <button
@@ -60,16 +72,7 @@ export default function Home() {
         />
       </section>
 
-      {/* 3. LOWER STAGE: Inbox Paper Feeder Counter (Bottom Center) */}
-      <section className="flex flex-col items-center justify-center w-full pb-2 select-none">
-        <InboxCounter
-          count={engine.manifest.inboxCount}
-          isLocked={engine.isLocked}
-          onFeedPaper={() => engine.feedPaper(1)}
-        />
-      </section>
-
-      {/* 4. UTILITY DECK: Viewport Base */}
+      {/* 3. UTILITY DECK: Viewport Base */}
       <footer className="flex items-center justify-between w-full border-t border-border pt-3 select-none text-xs">
         {/* Print / Compile Trigger */}
         <button
@@ -135,14 +138,7 @@ export default function Home() {
       <PrintModal
         isOpen={isPrintOpen}
         onClose={() => setIsPrintOpen(false)}
-        pages={[
-          ...engine.historicalPages,
-          {
-            pageNumber: engine.currentPageNumber,
-            lines: engine.currentPageLines,
-            completedAt: null,
-          },
-        ]}
+        pages={manuscriptPages}
         manifest={engine.manifest}
         onPrintedComplete={(printedCount) => {
           engine.setManifest({

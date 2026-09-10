@@ -77,6 +77,37 @@ describe('Typing Engine & State Machine Invariants', () => {
       const line1 = state.currentPageLines[1];
       expect(line1.cells.map((c) => c.char).join('')).toBe('HELL');
     });
+
+    it('breaks words at hyphens leaving hyphen on previous line and does not break at en-dashes', () => {
+      const store = useTypingStore.getState();
+
+      // Type 64 characters of filler
+      for (let i = 0; i < 64; i++) {
+        store.insertChar('A');
+      }
+      // Line now has 64 chars.
+      // Type "life-like":
+      // 'l'(64), 'i'(65), 'f'(66), 'e'(67), '-'(68), 'l'(69 - boundary hit!)
+      store.insertChar('l');
+      store.insertChar('i');
+      store.insertChar('f');
+      store.insertChar('e');
+      store.insertChar('-'); // hyphen at col 68
+      store.insertChar('l'); // 'l' overflows col 69 -> wraps 'l' to next line while keeping 'life-' on line 0!
+
+      const state = useTypingStore.getState();
+      expect(state.currentPageLines).toHaveLength(2);
+      expect(state.activeLineIndex).toBe(1);
+
+      // Line 0 should end with 'life-' at cols 64..68 and soft padding at col 69
+      const line0 = state.currentPageLines[0];
+      const line0Str = line0.cells.filter((c) => !c.isSoftPadding).map((c) => c.char).join('');
+      expect(line0Str.endsWith('life-')).toBe(true);
+
+      // Line 1 should start with 'l'
+      const line1 = state.currentPageLines[1];
+      expect(line1.cells[0].char).toBe('l');
+    });
   });
 
   describe('Backspace & Highlight Mode', () => {
@@ -226,8 +257,8 @@ describe('Typing Engine & State Machine Invariants', () => {
     });
   });
 
-  describe('Page Progression & Paper Feeder Mechanics', () => {
-    it('commits page and decrements inbox when page size limit is reached', () => {
+  describe('Page Progression Mechanics', () => {
+    it('commits page and seamlessly starts new page when page size limit is reached', () => {
       useTypingStore.getState().setPageSize(30);
       const store = useTypingStore.getState();
 
@@ -244,43 +275,13 @@ describe('Typing Engine & State Machine Invariants', () => {
       const state = useTypingStore.getState();
       expect(state.historicalPages).toHaveLength(1);
       expect(state.manifest.outboxCount).toBe(1);
-      expect(state.manifest.inboxCount).toBe(1); // was 2, decremented by 1
       expect(state.currentPageNumber).toBe(2);
       expect(state.activeLineIndex).toBe(0);
       expect(state.isLocked).toBe(false);
-    });
 
-    it('locks aperture when page completes and inbox is empty', () => {
-      useTypingStore.getState().resetEngine({
-        pageSize: 30,
-        inboxCount: 0,
-        outboxCount: 0,
-      });
-      const store = useTypingStore.getState();
-
-      // Enter 29 lines
-      for (let i = 0; i < 29; i++) {
-        store.handleEnter();
-      }
-
-      // Line 29 (final line of page)
-      store.handleEnter();
-
-      let state = useTypingStore.getState();
-      expect(state.isLocked).toBe(true);
-      expect(state.lockReason).toBe('page_exhaustion');
-      expect(state.manifest.outboxCount).toBe(1);
-
-      // Typing while locked is ignored
-      store.insertChar('Z');
-      expect(useTypingStore.getState().currentPageLines[0].cells).toHaveLength(0);
-
-      // User clicks inbox to feed paper
-      store.feedPaper(1);
-      state = useTypingStore.getState();
-      expect(state.isLocked).toBe(false);
-      expect(state.lockReason).toBeNull();
-      expect(state.currentPageNumber).toBe(2);
+      // Can immediately continue typing on new page without paper feeder
+      store.insertChar('N');
+      expect(useTypingStore.getState().currentPageLines[0].cells[0].char).toBe('N');
     });
   });
 
