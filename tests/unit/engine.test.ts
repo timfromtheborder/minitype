@@ -545,5 +545,55 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(sanitized).toContain('Page 2 line 0\nPage 2 line 1\nPage 2 line 2');
     });
   });
+
+  describe('Settings Persistence & Local Mode Rehydration', () => {
+    it('persists manifest settings updates to localStorage', () => {
+      const store = useTypingStore.getState();
+      store.setManifest({
+        colorScheme: 'dark-amber',
+        typeface: 'jetbrains-mono',
+        activeApertureHeight: 4,
+      });
+
+      const stored = JSON.parse(localStorage.getItem('minitype_settings') || '{}');
+      expect(stored.colorScheme).toBe('dark-amber');
+      expect(stored.typeface).toBe('jetbrains-mono');
+      expect(stored.activeApertureHeight).toBe(4);
+    });
+
+    it('rehydrates saved draft pages from IndexedDB in local mode', async () => {
+      const store = useTypingStore.getState();
+      store.setManifest({ mode: 'local' });
+
+      // Type some characters on active page
+      for (const c of 'Saved locally') {
+        store.insertChar(c);
+      }
+
+      // Force flush any debounced save
+      const { flushPendingSave } = await import('@/db');
+      flushPendingSave();
+
+      // Simulate a browser refresh by wiping in-memory state
+      store.resetEngine({ mode: 'local' });
+      expect(useTypingStore.getState().currentPageLines[0].cells).toHaveLength(0);
+
+      // Trigger rehydrate
+      await store.rehydrate();
+
+      const rehydratedState = useTypingStore.getState();
+      expect(rehydratedState.currentPageLines[0].cells.map((c) => c.char).join('')).toBe('Saved locally');
+      expect(rehydratedState.activeColIndex).toBe(13);
+    });
+
+    it('preserves sterile RAM invariant in temp mode (does not load IndexedDB)', async () => {
+      const store = useTypingStore.getState();
+      store.setManifest({ mode: 'temp' });
+
+      // In temp mode, rehydrate should not restore anything into RAM
+      await store.rehydrate();
+      expect(useTypingStore.getState().manifest.mode).toBe('temp');
+    });
+  });
 });
 

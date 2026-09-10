@@ -43,9 +43,41 @@ export async function getPagesForManuscript(manuscriptId: string): Promise<PageR
     .sortBy('pageNumber');
 }
 
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+let pendingPageToSave: PageRecord | null = null;
+
+export function debounceSavePage(page: PageRecord, delayMs = 250): void {
+  pendingPageToSave = page;
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    if (pendingPageToSave) {
+      savePage(pendingPageToSave).catch(console.error);
+      pendingPageToSave = null;
+    }
+  }, delayMs);
+}
+
+export function flushPendingSave(): void {
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+  }
+  if (pendingPageToSave) {
+    savePage(pendingPageToSave).catch(console.error);
+    pendingPageToSave = null;
+  }
+}
+
 export async function clearManuscriptData(manuscriptId: string): Promise<void> {
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+  }
+  pendingPageToSave = null;
+
   await db.transaction('rw', db.manuscripts, db.pages, async () => {
     await db.manuscripts.delete(manuscriptId);
     await db.pages.where('manuscriptId').equals(manuscriptId).delete();
   });
 }
+

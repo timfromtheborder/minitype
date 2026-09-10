@@ -4,6 +4,7 @@ import { useEffect, useCallback } from 'react';
 import { useTypingStore } from '@/stores/typingStore';
 import { LineRecord } from '@/types';
 import { typewriterAudio } from '@/lib/sound';
+import { flushPendingSave } from '@/db';
 
 const BLOCKED_KEYS = new Set([
   'ArrowUp',
@@ -102,6 +103,33 @@ export function useTypingEngine() {
       window.removeEventListener('cut', blockClipboard);
       window.removeEventListener('copy', blockClipboard);
       window.removeEventListener('contextmenu', blockClipboard);
+    };
+  }, []);
+
+  // Rehydrate persisted manuscript from IndexedDB on initial mount
+  useEffect(() => {
+    store.rehydrate();
+  }, []);
+
+  // Flush any pending debounced saves immediately on tab close, hide, or refresh
+  useEffect(() => {
+    const handleFlush = () => {
+      flushPendingSave();
+    };
+
+    window.addEventListener('beforeunload', handleFlush);
+    window.addEventListener('pagehide', handleFlush);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        handleFlush();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleFlush);
+      window.removeEventListener('pagehide', handleFlush);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 

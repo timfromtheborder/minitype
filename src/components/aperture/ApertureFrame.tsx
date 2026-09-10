@@ -43,14 +43,13 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
         userSelect: 'none',
       }}
     >
-      {/* 70-character column guide top ruler marker (aligned precisely with 70 columns below) */}
-      <div className="relative w-[70ch] h-4 mb-2 font-mono text-muted-foreground/40 select-none pointer-events-none">
-        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 border-b border-border/40" />
-        <span className="absolute left-0 bg-card pr-1 text-[10px] leading-none">01</span>
-        <span className="absolute left-1/2 -translate-x-1/2 bg-card px-1.5 text-[10px] leading-none">
-          35
-        </span>
-        <span className="absolute right-0 bg-card pl-1 text-[10px] leading-none">70</span>
+      {/* 70-character column guide top ruler marker (faint dots aesthetic, perfectly locked to 70 monospace columns) */}
+      <div className="w-[70ch] text-[10px] leading-none font-mono select-none pointer-events-none mb-2.5 whitespace-pre flex tracking-normal">
+        <span className="text-muted-foreground/40 font-semibold">01</span>
+        <span className="text-muted-foreground/25">{' ·'.repeat(16)}</span>
+        <span className="text-muted-foreground/55 font-semibold">35</span>
+        <span className="text-muted-foreground/25">{' ·'.repeat(16)}</span>
+        <span className="text-muted-foreground/40 font-semibold">70</span>
       </div>
 
       <div className="flex flex-col justify-end w-[71ch]">

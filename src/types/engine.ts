@@ -34,4 +34,5 @@ export interface TypingEngineActions {
   setManifest: (manifest: Partial<ManuscriptManifest>) => void;
   clearText: () => void;
   resetEngine: (newManifest?: Partial<ManuscriptManifest>) => void;
+  rehydrate: () => Promise<void>;
 }

@@ -12,7 +12,15 @@ import {
   TypingEngineActions,
 } from '@/types';
 import { wrapLine, getLastPrintableCellIndex, createCellId, MAX_COLUMNS } from '@/lib/wrap';
-import { saveManuscript, savePage, clearManuscriptData } from '@/db';
+import {
+  saveManuscript,
+  savePage,
+  clearManuscriptData,
+  getManuscript,
+  getPagesForManuscript,
+  debounceSavePage,
+  flushPendingSave,
+} from '@/db';
 
 export function getPageLineLimit(mode?: PageMode, customSize?: number): number {
   if (mode === 'notecard') return 10;
@@ -47,6 +55,32 @@ export const DEFAULT_MANIFEST: ManuscriptManifest = {
   updatedAt: new Date().toISOString(),
 };
 
+const SETTINGS_KEY = 'minitype_settings';
+
+export function getInitialManifest(): ManuscriptManifest {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem(SETTINGS_KEY);
+      if (cached) {
+        return { ...DEFAULT_MANIFEST, ...JSON.parse(cached) };
+      }
+    } catch (e) {
+      console.error('Failed to parse cached settings from localStorage:', e);
+    }
+  }
+  return { ...DEFAULT_MANIFEST };
+}
+
+export function persistSettings(manifest: ManuscriptManifest): void {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(manifest));
+    } catch (e) {
+      console.error('Failed to save settings to localStorage:', e);
+    }
+  }
+}
+
 export interface TypingStore extends TypingEngineState, TypingEngineActions {
   currentPageNumber: number;
   historicalPages: PageRecord[];
@@ -54,7 +88,7 @@ export interface TypingStore extends TypingEngineState, TypingEngineActions {
 }
 
 export const useTypingStore = create<TypingStore>((set, get) => ({
-  manifest: { ...DEFAULT_MANIFEST },
+  manifest: getInitialManifest(),
   currentPageNumber: 1,
   historicalPages: [],
   currentPageLines: [createEmptyLine(1, 0)],
@@ -69,8 +103,18 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
   setManifest: (newManifest) => {
     set((state) => {
       const updated = { ...state.manifest, ...newManifest };
+      persistSettings(updated);
       if (updated.mode === 'local') {
         saveManuscript(updated).catch(console.error);
+        const currentPage: PageRecord = {
+          id: `${updated.id}-page-${state.currentPageNumber}`,
+          manuscriptId: updated.id,
+          pageNumber: state.currentPageNumber,
+          lines: state.currentPageLines,
+          completedAt: null,
+        };
+        savePage(currentPage).catch(console.error);
+        state.historicalPages.forEach((p) => savePage(p).catch(console.error));
       }
       return { manifest: updated };
     });
@@ -90,6 +134,7 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
       }
 
       const updatedManifest = { ...state.manifest, activeApertureHeight: height };
+      persistSettings(updatedManifest);
       if (updatedManifest.mode === 'local') {
         saveManuscript(updatedManifest).catch(console.error);
       }
@@ -106,6 +151,7 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
   setPageSize: (pageSize: PageSize) => {
     set((state) => {
       const updated = { ...state.manifest, pageSize };
+      persistSettings(updated);
       if (updated.mode === 'local') {
         saveManuscript(updated).catch(console.error);
       }
@@ -117,6 +163,7 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
     set((state) => {
       const pageSize = pageMode === 'notecard' ? 10 : pageMode === 'page' ? 54 : 9999;
       const updated = { ...state.manifest, pageMode, pageSize };
+      persistSettings(updated);
       if (updated.mode === 'local') {
         saveManuscript(updated).catch(console.error);
       }
@@ -170,6 +217,17 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
         cells: [...lineCells, newCell],
       };
 
+      if (state.manifest.mode === 'local') {
+        const pageToSave: PageRecord = {
+          id: `${state.manifest.id}-page-${state.currentPageNumber}`,
+          manuscriptId: state.manifest.id,
+          pageNumber: state.currentPageNumber,
+          lines: lines,
+          completedAt: null,
+        };
+        debounceSavePage(pageToSave);
+      }
+
       set({
         currentPageLines: lines,
         activeColIndex: colCount + 1,
@@ -178,6 +236,8 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
       });
       return;
     }
+
+    flushPendingSave();
 
     // Line boundary reached (soft wrap triggered)
     const wrapResult = wrapLine(
@@ -297,6 +357,16 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
           ),
         };
 
+        if (state.manifest.mode === 'local') {
+          debounceSavePage({
+            id: `${state.manifest.id}-page-${state.currentPageNumber}`,
+            manuscriptId: state.manifest.id,
+            pageNumber: state.currentPageNumber,
+            lines,
+            completedAt: null,
+          });
+        }
+
         set({
           currentPageLines: lines,
           isHighlighting: true,
@@ -320,6 +390,16 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
                   : cell
               ),
             };
+
+            if (state.manifest.mode === 'local') {
+              debounceSavePage({
+                id: `${state.manifest.id}-page-${state.currentPageNumber}`,
+                manuscriptId: state.manifest.id,
+                pageNumber: state.currentPageNumber,
+                lines,
+                completedAt: null,
+              });
+            }
 
             set({
               currentPageLines: lines,
@@ -358,6 +438,16 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
         ),
       };
 
+      if (state.manifest.mode === 'local') {
+        debounceSavePage({
+          id: `${state.manifest.id}-page-${state.currentPageNumber}`,
+          manuscriptId: state.manifest.id,
+          pageNumber: state.currentPageNumber,
+          lines,
+          completedAt: null,
+        });
+      }
+
       set({
         currentPageLines: lines,
         highlightHead: { lineIndex: head.lineIndex, colIndex: nextCol },
@@ -381,6 +471,16 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
                 : cell
             ),
           };
+
+          if (state.manifest.mode === 'local') {
+            debounceSavePage({
+              id: `${state.manifest.id}-page-${state.currentPageNumber}`,
+              manuscriptId: state.manifest.id,
+              pageNumber: state.currentPageNumber,
+              lines,
+              completedAt: null,
+            });
+          }
 
           set({
             currentPageLines: lines,
@@ -412,6 +512,16 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
         ),
       }));
 
+      if (state.manifest.mode === 'local') {
+        debounceSavePage({
+          id: `${state.manifest.id}-page-${state.currentPageNumber}`,
+          manuscriptId: state.manifest.id,
+          pageNumber: state.currentPageNumber,
+          lines,
+          completedAt: null,
+        });
+      }
+
       const activeLine = lines[state.activeLineIndex];
       const activeCol = activeLine ? activeLine.cells.length : 0;
 
@@ -425,23 +535,14 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
     }
 
     // Enter without active highlight: commits current line and advances to line N+1
+    flushPendingSave();
+
     const currentLine = lines[state.activeLineIndex] || createEmptyLine(state.currentPageNumber, state.activeLineIndex);
     lines[state.activeLineIndex] = {
       ...currentLine,
       isCommitted: true,
       wrapType: 'hard',
     };
-
-    if (state.manifest.mode === 'local') {
-      const pageToSave: PageRecord = {
-        id: `${state.manifest.id}-page-${state.currentPageNumber}`,
-        manuscriptId: state.manifest.id,
-        pageNumber: state.currentPageNumber,
-        lines,
-        completedAt: null,
-      };
-      savePage(pageToSave).catch(console.error);
-    }
 
     const nextLineIndex = state.activeLineIndex + 1;
     const isParagraphMode = state.manifest.pageMode === 'paragraph';
@@ -472,6 +573,7 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
         ...state.manifest,
         outboxCount: newOutbox,
       };
+      persistSettings(updatedManifest);
       if (updatedManifest.mode === 'local') {
         saveManuscript(updatedManifest).catch(console.error);
       }
@@ -493,6 +595,17 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
 
     // Advance to line N+1
     lines.push(createEmptyLine(state.currentPageNumber, nextLineIndex));
+
+    if (state.manifest.mode === 'local') {
+      const pageToSave: PageRecord = {
+        id: `${state.manifest.id}-page-${state.currentPageNumber}`,
+        manuscriptId: state.manifest.id,
+        pageNumber: state.currentPageNumber,
+        lines,
+        completedAt: null,
+      };
+      savePage(pageToSave).catch(console.error);
+    }
 
     set({
       currentPageLines: lines,
@@ -577,6 +690,16 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
     if (state.manifest.mode === 'local') {
       clearManuscriptData(state.manifest.id).catch(console.error);
     }
+    const updatedManifest: ManuscriptManifest = {
+      ...state.manifest,
+      outboxCount: 0,
+      lastPrintedCharIndex: 0,
+      printedPagesCount: 0,
+    };
+    persistSettings(updatedManifest);
+    if (updatedManifest.mode === 'local') {
+      saveManuscript(updatedManifest).catch(console.error);
+    }
     set({
       currentPageNumber: 1,
       historicalPages: [],
@@ -588,12 +711,7 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
       isLocked: false,
       lockReason: null,
       pendingWrappedCells: null,
-      manifest: {
-        ...state.manifest,
-        outboxCount: 0,
-        lastPrintedCharIndex: 0,
-        printedPagesCount: 0,
-      },
+      manifest: updatedManifest,
     });
   },
 
@@ -612,5 +730,77 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
       lockReason: null,
       pendingWrappedCells: null,
     });
+  },
+
+  rehydrate: async () => {
+    if (typeof window === 'undefined') return;
+
+    const state = get();
+    // Rule 7.3: In temp mode, ignore database entries and keep memory sterile
+    if (state.manifest.mode === 'temp') return;
+
+    try {
+      const [savedManifest, pages] = await Promise.all([
+        getManuscript(state.manifest.id),
+        getPagesForManuscript(state.manifest.id),
+      ]);
+
+      if (!pages || pages.length === 0) {
+        return;
+      }
+
+      pages.sort((a, b) => a.pageNumber - b.pageNumber);
+
+      const lastPage = pages[pages.length - 1];
+      let historicalPages: PageRecord[] = [];
+      let currentPageNumber = 1;
+      let currentPageLines: LineRecord[] = [];
+      let activeLineIndex = 0;
+      let activeColIndex = 0;
+
+      if (lastPage.completedAt) {
+        historicalPages = pages;
+        currentPageNumber = lastPage.pageNumber + 1;
+        currentPageLines = [createEmptyLine(currentPageNumber, 0)];
+        activeLineIndex = 0;
+        activeColIndex = 0;
+      } else {
+        historicalPages = pages.slice(0, -1);
+        currentPageNumber = lastPage.pageNumber;
+        currentPageLines =
+          lastPage.lines && lastPage.lines.length > 0
+            ? lastPage.lines
+            : [createEmptyLine(currentPageNumber, 0)];
+        activeLineIndex = Math.max(0, currentPageLines.length - 1);
+        const activeLine = currentPageLines[activeLineIndex];
+        activeColIndex = activeLine ? activeLine.cells.length : 0;
+      }
+
+      const outboxCount = historicalPages.length;
+      const updatedManifest: ManuscriptManifest = {
+        ...state.manifest,
+        outboxCount,
+        lastPrintedCharIndex:
+          savedManifest?.lastPrintedCharIndex ?? state.manifest.lastPrintedCharIndex ?? 0,
+        printedPagesCount:
+          savedManifest?.printedPagesCount ?? state.manifest.printedPagesCount ?? 0,
+      };
+      persistSettings(updatedManifest);
+
+      set({
+        manifest: updatedManifest,
+        currentPageNumber,
+        historicalPages,
+        currentPageLines,
+        activeLineIndex,
+        activeColIndex,
+        isHighlighting: false,
+        highlightHead: null,
+        isLocked: false,
+        lockReason: null,
+      });
+    } catch (e) {
+      console.error('Failed to rehydrate manuscript from IndexedDB:', e);
+    }
   },
 }));
