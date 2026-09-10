@@ -34,9 +34,13 @@ export function useTypingEngine(options?: UseTypingEngineOptions) {
         return;
       }
 
-      // 0. Ignore events originating from interactive inputs (e.g. document title input in modals)
+      // 0. Ignore events originating from interactive inputs (e.g. document title input in modals), but allow proxy bridge
       const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+      if (
+        target &&
+        target.getAttribute('data-proxy-bridge') !== 'true' &&
+        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+      ) {
         return;
       }
 
@@ -107,7 +111,11 @@ export function useTypingEngine(options?: UseTypingEngineOptions) {
   useEffect(() => {
     const blockClipboard = (e: Event) => {
       const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+      if (
+        target &&
+        target.getAttribute('data-proxy-bridge') !== 'true' &&
+        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+      ) {
         return;
       }
       e.preventDefault();

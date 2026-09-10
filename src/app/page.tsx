@@ -50,6 +50,8 @@ export default function Home() {
   );
 
   const isSpotlight = engine.manifest.colorScheme === 'spotlight';
+  const isPortrait = (engine.activeColumnLimit ?? 70) === 35;
+  const boxWidthClass = isPortrait ? 'w-[36ch]' : 'w-[71ch]';
 
   return (
     <main
@@ -62,96 +64,105 @@ export default function Home() {
         <PaperTrayStack count={engine.manifest.outboxCount} />
       </header>
 
-      {/* 2. CENTER STAGE: Settings Gear + Monospace Aperture */}
-      <section className="flex items-center justify-center w-full gap-3 sm:gap-4 my-auto">
-        {/* Settings Gear Button */}
-        <button
-          type="button"
-          onClick={() => setIsSettingsOpen(true)}
-          title="Settings (Aperture, Palette, Page Size)"
-          className={`p-2.5 sm:p-3 rounded-full border shadow-xs transition-all cursor-pointer hover:rotate-45 active:scale-95 shrink-0 ${
-            isSpotlight
-              ? 'border-border/80 bg-muted/70 text-muted-foreground hover:bg-card hover:text-card-foreground'
-              : 'border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
-        </button>
+      {/* 2. CENTER STAGE: Exactly Centered Monospace Aperture */}
+      <section className="flex-1 flex flex-col items-center justify-center w-full my-auto">
+        <div className="flex flex-col items-center">
+          <ApertureFrame
+            lines={engine.currentPageLines}
+            activeLineIndex={engine.activeLineIndex}
+            activeColIndex={engine.activeColIndex}
+            height={engine.manifest.activeApertureHeight}
+            isLocked={engine.isLocked}
+            isHighlighting={engine.isHighlighting}
+            isPaused={isPrintOpen || isSettingsOpen}
+          />
 
-        {/* Monospace Typing Aperture */}
-        <ApertureFrame
-          lines={engine.currentPageLines}
-          activeLineIndex={engine.activeLineIndex}
-          activeColIndex={engine.activeColIndex}
-          height={engine.manifest.activeApertureHeight}
-          isLocked={engine.isLocked}
-          isHighlighting={engine.isHighlighting}
-          isPaused={isPrintOpen || isSettingsOpen}
-        />
+          {/* Live Drafting Metadata (immediately beneath input box, left-aligned with ruler start) */}
+          {engine.manifest.showStats !== false && (
+            <div className={`flex items-center justify-start ${boxWidthClass} px-3 sm:px-8 mt-1.5 text-muted-foreground text-[11px] font-mono pointer-events-none select-none`}>
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                <span>
+                  {engine.manifest.pageMode === 'paragraph'
+                    ? `Paragraph ${engine.currentPageNumber} · Line ${engine.activeLineIndex + 1}`
+                    : engine.manifest.pageMode === 'notecard'
+                    ? `Card ${engine.currentPageNumber} · Line ${engine.activeLineIndex + 1}/10`
+                    : `Page ${engine.currentPageNumber} · Line ${engine.activeLineIndex + 1}/${engine.manifest.pageSize || 54}`}
+                </span>
+                <span>·</span>
+                <span>Col {Math.min(engine.activeColIndex + 1, engine.activeColumnLimit ?? 70)}/{engine.activeColumnLimit ?? 70}</span>
+                <span>·</span>
+                <span className="text-foreground/90 font-medium">{wordCount} words</span>
+                <span>·</span>
+                <span>{totalCharsOnPage} chars</span>
+              </div>
+            </div>
+          )}
+        </div>
       </section>
 
-      {/* 3. UTILITY DECK: Viewport Base */}
-      <footer className="relative flex items-center justify-between w-full border-t border-border pt-3 select-none text-xs">
-        {/* Print / Compile Trigger */}
-        <button
-          type="button"
-          onClick={() => setIsPrintOpen(true)}
-          className={`flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg border font-mono transition-all cursor-pointer shadow-xs active:scale-95 z-10 text-[11px] sm:text-xs ${
-            isSpotlight
-              ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground'
-              : 'border-border/70 bg-card hover:bg-muted text-card-foreground'
-          }`}
-        >
-          <Printer className="w-3.5 h-3.5 opacity-70" />
-          <span>Print / Compile</span>
-        </button>
+      {/* 3. UTILITY DECK: Viewport Base, centered and matching input box width */}
+      <footer className="w-full flex justify-center items-center pb-2 select-none text-xs">
+        <div className={`flex items-center justify-between ${boxWidthClass} gap-2`}>
+          {/* Project Button */}
+          <button
+            type="button"
+            onClick={() => setIsPrintOpen(true)}
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-none border font-mono transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs ${
+              isSpotlight
+                ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground'
+                : 'border-border/70 bg-card hover:bg-muted text-card-foreground'
+            }`}
+            title="Project"
+          >
+            <Printer className="w-3.5 h-3.5 opacity-70" />
+            <span>Project</span>
+          </button>
 
-        {/* Live Drafting Metadata (Centered) */}
-        <div className="hidden sm:flex absolute left-1/2 -translate-x-1/2 items-center gap-3.5 text-muted-foreground text-[11px] font-mono pointer-events-none">
-          <span>
-            {engine.manifest.pageMode === 'paragraph'
-              ? `Paragraph ${engine.currentPageNumber} · Line ${engine.activeLineIndex + 1}`
-              : engine.manifest.pageMode === 'notecard'
-              ? `Card ${engine.currentPageNumber} · Line ${engine.activeLineIndex + 1}/10`
-              : `Page ${engine.currentPageNumber} · Line ${engine.activeLineIndex + 1}/${engine.manifest.pageSize || 54}`}
-          </span>
-          <span>·</span>
-          <span>Col {Math.min(engine.activeColIndex + 1, engine.activeColumnLimit ?? 70)}/{engine.activeColumnLimit ?? 70}</span>
-          <span>·</span>
-          <span className="text-foreground/90 font-medium">{wordCount} words</span>
-          <span>·</span>
-          <span>{totalCharsOnPage} chars</span>
+          {/* Settings Button */}
+          <button
+            type="button"
+            onClick={() => setIsSettingsOpen(true)}
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-none border font-mono transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs ${
+              isSpotlight
+                ? 'border-border/80 bg-muted/70 text-muted-foreground hover:bg-card hover:text-card-foreground'
+                : 'border-border/70 bg-card hover:bg-muted text-muted-foreground hover:text-foreground'
+            }`}
+            title="Settings"
+          >
+            <Settings className="w-3.5 h-3.5 opacity-70" />
+            <span>Settings</span>
+          </button>
+
+          {/* Persistence Mode Toggle Indicator */}
+          <button
+            type="button"
+            onClick={() =>
+              engine.setManifest({
+                mode: engine.manifest.mode === 'local' ? 'temp' : 'local',
+              })
+            }
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-none border font-mono transition-all cursor-pointer text-[11px] sm:text-xs ${
+              engine.manifest.mode === 'local'
+                ? isSpotlight
+                  ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground font-medium shadow-xs'
+                  : 'border-border/70 bg-card text-card-foreground font-medium shadow-xs'
+                : 'border-amber-500/80 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold shadow-xs hover:bg-amber-500/20'
+            }`}
+            title="Click to toggle between IndexedDB persistence and volatile RAM"
+          >
+            {engine.manifest.mode === 'local' ? (
+              <>
+                <Database className="w-3.5 h-3.5 opacity-80" />
+                <span>Mode: Local</span>
+              </>
+            ) : (
+              <>
+                <Zap className="w-3.5 h-3.5 text-amber-500" />
+                <span>Mode: Temp</span>
+              </>
+            )}
+          </button>
         </div>
-
-        {/* Persistence Mode Toggle Indicator */}
-        <button
-          type="button"
-          onClick={() =>
-            engine.setManifest({
-              mode: engine.manifest.mode === 'local' ? 'temp' : 'local',
-            })
-          }
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-mono transition-all cursor-pointer z-10 ${
-            engine.manifest.mode === 'local'
-              ? isSpotlight
-                ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground font-medium shadow-xs'
-                : 'border-border/70 bg-card text-card-foreground font-medium shadow-xs'
-              : 'border-amber-500/80 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold shadow-xs hover:bg-amber-500/20'
-          }`}
-          title="Click to toggle between IndexedDB persistence and volatile RAM"
-        >
-          {engine.manifest.mode === 'local' ? (
-            <>
-              <Database className="w-3.5 h-3.5 opacity-80" />
-              <span>Mode: Local (IndexedDB)</span>
-            </>
-          ) : (
-            <>
-              <Zap className="w-3.5 h-3.5 text-amber-500" />
-              <span>Mode: Temp (RAM Only)</span>
-            </>
-          )}
-        </button>
       </footer>
 
       {/* Settings Drawer Modal */}
@@ -164,7 +175,7 @@ export default function Home() {
         onUpdateManifest={engine.setManifest}
       />
 
-      {/* Print / Compile Modal */}
+      {/* Project Modal */}
       <PrintModal
         isOpen={isPrintOpen}
         onClose={() => setIsPrintOpen(false)}

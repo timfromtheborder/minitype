@@ -90,7 +90,7 @@ export const MobileKeyboardBridge = forwardRef<
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (isPaused || store.isLocked) return;
 
-    // Direct key resolution for virtual or hardware keyboards attached to mobile
+    // Direct key resolution for virtual or hardware keyboards attached to mobile or desktop
     if (e.key === 'Backspace') {
       e.preventDefault();
       e.stopPropagation();
@@ -105,6 +105,17 @@ export const MobileKeyboardBridge = forwardRef<
         typewriterAudio.playCarriageReturn();
       }
       store.handleEnter();
+    } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (store.isHighlighting) {
+        typewriterAudio.playStrike();
+      } else if (e.key === ' ') {
+        typewriterAudio.playSpace();
+      } else {
+        typewriterAudio.playKeyClick();
+      }
+      store.insertChar(e.key);
     }
   };
 
@@ -136,7 +147,7 @@ export const MobileKeyboardBridge = forwardRef<
       onPaste={handleBlock}
       onCopy={handleBlock}
       onCut={handleBlock}
-      className="fixed top-0 left-0 w-px h-px opacity-0 pointer-events-none -z-10"
+      className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-text select-none"
       style={{
         userSelect: 'none',
       }}

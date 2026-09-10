@@ -13,12 +13,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Minitype — Forward-Momentum Typewriter",
+  title: "minitype",
   description: "Distraction-free, forward-momentum writing web application modeled on mechanical typewriter constraints.",
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Minitype",
+    title: "minitype",
   },
 };
 

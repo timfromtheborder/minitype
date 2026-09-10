@@ -962,6 +962,84 @@ describe('Typing Engine & State Machine Invariants', () => {
       store.setActiveColumnLimit(70);
     });
   });
+
+  describe('New Project, Double-Space Markdown Mode & Aperture Slider', () => {
+    it('clears text, pages, and resets manuscript title on newProject', async () => {
+      const store = useTypingStore.getState();
+      store.setManifest({ title: 'My Custom Novel' });
+      expect(useTypingStore.getState().manifest.title).toBe('My Custom Novel');
+
+      // Type some characters and create a line
+      store.insertChar('H');
+      store.insertChar('e');
+      store.insertChar('y');
+      store.handleEnter();
+
+      expect(useTypingStore.getState().currentPageLines.length).toBeGreaterThanOrEqual(1);
+
+      // Trigger newProject
+      await store.newProject();
+
+      const state = useTypingStore.getState();
+      expect(state.manifest.title).toBe('Untitled Manuscript');
+      expect(state.currentPageNumber).toBe(1);
+      expect(state.historicalPages).toHaveLength(0);
+      expect(state.currentPageLines).toHaveLength(1);
+      expect(state.currentPageLines[0].cells).toHaveLength(0);
+      expect(state.activeLineIndex).toBe(0);
+      expect(state.activeColIndex).toBe(0);
+    });
+
+    it('sanitizes with double-spaced linebreaks when doubleSpaceLinebreaks is true', () => {
+      const store = useTypingStore.getState();
+      store.insertChar('P');
+      store.insertChar('a');
+      store.insertChar('r');
+      store.insertChar('a');
+      store.insertChar('1');
+      store.handleEnter();
+      store.insertChar('P');
+      store.insertChar('a');
+      store.insertChar('r');
+      store.insertChar('a');
+      store.insertChar('2');
+
+      const pages = [{
+        pageNumber: 1,
+        lines: useTypingStore.getState().currentPageLines,
+        completedAt: null,
+      }];
+
+      const singleSpaced = sanitizeManuscript(pages, { doubleSpaceLinebreaks: false });
+      expect(singleSpaced).toBe('Para1\nPara2');
+
+      const doubleSpaced = sanitizeManuscript(pages, { doubleSpaceLinebreaks: true });
+      expect(doubleSpaced).toBe('Para1\n\nPara2');
+    });
+
+    it('supports 1 to 8 aperture line heights smoothly', () => {
+      const store = useTypingStore.getState();
+      store.setApertureHeight(1);
+      expect(useTypingStore.getState().manifest.activeApertureHeight).toBe(1);
+
+      store.setApertureHeight(8);
+      expect(useTypingStore.getState().manifest.activeApertureHeight).toBe(8);
+
+      store.setApertureHeight(4);
+      expect(useTypingStore.getState().manifest.activeApertureHeight).toBe(4);
+    });
+
+    it('toggles live stats visibility', () => {
+      const store = useTypingStore.getState();
+      expect(store.manifest.showStats).toBe(true);
+
+      store.toggleStats(false);
+      expect(useTypingStore.getState().manifest.showStats).toBe(false);
+
+      store.toggleStats(true);
+      expect(useTypingStore.getState().manifest.showStats).toBe(true);
+    });
+  });
 });
 
 

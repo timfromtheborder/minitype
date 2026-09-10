@@ -8,7 +8,7 @@ export interface PageRecord {
   completedAt: string | null;
 }
 
-export type ApertureHeight = 1 | 2 | 3 | 4 | 5;
+export type ApertureHeight = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 export type WrapMode = 'soft';
 export type PageSize = 30 | 40 | 54 | 60 | number;
 export type PageMode = 'notecard' | 'paragraph' | 'page';
@@ -30,6 +30,9 @@ export interface ManuscriptManifest {
   pageMode: PageMode;
   colorScheme: ColorScheme;
   typeface: Typeface;
+  showStats?: boolean;
+  doubleSpaceLinebreaks?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
+

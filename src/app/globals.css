@@ -39,13 +39,13 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-sm: 0rem;
+  --radius-md: 0rem;
+  --radius-lg: 0rem;
+  --radius-xl: 0rem;
+  --radius-2xl: 0rem;
+  --radius-3xl: 0rem;
+  --radius-4xl: 0rem;
 }
 
 /* ==========================================================================
@@ -73,7 +73,7 @@
   --border: #DCD1BE;
   --input: #DCD1BE;
   --ring: #887E6E;
-  --radius: 0.625rem;
+  --radius: 0rem;
   --highlight-bg: rgba(220, 206, 178, 0.9);
   --highlight-text: #1E1E1E;
   --struck-color: #C0392B;
@@ -233,4 +233,46 @@
     height: 100%;
     overscroll-behavior: none;
   }
+}
+
+/* Custom Square Monospace Scrollbar */
+.square-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.square-scrollbar::-webkit-scrollbar-track {
+  background: var(--muted);
+}
+.square-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+.square-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+/* Custom Square Range Slider */
+input[type="range"].square-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--muted);
+  height: 6px;
+  border-radius: 0;
+  outline: none;
+}
+input[type="range"].square-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--primary);
+  border-radius: 0;
+  cursor: pointer;
+}
+input[type="range"].square-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--primary);
+  border-radius: 0;
+  cursor: pointer;
+  border: none;
 }

@@ -91,13 +91,21 @@ export function sanitizeLine(line: LineRecord): string {
   return chars.join('');
 }
 
+export interface SanitizeOptions {
+  doubleSpaceLinebreaks?: boolean;
+}
+
 /**
  * Sanitizes an array of pages or lines, unwrapping soft-wrapped lines into
  * continuous paragraphs so that only explicit 'Enter' keystrokes create linebreaks.
  * Also eliminates struck-out text and collapses lines created by full-line strikeouts.
  */
-export function sanitizeManuscript(pages: PageRecord[]): string {
+export function sanitizeManuscript(
+  pages: PageRecord[],
+  options?: SanitizeOptions
+): string {
   const pageTexts: string[] = [];
+  const lineDelimiter = options?.doubleSpaceLinebreaks ? '\n\n' : '\n';
 
   for (const page of pages) {
     const pageLines = [...page.lines];
@@ -176,7 +184,7 @@ export function sanitizeManuscript(pages: PageRecord[]): string {
     }
 
     if (paragraphs.length > 0) {
-      pageTexts.push(paragraphs.join('\n'));
+      pageTexts.push(paragraphs.join(lineDelimiter));
     }
   }
 

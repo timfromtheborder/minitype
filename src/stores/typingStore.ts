@@ -52,6 +52,8 @@ export const DEFAULT_MANIFEST: ManuscriptManifest = {
   pageMode: 'page',
   colorScheme: 'typewriter',
   typeface: 'courier-prime',
+  showStats: true,
+  doubleSpaceLinebreaks: false,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
 };
@@ -795,6 +797,61 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
       lockReason: null,
       pendingWrappedCells: null,
       manifest: updatedManifest,
+    });
+  },
+
+  newProject: async () => {
+    const state = get();
+    if (state.manifest.mode === 'local') {
+      await clearManuscriptData(state.manifest.id).catch(console.error);
+    }
+    const updatedManifest: ManuscriptManifest = {
+      ...state.manifest,
+      title: 'Untitled Manuscript',
+      outboxCount: 0,
+      lastPrintedCharIndex: 0,
+      printedPagesCount: 0,
+    };
+    persistSettings(updatedManifest);
+    if (updatedManifest.mode === 'local') {
+      await saveManuscript(updatedManifest).catch(console.error);
+    }
+    set({
+      currentPageNumber: 1,
+      historicalPages: [],
+      currentPageLines: [createEmptyLine(1, 0)],
+      activeLineIndex: 0,
+      activeColIndex: 0,
+      isHighlighting: false,
+      highlightHead: null,
+      isLocked: false,
+      lockReason: null,
+      pendingWrappedCells: null,
+      manifest: updatedManifest,
+    });
+  },
+
+  toggleStats: (show?: boolean) => {
+    set((state) => {
+      const showStats = show !== undefined ? show : !(state.manifest.showStats ?? true);
+      const updatedManifest = { ...state.manifest, showStats };
+      persistSettings(updatedManifest);
+      if (updatedManifest.mode === 'local') {
+        saveManuscript(updatedManifest).catch(console.error);
+      }
+      return { manifest: updatedManifest };
+    });
+  },
+
+  toggleDoubleSpaceLinebreaks: (enabled?: boolean) => {
+    set((state) => {
+      const doubleSpaceLinebreaks = enabled !== undefined ? enabled : !(state.manifest.doubleSpaceLinebreaks ?? false);
+      const updatedManifest = { ...state.manifest, doubleSpaceLinebreaks };
+      persistSettings(updatedManifest);
+      if (updatedManifest.mode === 'local') {
+        saveManuscript(updatedManifest).catch(console.error);
+      }
+      return { manifest: updatedManifest };
     });
   },
 

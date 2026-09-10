@@ -31,7 +31,7 @@ export const PaperTrayStack: React.FC<PaperTrayStackProps> = ({ count }) => {
   }
 
   return (
-    <div className="flex flex-col items-center select-none group cursor-default" title={`${count} completed ${count === 1 ? 'page' : 'pages'}`}>
+    <div className="flex flex-col items-center select-none group cursor-default">
       <svg
         width="110"
         height="56"
