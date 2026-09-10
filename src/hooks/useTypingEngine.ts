@@ -3,6 +3,7 @@
 import { useEffect, useCallback } from 'react';
 import { useTypingStore } from '@/stores/typingStore';
 import { LineRecord } from '@/types';
+import { typewriterAudio } from '@/lib/sound';
 
 const BLOCKED_KEYS = new Set([
   'ArrowUp',
@@ -44,6 +45,7 @@ export function useTypingEngine() {
       // 4. Backspace Trigger
       if (e.key === 'Backspace') {
         e.preventDefault();
+        typewriterAudio.playStrike();
         store.handleBackspace();
         return;
       }
@@ -51,6 +53,11 @@ export function useTypingEngine() {
       // 5. Enter Key Resolution
       if (e.key === 'Enter') {
         e.preventDefault();
+        if (store.isHighlighting) {
+          typewriterAudio.playStrike();
+        } else {
+          typewriterAudio.playBell();
+        }
         store.handleEnter();
         return;
       }
@@ -58,6 +65,11 @@ export function useTypingEngine() {
       // 6. Printable character entry (length 1, no modifier keys)
       if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
         e.preventDefault();
+        if (e.key === ' ') {
+          typewriterAudio.playSpace();
+        } else {
+          typewriterAudio.playKeyClick();
+        }
         store.insertChar(e.key);
       }
     },
