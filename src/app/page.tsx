@@ -62,19 +62,30 @@ export default function Home() {
   const isSpotlight = engine.manifest.colorScheme === 'spotlight';
   const isPortrait = (engine.activeColumnLimit ?? 70) === 35;
   const boxWidthClass = isPortrait
-    ? 'w-[calc(36ch+1.5rem)] max-w-[calc(100vw-1.5rem)]'
-    : 'w-[calc(71ch+4rem)] max-w-[calc(100vw-1.5rem)]';
+    ? 'w-[calc(36ch+1.5rem)] max-w-[calc(100vw-2rem)]'
+    : 'w-[calc(71ch+4rem)] max-w-[calc(100vw-2.5rem)]';
+
+  const lineStatText =
+    engine.manifest.pageMode === 'scroll'
+      ? `line: ${engine.activeLineIndex + 1}`
+      : engine.manifest.pageMode === 'notecard'
+      ? `line: ${engine.activeLineIndex + 1}/10`
+      : engine.manifest.pageMode === 'paragraph'
+      ? `line: ${engine.activeLineIndex + 1}`
+      : `line: ${engine.activeLineIndex + 1}/${engine.manifest.pageSize || 54}`;
 
   return (
     <main
       suppressHydrationWarning
       data-theme={engine.manifest.colorScheme}
-      className="relative w-full h-[100dvh] min-h-[100dvh] overflow-hidden flex flex-col justify-between p-3 sm:p-6 transition-colors duration-300 bg-background text-foreground font-sans"
+      className="relative w-full h-[100dvh] max-h-[100dvh] overflow-hidden flex flex-col justify-between p-2.5 sm:p-6 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] transition-colors duration-300 bg-background text-foreground font-sans"
     >
-      {/* 1. TOP STAGE: Visual Wireframe Isometric Paper Outbox Tray */}
-      <header className="flex items-center justify-center w-full pt-4 select-none">
-        <PaperTrayStack count={engine.manifest.outboxCount} />
-      </header>
+      {/* 1. TOP STAGE: Visual Wireframe Isometric Paper Outbox Tray (hidden in endless scroll mode) */}
+      {engine.manifest.pageMode !== 'scroll' && (
+        <header className="flex items-center justify-center w-full pt-2 sm:pt-4 select-none shrink-0">
+          <PaperTrayStack count={engine.manifest.outboxCount} />
+        </header>
+      )}
 
       {/* 2. CENTER STAGE: Exactly Centered Monospace Aperture */}
       <section className="flex-1 flex flex-col items-center justify-center w-full my-auto">
@@ -89,19 +100,11 @@ export default function Home() {
             isPaused={isPrintOpen || isSettingsOpen}
           />
 
-          {/* Live Drafting Metadata (immediately beneath input box, left-aligned with ruler start) */}
+          {/* Live Drafting Metadata (centered beneath input box in Courier Prime) */}
           {engine.manifest.showStats !== false && (
-            <div className={`flex items-center justify-start ${boxWidthClass} px-3 sm:px-8 mt-1.5 text-muted-foreground text-[11px] font-sans pointer-events-none select-none`}>
-              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                <span>
-                  {engine.manifest.pageMode === 'paragraph'
-                    ? `Paragraph ${engine.currentPageNumber} · Line ${engine.activeLineIndex + 1}`
-                    : engine.manifest.pageMode === 'notecard'
-                    ? `Card ${engine.currentPageNumber} · Line ${engine.activeLineIndex + 1}/10`
-                    : `Page ${engine.currentPageNumber} · Line ${engine.activeLineIndex + 1}/${engine.manifest.pageSize || 54}`}
-                </span>
-                <span>·</span>
-                <span>Col {Math.min(engine.activeColIndex + 1, engine.activeColumnLimit ?? 70)}/{engine.activeColumnLimit ?? 70}</span>
+            <div className={`flex items-center justify-center text-center ${boxWidthClass} px-3 sm:px-8 mt-1.5 text-muted-foreground text-[11px] font-mono pointer-events-none select-none`}>
+              <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+                <span>{lineStatText}</span>
                 <span>·</span>
                 <span className="text-foreground/90 font-medium">{wordCount} words</span>
                 <span>·</span>
@@ -113,7 +116,7 @@ export default function Home() {
       </section>
 
       {/* 3. UTILITY DECK: Viewport Base, centered and matching input box width */}
-      <footer className="w-full flex justify-center items-center pb-2 select-none text-xs">
+      <footer className="w-full flex justify-center items-center pb-1.5 sm:pb-2 select-none text-xs shrink-0">
         <div className={`flex items-center justify-between ${boxWidthClass} gap-2`}>
           {/* Project Button */}
           <button
@@ -136,8 +139,8 @@ export default function Home() {
             onClick={() => setIsSettingsOpen(true)}
             className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-none border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs ${
               isSpotlight
-                ? 'border-border/80 bg-muted/70 text-muted-foreground hover:bg-card hover:text-card-foreground'
-                : 'border-border/70 bg-card hover:bg-muted text-muted-foreground hover:text-foreground'
+                ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground'
+                : 'border-border/70 bg-card hover:bg-muted text-card-foreground'
             }`}
             title="Settings"
           >

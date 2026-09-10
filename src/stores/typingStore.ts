@@ -24,6 +24,7 @@ import {
 } from '@/db';
 
 export function getPageLineLimit(mode?: PageMode, customSize?: number): number {
+  if (mode === 'scroll') return Infinity;
   if (mode === 'notecard') return 10;
   if (mode === 'paragraph') return 9999;
   return customSize || 54;
@@ -48,8 +49,8 @@ export const DEFAULT_MANIFEST: ManuscriptManifest = {
   printedPagesCount: 0,
   activeApertureHeight: 1,
   wrapMode: 'soft',
-  pageSize: 54,
-  pageMode: 'page',
+  pageSize: 999999,
+  pageMode: 'scroll',
   colorScheme: 'typewriter',
   typeface: 'courier-prime',
   showStats: true,
@@ -156,7 +157,7 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
 
   setPageSize: (pageSize: PageSize) => {
     set((state) => {
-      const updated = { ...state.manifest, pageSize };
+      const updated = { ...state.manifest, pageSize, pageMode: 'page' as const };
       persistSettings(updated);
       if (updated.mode === 'local') {
         saveManuscript(updated).catch(console.error);

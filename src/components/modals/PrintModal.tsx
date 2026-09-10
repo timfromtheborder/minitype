@@ -137,7 +137,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
             {/* Pop-Over Confirmation Card */}
             {isConfirmingNewProject && (
               <div className="absolute bottom-11 left-0 z-30 p-4 rounded-none border border-border bg-popover text-popover-foreground shadow-2xl flex flex-col gap-3 w-72 font-sans text-xs animate-in fade-in zoom-in-95 duration-100">
-                <p className="font-bold text-foreground">Start a new project?</p>
+                <p className="font-bold text-popover-foreground">Start a new project?</p>
                 <p className="text-muted-foreground text-[11px] leading-relaxed">
                   This will erase all drafted text, completed pages, and reset the manuscript title.
                 </p>
@@ -152,7 +152,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
                   <button
                     type="button"
                     onClick={handleNewProject}
-                    className="px-3 py-1 rounded-none border border-destructive bg-destructive text-destructive-foreground font-bold hover:opacity-90 transition-opacity cursor-pointer"
+                    className="px-3 py-1 rounded-none border border-red-600 bg-red-600 hover:bg-red-700 text-white font-bold transition-colors cursor-pointer shadow-xs"
                   >
                     Confirm
                   </button>

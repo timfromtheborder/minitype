@@ -68,7 +68,7 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
       onMouseDown={handleMouseDown}
       onClick={handleFrameTap}
       onTouchEnd={handleFrameTap}
-      className="relative flex flex-col justify-start w-fit max-w-[calc(100vw-1.5rem)] px-3 sm:px-8 pt-2.5 pb-2 rounded-none border border-border/70 bg-card text-card-foreground shadow-inner shadow-black/5 overflow-hidden select-none text-[13px] sm:text-sm md:text-base cursor-pointer font-mono"
+      className="relative flex flex-col justify-start w-fit max-w-[calc(100vw-2.5rem)] px-3 sm:px-8 pt-2.5 pb-2 rounded-none border border-border/70 bg-card text-card-foreground shadow-inner shadow-black/5 overflow-hidden select-none text-[13px] sm:text-sm md:text-base cursor-pointer font-mono"
       style={{
         cursor: isLocked ? 'not-allowed' : 'text',
         userSelect: 'none',

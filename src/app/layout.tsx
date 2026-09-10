@@ -13,13 +13,19 @@ const interTight = Inter_Tight({
   variable: "--font-inter-tight",
 });
 
+const basePath = process.env.GITHUB_PAGES === "true" ? "/minitype" : "";
+
 export const metadata: Metadata = {
   title: "minitype",
   description: "Distraction-free, forward-momentum writing web application modeled on mechanical typewriter constraints.",
   icons: {
     icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: `${basePath}/favicon.svg`, type: "image/svg+xml" },
+      { url: `${basePath}/favicon.png`, type: "image/png" },
+      { url: `${basePath}/favicon.ico` },
     ],
+    shortcut: `${basePath}/favicon.ico`,
+    apple: `${basePath}/apple-touch-icon.png`,
   },
   appleWebApp: {
     capable: true,

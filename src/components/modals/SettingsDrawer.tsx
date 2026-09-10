@@ -59,7 +59,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           <div className="flex items-center gap-2">
             <Sliders className="w-4 h-4 text-muted-foreground" />
             <h2 className="text-sm font-sans font-semibold tracking-wider uppercase text-foreground">
-              Typewriter Settings
+              Settings
             </h2>
           </div>
           <button
@@ -76,7 +76,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Aperture Visible Lines Slider (1 to 8 lines) */}
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-muted-foreground">Aperture Capacity:</label>
+              <label className="text-muted-foreground">Aperture:</label>
               <span className="font-bold text-foreground">
                 {manifest.activeApertureHeight} {manifest.activeApertureHeight === 1 ? 'line' : 'lines'}
               </span>
@@ -91,7 +91,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 value={manifest.activeApertureHeight}
                 onChange={(e) => onUpdateHeight(Number(e.target.value) as ApertureHeight)}
                 className="w-full square-slider cursor-pointer"
-                aria-label="Aperture Capacity slider"
+                aria-label="Aperture slider"
               />
               <span className="text-[10px] text-muted-foreground font-semibold">8</span>
             </div>
@@ -100,17 +100,17 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Page Mode */}
           <div className="flex flex-col gap-1.5">
             <label className="text-muted-foreground">Page Mode:</label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {(['paragraph', 'notecard', 'page'] as PageMode[]).map((mode) => (
+            <div className="grid grid-cols-4 gap-1.5">
+              {(['scroll', 'page', 'notecard', 'paragraph'] as PageMode[]).map((mode) => (
                 <button
                   key={mode}
                   type="button"
                   onClick={() => {
-                    const pageSize = mode === 'notecard' ? 10 : mode === 'page' ? 54 : 9999;
+                    const pageSize = mode === 'scroll' ? 999999 : mode === 'notecard' ? 10 : mode === 'page' ? 54 : 9999;
                     onUpdateManifest({ pageMode: mode, pageSize });
                   }}
                   className={`py-1.5 rounded-none border text-center transition-all cursor-pointer capitalize ${
-                    (manifest.pageMode || 'page') === mode
+                    (manifest.pageMode || 'scroll') === mode
                       ? 'border-primary bg-primary text-primary-foreground font-bold shadow-xs'
                       : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground'
                   }`}

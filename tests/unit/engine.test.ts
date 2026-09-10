@@ -377,6 +377,21 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(useTypingStore.getState().currentPageNumber).toBe(3);
       expect(useTypingStore.getState().manifest.outboxCount).toBe(2);
     });
+
+    it('does not paginate or complete page in scroll mode (endless scroll)', () => {
+      const store = useTypingStore.getState();
+      store.setPageMode('scroll');
+
+      for (let i = 0; i < 60; i++) {
+        store.insertChar('S');
+        store.handleEnter();
+      }
+
+      const state = useTypingStore.getState();
+      expect(state.currentPageNumber).toBe(1);
+      expect(state.manifest.outboxCount).toBe(0);
+      expect(state.currentPageLines.length).toBe(61);
+    });
   });
 
   describe('Content Sanitization & Print Speed Formula', () => {
