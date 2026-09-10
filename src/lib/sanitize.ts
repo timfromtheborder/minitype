@@ -62,7 +62,7 @@ export function sanitizeManuscript(pages: PageRecord[]): string {
       // Intentional empty line (e.g. user pressed Enter on an empty line without struck text)
       if (line.cells.length === 0 || lineText === '') {
         if (currentParagraph !== '') {
-          paragraphs.push(currentParagraph);
+          paragraphs.push(currentParagraph.trimEnd());
           currentParagraph = '';
         }
         paragraphs.push('');
@@ -70,23 +70,30 @@ export function sanitizeManuscript(pages: PageRecord[]): string {
       }
 
       if (currentParagraph === '') {
-        currentParagraph = lineText;
+        currentParagraph = rawLine;
       } else {
-        if (currentParagraph.endsWith('-')) {
-          currentParagraph += lineText.trimStart();
+        const hasTrailingSpace = currentParagraph.endsWith(' ') || Boolean(line.explicitTrailingWhitespace);
+        const hasLeadingSpace = rawLine.startsWith(' ');
+        const isHyphenated = currentParagraph.endsWith('-');
+
+        if (isHyphenated) {
+          currentParagraph += rawLine.trimStart();
+        } else if (hasTrailingSpace || hasLeadingSpace) {
+          currentParagraph = currentParagraph.trimEnd() + ' ' + rawLine.trimStart();
         } else {
-          currentParagraph += ' ' + lineText.trimStart();
+          // No whitespace between lines: connect directly (e.g. mid-word strikethrough: test[strike] + ing = testing)
+          currentParagraph += rawLine;
         }
       }
 
       if (line.wrapType === 'hard') {
-        paragraphs.push(currentParagraph);
+        paragraphs.push(currentParagraph.trimEnd());
         currentParagraph = '';
       }
     }
 
     if (currentParagraph !== '') {
-      paragraphs.push(currentParagraph);
+      paragraphs.push(currentParagraph.trimEnd());
     }
 
     // Trim trailing blank lines within this page

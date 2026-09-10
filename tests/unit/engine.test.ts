@@ -697,6 +697,54 @@ describe('Typing Engine & State Machine Invariants', () => {
       ]);
       expect(sanitized).toBe('Paragraph 1 continued');
     });
+
+    it('does not insert an artificial space when rejoining mid-word lines without whitespace (e.g. test[strike] + ing = testing)', () => {
+      // Simulate Line 0: "I am test" + [struck chars]
+      // Line 1: "ing" (soft-wrapped or joined without manual Enter)
+      const line0 = {
+        id: 'p1-line-0',
+        lineIndex: 0,
+        wrapType: 'soft' as const,
+        isCommitted: true,
+        cells: [
+          ...Array.from('I am test').map((char, i) => ({
+            id: `c0-${i}`,
+            char,
+            state: 'standard' as const,
+            colIndex: i,
+            lineIndex: 0,
+          })),
+          ...Array.from('xyz').map((char, i) => ({
+            id: `c0-struck-${i}`,
+            char,
+            state: 'struck' as const,
+            colIndex: 9 + i,
+            lineIndex: 0,
+          })),
+        ],
+      };
+
+      const line1 = {
+        id: 'p1-line-1',
+        lineIndex: 1,
+        wrapType: undefined,
+        isCommitted: false,
+        cells: Array.from('ing').map((char, i) => ({
+          id: `c1-${i}`,
+          char,
+          state: 'standard' as const,
+          colIndex: i,
+          lineIndex: 1,
+        })),
+      };
+
+      const sanitized = sanitizeManuscript([
+        { pageNumber: 1, lines: [line0, line1], completedAt: null },
+      ]);
+
+      // Should be "I am testing", NOT "I am test ing"
+      expect(sanitized).toBe('I am testing');
+    });
   });
 
   describe('Settings Persistence & Local Mode Rehydration', () => {
