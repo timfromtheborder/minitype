@@ -40,16 +40,26 @@ export function sanitizeManuscript(pages: PageRecord[]): string {
     for (let i = 0; i < pageLines.length; i++) {
       const line = pageLines[i];
 
-      const hasStruckOnly =
-        line.cells.length > 0 &&
-        line.cells.every((c) => c.state === 'struck' || c.isSoftPadding);
-
-      if (hasStruckOnly) continue;
-
       const rawLine = sanitizeLine(line);
       const lineText = rawLine.trimEnd();
 
-      // Intentional empty line (e.g. user pressed Enter on an empty line)
+      // Check if all non-padding genuine text on this line was struck out
+      const hasStruckCells = line.cells.some((c) => c.state === 'struck');
+      const hasOnlyStruckOrEmpty =
+        line.cells.length > 0 &&
+        line.cells.every((c) => c.state === 'struck' || c.isSoftPadding || c.char === ' ');
+
+      if (hasOnlyStruckOrEmpty && hasStruckCells) {
+        // This entire line was struck out. Collapse it without adding an unwanted empty line.
+        // If this line ended with a hard break (Enter), flush any accumulated soft-wrap paragraph.
+        if (line.wrapType === 'hard' && currentParagraph !== '') {
+          paragraphs.push(currentParagraph);
+          currentParagraph = '';
+        }
+        continue;
+      }
+
+      // Intentional empty line (e.g. user pressed Enter on an empty line without struck text)
       if (line.cells.length === 0 || lineText === '') {
         if (currentParagraph !== '') {
           paragraphs.push(currentParagraph);

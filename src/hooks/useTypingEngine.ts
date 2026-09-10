@@ -24,6 +24,12 @@ export function useTypingEngine() {
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
+      // 0. Ignore events originating from interactive inputs (e.g. document title input in modals)
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+
       // 1. IME Guard: suppress state mutation during composition
       const isComposing = (e as any).isComposing || e.keyCode === 229;
       if (isComposing) {
@@ -90,6 +96,10 @@ export function useTypingEngine() {
   // Global clipboard and context menu block
   useEffect(() => {
     const blockClipboard = (e: Event) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
       e.preventDefault();
     };
 

@@ -49,6 +49,8 @@ export default function Home() {
     [engine.historicalPages, engine.currentPageNumber, engine.currentPageLines]
   );
 
+  const isSpotlight = engine.manifest.colorScheme === 'spotlight';
+
   return (
     <main
       suppressHydrationWarning
@@ -67,7 +69,11 @@ export default function Home() {
           type="button"
           onClick={() => setIsSettingsOpen(true)}
           title="Settings (Aperture, Palette, Page Size)"
-          className="p-3 rounded-full border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground shadow-xs transition-all cursor-pointer hover:rotate-45 active:scale-95"
+          className={`p-3 rounded-full border shadow-xs transition-all cursor-pointer hover:rotate-45 active:scale-95 ${
+            isSpotlight
+              ? 'border-border/80 bg-muted/70 text-muted-foreground hover:bg-card hover:text-card-foreground'
+              : 'border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground'
+          }`}
         >
           <Settings className="w-5 h-5" />
         </button>
@@ -89,7 +95,11 @@ export default function Home() {
         <button
           type="button"
           onClick={() => setIsPrintOpen(true)}
-          className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg border border-border/70 bg-card hover:bg-muted text-card-foreground font-mono transition-all cursor-pointer shadow-xs active:scale-95 z-10"
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg border font-mono transition-all cursor-pointer shadow-xs active:scale-95 z-10 ${
+            isSpotlight
+              ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground'
+              : 'border-border/70 bg-card hover:bg-muted text-card-foreground'
+          }`}
         >
           <Printer className="w-3.5 h-3.5 opacity-70" />
           <span>Print / Compile</span>
@@ -122,8 +132,10 @@ export default function Home() {
           }
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-mono transition-all cursor-pointer z-10 ${
             engine.manifest.mode === 'local'
-              ? 'border-border/70 bg-card text-card-foreground font-medium shadow-xs'
-              : 'border-amber-500/80 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold shadow-xs'
+              ? isSpotlight
+                ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground font-medium shadow-xs'
+                : 'border-border/70 bg-card text-card-foreground font-medium shadow-xs'
+              : 'border-amber-500/80 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold shadow-xs hover:bg-amber-500/20'
           }`}
           title="Click to toggle between IndexedDB persistence and volatile RAM"
         >

@@ -544,6 +544,59 @@ describe('Typing Engine & State Machine Invariants', () => {
       const sanitized = sanitizeManuscript(pages);
       expect(sanitized).toContain('Page 2 line 0\nPage 2 line 1\nPage 2 line 2');
     });
+
+    it('collapses full-line strikeouts without inserting unwanted blank lines, and preserves hard breaks', () => {
+      const store = useTypingStore.getState();
+      store.resetEngine({ mode: 'temp', pageMode: 'notecard' });
+
+      // Line 0: "First line"
+      for (const c of 'First line') store.insertChar(c);
+      store.handleEnter();
+
+      // Line 1: Type "mistake", backspace all of it, and strike it out with Enter
+      for (const c of 'mistake') store.insertChar(c);
+      for (let i = 0; i < 7; i++) store.handleBackspace();
+      store.handleEnter(); // strikes out "mistake"
+      store.handleEnter(); // advances to Line 2 with hard break
+
+      // Line 2: "Second line"
+      for (const c of 'Second line') store.insertChar(c);
+
+      const state = useTypingStore.getState();
+      const sanitized = sanitizeManuscript([
+        { pageNumber: 1, lines: state.currentPageLines, completedAt: null },
+      ]);
+
+      // Should be "First line\nSecond line" without an empty line between them
+      expect(sanitized).toBe('First line\nSecond line');
+    });
+
+    it('preserves paragraph break when hard Enter is pressed after soft-wrap and strikeout', () => {
+      const store = useTypingStore.getState();
+      store.resetEngine({ mode: 'temp', pageMode: 'notecard', wrapMode: 'soft' });
+
+      // Line 0: Type 60 chars and wrap into Line 1
+      for (let i = 0; i < 60; i++) store.insertChar('A');
+      store.insertChar(' ');
+      for (const c of 'wrapped') store.insertChar(c); // wraps to line 1
+      store.insertChar(' ');
+
+      // Strike out "wrapped " on line 1
+      for (let i = 0; i < 8; i++) store.handleBackspace();
+      store.handleEnter(); // strikes out
+      store.handleEnter(); // hard break to line 2
+
+      // Line 2: Next paragraph
+      for (const c of 'Paragraph 2') store.insertChar(c);
+
+      const state = useTypingStore.getState();
+      const sanitized = sanitizeManuscript([
+        { pageNumber: 1, lines: state.currentPageLines, completedAt: null },
+      ]);
+
+      // Paragraph 1 and Paragraph 2 should be separated by a newline
+      expect(sanitized).toContain('\nParagraph 2');
+    });
   });
 
   describe('Settings Persistence & Local Mode Rehydration', () => {

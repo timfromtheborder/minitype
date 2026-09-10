@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { PageRecord, ManuscriptManifest } from '@/types';
 import { sanitizeManuscript } from '@/lib/sanitize';
 import { typewriterAudio } from '@/lib/sound';
+import { useTypingStore } from '@/stores/typingStore';
 import { Printer, Download, X, FastForward, CheckCircle2, Trash2 } from 'lucide-react';
 
 interface PrintModalProps {
@@ -21,6 +22,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
   onPrintedComplete,
   onClearText,
 }) => {
+  const [title, setTitle] = useState<string>(manifest.title || 'Untitled Manuscript');
   const [allLines, setAllLines] = useState<string[]>([]);
   const [printedLines, setPrintedLines] = useState<string[]>([]);
   const [isPrinting, setIsPrinting] = useState<boolean>(false);
@@ -31,6 +33,13 @@ export const PrintModal: React.FC<PrintModalProps> = ({
   const bottomRef = useRef<HTMLDivElement>(null);
   const printAbortRef = useRef<boolean>(false);
   const prevIsOpenRef = useRef<boolean>(false);
+
+  // Sync title when modal opens or manifest updates
+  useEffect(() => {
+    if (isOpen) {
+      setTitle(manifest.title || 'Untitled Manuscript');
+    }
+  }, [isOpen, manifest.title]);
 
   // Trigger print feed animation ONLY when modal opens (transition from closed -> open)
   useEffect(() => {
@@ -54,48 +63,8 @@ export const PrintModal: React.FC<PrintModalProps> = ({
     const fullClean = sanitizeManuscript(pages);
     setSanitizedFullText(fullClean);
 
-    // Extract visual drafted lines for the line-by-line feed animation
-    const visualLines: string[] = [];
-    for (let p = 0; p < pages.length; p++) {
-      const page = pages[p];
-      const pageVisualLines: string[] = [];
-
-      for (const line of page.lines) {
-        const hasStruckOnly =
-          line.cells.length > 0 &&
-          line.cells.every((c) => c.state === 'struck' || c.isSoftPadding);
-        if (hasStruckOnly) continue;
-
-        const cleanChars = line.cells
-          .filter((c) => c.state !== 'struck' && !c.isSoftPadding)
-          .map((c) => c.char)
-          .join('')
-          .trimEnd();
-
-        if (line.cells.length === 0 || cleanChars === '') {
-          if (line.isCommitted || line.wrapType === 'hard') {
-            pageVisualLines.push('');
-          }
-        } else {
-          pageVisualLines.push(cleanChars);
-        }
-      }
-
-      // Trim trailing empty lines from this page
-      while (pageVisualLines.length > 0 && pageVisualLines[pageVisualLines.length - 1] === '') {
-        pageVisualLines.pop();
-      }
-
-      if (pageVisualLines.length > 0) {
-        if (visualLines.length > 0) {
-          // Visual line break between pages
-          visualLines.push('');
-        }
-        visualLines.push(...pageVisualLines);
-      }
-    }
-
-    const lines = visualLines.length > 0 ? visualLines : [''];
+    // Derive print lines directly from sanitized manuscript for 100% export-to-screen fidelity
+    const lines = fullClean.length > 0 ? fullClean.split('\n') : [''];
     setAllLines(lines);
 
     printAbortRef.current = false;
@@ -148,11 +117,12 @@ export const PrintModal: React.FC<PrintModalProps> = ({
   };
 
   const handleDownloadTxt = () => {
+    const safeTitle = (title.trim() || manifest.title || 'manuscript').replace(/[/\\?%*:|"<>]/g, '-');
     const blob = new Blob([sanitizedFullText], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${manifest.title || 'manuscript'}.txt`;
+    link.download = `${safeTitle}.txt`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -188,12 +158,21 @@ export const PrintModal: React.FC<PrintModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border/60 pb-3">
-          <div className="flex items-center gap-2.5">
-            <Printer className="w-4 h-4 text-foreground" />
-            <h2 className="text-sm font-mono font-semibold tracking-wider uppercase text-foreground">
-              Manuscript Print Output
-            </h2>
+        <div className="flex items-center justify-between border-b border-border/60 pb-3 gap-3">
+          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+            <Printer className="w-4 h-4 text-foreground shrink-0" />
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => {
+                const val = e.target.value;
+                setTitle(val);
+                useTypingStore.getState().setManifest({ title: val });
+              }}
+              placeholder="Untitled Manuscript"
+              className="bg-transparent text-sm font-mono font-semibold tracking-wide text-foreground border-b border-dashed border-border/80 hover:border-foreground focus:border-foreground focus:outline-none px-1 py-0.5 w-full max-w-[280px] sm:max-w-[340px] truncate transition-colors cursor-text"
+              title="Click to edit document title"
+            />
           </div>
 
           <div className="flex items-center gap-2.5">
