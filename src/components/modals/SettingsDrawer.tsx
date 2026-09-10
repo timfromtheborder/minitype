@@ -46,7 +46,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md p-6 rounded-2xl border border-border/70 bg-card text-card-foreground shadow-2xl flex flex-col gap-5 select-none"
+        className="w-full max-w-md p-6 rounded-2xl border border-border bg-background text-foreground shadow-2xl flex flex-col gap-5 select-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
