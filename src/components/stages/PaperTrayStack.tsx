@@ -71,7 +71,7 @@ export const PaperTrayStack: React.FC<PaperTrayStackProps> = ({ count }) => {
       </svg>
 
       <span className="text-[10px] font-mono tracking-widest uppercase text-muted-foreground/60 transition-colors group-hover:text-foreground">
-        {count === 0 ? 'Outbox' : `${count} ${count === 1 ? 'Sheet' : 'Sheets'}`}
+        Outbox
       </span>
     </div>
   );

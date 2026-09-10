@@ -46,7 +46,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md p-6 rounded-2xl border border-border bg-background shadow-2xl flex flex-col gap-5 select-none"
+        className="w-full max-w-md p-6 rounded-2xl border border-border/70 bg-card text-card-foreground shadow-2xl flex flex-col gap-5 select-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -94,7 +94,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           <div className="flex flex-col gap-1.5">
             <label className="text-muted-foreground">Page Mode:</label>
             <div className="grid grid-cols-3 gap-1.5">
-              {(['notecard', 'paragraph', 'page'] as PageMode[]).map((mode) => (
+              {(['paragraph', 'notecard', 'page'] as PageMode[]).map((mode) => (
                 <button
                   key={mode}
                   type="button"
@@ -215,8 +215,8 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 onClick={() => onUpdateManifest({ mode: 'local' })}
                 className={`py-1.5 px-3 rounded-md border text-center transition-all cursor-pointer ${
                   manifest.mode === 'local'
-                    ? 'border-primary bg-primary/10 text-primary font-bold'
-                    : 'border-border/80 bg-muted/30 hover:bg-muted/70'
+                    ? 'border-primary bg-primary text-primary-foreground font-bold shadow-xs'
+                    : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground'
                 }`}
               >
                 Local (IndexedDB)

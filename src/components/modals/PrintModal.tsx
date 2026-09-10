@@ -184,14 +184,14 @@ export const PrintModal: React.FC<PrintModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl h-[560px] p-6 rounded-2xl border border-border bg-background shadow-2xl flex flex-col justify-between select-none"
+        className="w-full max-w-2xl h-[560px] p-6 rounded-2xl border border-border/70 bg-card text-card-foreground shadow-2xl flex flex-col justify-between select-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border pb-3">
+        <div className="flex items-center justify-between border-b border-border/60 pb-3">
           <div className="flex items-center gap-2.5">
-            <Printer className="w-4 h-4 text-foreground" />
-            <h2 className="text-sm font-mono font-semibold tracking-wider uppercase text-foreground">
+            <Printer className="w-4 h-4 text-card-foreground" />
+            <h2 className="text-sm font-mono font-semibold tracking-wider uppercase text-card-foreground">
               Manuscript Print Output
             </h2>
           </div>
@@ -205,7 +205,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
                 <button
                   type="button"
                   onClick={handleFastForward}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-border bg-card hover:bg-muted text-xs font-mono cursor-pointer transition-colors"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/70 bg-background/10 hover:bg-background/20 text-card-foreground text-xs font-mono cursor-pointer transition-colors"
                   title="Fast-forward"
                 >
                   <FastForward className="w-3.5 h-3.5" />
@@ -215,7 +215,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
             )}
 
             {isDone && (
-              <span className="text-xs font-mono text-foreground font-medium flex items-center gap-1">
+              <span className="text-xs font-mono text-card-foreground font-medium flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 Ready ({totalLinesCount} lines)
               </span>
@@ -224,23 +224,23 @@ export const PrintModal: React.FC<PrintModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+              className="p-1.5 rounded-md text-card-foreground/70 hover:text-card-foreground hover:bg-background/10 transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Clean, Non-skeumorphic Manuscript Sheet Area (Fixed size, lines emerge one-by-one from the bottom) */}
-        <div className="relative w-full h-[380px] p-6 rounded-xl border border-border bg-card font-mono text-sm leading-relaxed overflow-y-auto whitespace-pre-wrap select-text flex flex-col justify-end">
+        {/* Clean Manuscript Sheet Area matching input box and input font color */}
+        <div className="relative w-full h-[380px] p-6 rounded-xl border border-border/80 bg-card text-card-foreground font-mono text-sm leading-[1.2] overflow-y-auto whitespace-pre-wrap select-text flex flex-col justify-end shadow-inner">
           <div className="flex-1 flex flex-col justify-end">
             {printedLines.map((line, idx) => {
               const isLatest = idx === printedLines.length - 1 && isPrinting;
               return (
                 <div
                   key={idx}
-                  className={`min-h-[1.5rem] tracking-wide transition-opacity duration-150 ${
-                    isLatest ? 'opacity-100 font-semibold' : 'opacity-90'
+                  className={`min-h-[1.5rem] tracking-wide text-card-foreground transition-opacity duration-150 ${
+                    isLatest ? 'font-bold' : ''
                   }`}
                 >
                   {line || '\u00A0'}
@@ -252,7 +252,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
         </div>
 
         {/* Actions Footer */}
-        <div className="flex items-center justify-between pt-2 border-t border-border text-xs font-mono">
+        <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs font-mono">
           <div className="flex items-center gap-3">
             {onClearText && (
               <button
@@ -277,12 +277,11 @@ export const PrintModal: React.FC<PrintModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-
             <button
               type="button"
               onClick={handleDownloadTxt}
               disabled={sanitizedFullText.length === 0}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-card hover:bg-muted text-foreground transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border/80 bg-background/10 hover:bg-background/20 text-card-foreground transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Download className="w-3.5 h-3.5" />
               Download .txt

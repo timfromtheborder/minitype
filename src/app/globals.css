@@ -110,23 +110,23 @@
 [data-theme="spotlight"],
 [data-theme="phosphor"] {
   --background: #141416;
-  --foreground: #A1A1AA;
+  --foreground: #EDEDED;
   --card: #E4E4E7;
   --card-foreground: #09090B;
   --popover: #E4E4E7;
   --popover-foreground: #09090B;
-  --primary: #09090B;
-  --primary-foreground: #F4F4F5;
+  --primary: #E4E4E7;
+  --primary-foreground: #09090B;
   --secondary: #D4D4D8;
   --secondary-foreground: #09090B;
   --muted: #27272A;
-  --muted-foreground: #71717A;
+  --muted-foreground: #A1A1AA;
   --accent: #27272A;
   --accent-foreground: #F4F4F5;
-  --destructive: #EF4444;
-  --border: #2E2E33;
-  --input: #2E2E33;
-  --ring: #09090B;
+  --destructive: #DC2626;
+  --border: #3F3F46;
+  --input: #3F3F46;
+  --ring: #E4E4E7;
   --highlight-bg: #CBD5E1;
   --highlight-text: #09090B;
   --struck-color: #DC2626;

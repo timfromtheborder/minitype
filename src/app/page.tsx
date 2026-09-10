@@ -89,7 +89,7 @@ export default function Home() {
         <button
           type="button"
           onClick={() => setIsPrintOpen(true)}
-          className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg border border-border bg-card hover:bg-muted text-foreground font-mono transition-all cursor-pointer shadow-xs active:scale-95 z-10"
+          className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg border border-border/70 bg-card hover:bg-muted text-card-foreground font-mono transition-all cursor-pointer shadow-xs active:scale-95 z-10"
         >
           <Printer className="w-3.5 h-3.5 opacity-70" />
           <span>Print / Compile</span>
@@ -99,10 +99,10 @@ export default function Home() {
         <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3.5 text-muted-foreground text-[11px] font-mono pointer-events-none">
           <span>
             {engine.manifest.pageMode === 'paragraph'
-              ? `Page ${engine.currentPageNumber} · Line ${engine.activeLineIndex + 1}`
+              ? `Paragraph ${engine.currentPageNumber} · Line ${engine.activeLineIndex + 1}`
               : engine.manifest.pageMode === 'notecard'
               ? `Card ${engine.currentPageNumber} · Line ${engine.activeLineIndex + 1}/10`
-              : `Sheet ${engine.currentPageNumber} · Line ${engine.activeLineIndex + 1}/${engine.manifest.pageSize || 54}`}
+              : `Page ${engine.currentPageNumber} · Line ${engine.activeLineIndex + 1}/${engine.manifest.pageSize || 54}`}
           </span>
           <span>·</span>
           <span>Col {Math.min(engine.activeColIndex + 1, 70)}/70</span>
@@ -120,16 +120,16 @@ export default function Home() {
               mode: engine.manifest.mode === 'local' ? 'temp' : 'local',
             })
           }
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-mono transition-all cursor-pointer ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-mono transition-all cursor-pointer z-10 ${
             engine.manifest.mode === 'local'
-              ? 'border-border bg-card text-foreground'
-              : 'border-amber-500/80 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold'
+              ? 'border-border/70 bg-card text-card-foreground font-medium shadow-xs'
+              : 'border-amber-500/80 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold shadow-xs'
           }`}
           title="Click to toggle between IndexedDB persistence and volatile RAM"
         >
           {engine.manifest.mode === 'local' ? (
             <>
-              <Database className="w-3.5 h-3.5 opacity-70" />
+              <Database className="w-3.5 h-3.5 opacity-80" />
               <span>Mode: Local (IndexedDB)</span>
             </>
           ) : (
