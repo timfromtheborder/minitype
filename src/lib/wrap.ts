@@ -37,6 +37,7 @@ export function wrapLine(
         ...currentLine,
         isCommitted: true,
         wrapType: 'soft',
+        explicitTrailingWhitespace: true,
       },
       nextLineCells: [],
     };

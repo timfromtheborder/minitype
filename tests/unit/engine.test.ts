@@ -468,14 +468,38 @@ describe('Typing Engine & State Machine Invariants', () => {
       state = useTypingStore.getState();
       sanitized = sanitizeManuscript([{ pageNumber: 1, lines: state.currentPageLines, completedAt: null }]);
       expect(sanitized).toBe('Paragraph 1\n\nParagraph 2');
+    });
 
-      // 4. Hyphenated wrap should connect directly without introducing a space
+    it('preserves space when space is typed at the end of the line (character 71) and drafting continues on the next line', () => {
+      const store = useTypingStore.getState();
+      store.resetEngine({ mode: 'temp', wrapMode: 'soft' });
+
+      // Type 70 characters on Line 0 (filling columns 0 to 69)
+      for (let i = 0; i < 70; i++) store.insertChar('a');
+
+      // Character 71 is a space: triggers soft wrap to Line 1
+      store.insertChar(' ');
+
+      // Continue drafting on Line 1
+      for (const c of 'next') store.insertChar(c);
+
+      const state = useTypingStore.getState();
+      expect(state.currentPageLines).toHaveLength(2);
+      expect(state.currentPageLines[0].explicitTrailingWhitespace).toBe(true);
+
+      // In the compiled manuscript, the space between line 0 and line 1 is preserved!
+      const sanitized = sanitizeManuscript([{ pageNumber: 1, lines: state.currentPageLines, completedAt: null }]);
+      expect(sanitized).toBe('a'.repeat(70) + ' next');
+    });
+
+    it('connects hyphenated wrap directly without introducing a space', () => {
+      const store = useTypingStore.getState();
       store.resetEngine({ mode: 'temp', wrapMode: 'soft' });
       for (let i = 0; i < 64; i++) store.insertChar('a');
       for (const c of 'life-like') store.insertChar(c);
 
-      state = useTypingStore.getState();
-      sanitized = sanitizeManuscript([{ pageNumber: 1, lines: state.currentPageLines, completedAt: null }]);
+      const state = useTypingStore.getState();
+      const sanitized = sanitizeManuscript([{ pageNumber: 1, lines: state.currentPageLines, completedAt: null }]);
       expect(sanitized.endsWith('life-like')).toBe(true);
       expect(sanitized.includes('life- like')).toBe(false);
       expect(sanitized.includes('\n')).toBe(false);

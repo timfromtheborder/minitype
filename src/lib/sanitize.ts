@@ -123,6 +123,7 @@ export function sanitizeManuscript(
 
     const paragraphs: string[] = [];
     let currentParagraph = '';
+    let previousLineRecord: LineRecord | null = null;
 
     for (let i = 0; i < pageLines.length; i++) {
       const line = pageLines[i];
@@ -148,13 +149,14 @@ export function sanitizeManuscript(
           currentParagraph = '';
         }
         paragraphs.push('');
+        previousLineRecord = null;
         continue;
       }
 
       if (currentParagraph === '') {
         currentParagraph = rawLine;
       } else {
-        const hasTrailingSpace = currentParagraph.endsWith(' ');
+        const hasTrailingSpace = currentParagraph.endsWith(' ') || Boolean(previousLineRecord?.explicitTrailingWhitespace);
         const hasLeadingSpace = rawLine.startsWith(' ');
         const isHyphenated = currentParagraph.endsWith('-');
 
@@ -168,9 +170,12 @@ export function sanitizeManuscript(
         }
       }
 
+      previousLineRecord = line;
+
       if (line.wrapType === 'hard') {
         paragraphs.push(currentParagraph.trimEnd());
         currentParagraph = '';
+        previousLineRecord = null;
       }
     }
 
