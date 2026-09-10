@@ -893,6 +893,18 @@ describe('Typing Engine & State Machine Invariants', () => {
       typewriterAudio.setMuted(true);
       expect(typewriterAudio.getMuted()).toBe(true);
     });
+
+    it('plays paper feed sound when a page or card completes', async () => {
+      const { typewriterAudio } = await import('@/lib/sound');
+      const spy = vi.spyOn(typewriterAudio, 'playPaperFeed');
+      const store = useTypingStore.getState();
+      store.resetEngine({ mode: 'temp', pageMode: 'notecard' }); // 10 lines per card
+      for (let i = 0; i < 10; i++) {
+        store.handleEnter();
+      }
+      expect(spy).toHaveBeenCalled();
+      spy.mockRestore();
+    });
   });
 });
 

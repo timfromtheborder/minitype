@@ -283,6 +283,7 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
 
       const newOutbox = state.manifest.outboxCount + 1;
       const historical = [...state.historicalPages, completedPage];
+      typewriterAudio.playPaperFeed();
 
       if (state.manifest.mode === 'local') {
         savePage(completedPage).catch(console.error);
@@ -637,6 +638,7 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
 
       const newOutbox = state.manifest.outboxCount + 1;
       const historical = [...state.historicalPages, completedPage];
+      typewriterAudio.playPaperFeed();
 
       if (state.manifest.mode === 'local') {
         savePage(completedPage).catch(console.error);

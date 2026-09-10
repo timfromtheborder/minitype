@@ -370,6 +370,56 @@ class TypewriterAudio {
       stepOsc.stop(t + 0.22);
     } catch {}
   }
+
+  /**
+   * Synthesizes a soft, minimal 'shweep' paper flapping sound for adding a page to the stack.
+   * Simulates a lightweight parchment sheet sliding and settling into the tray.
+   */
+  public playPaperFeed() {
+    if (this.isMuted) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    try {
+      const t = ctx.currentTime;
+      const duration = 0.16; // 160ms
+      const bufferSize = Math.floor(ctx.sampleRate * duration);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+
+      // Soft paper whoosh with subtle aerodynamic flap flutter
+      for (let i = 0; i < bufferSize; i++) {
+        const progress = i / bufferSize;
+        // Smooth bell curve envelope: rapid soft rise, gentle decay
+        const env = Math.sin(progress * Math.PI) * Math.exp(-progress * 1.5);
+        // Aerodynamic flutter modulation (~18Hz paper flap)
+        const flutter = 1 + 0.25 * Math.sin(progress * 2 * Math.PI * 18);
+        data[i] = (Math.random() * 2 - 1) * env * flutter;
+      }
+
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      // Bandpass filter sweeping smoothly upward then resting ("shweep")
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(750, t);
+      filter.frequency.exponentialRampToValueAtTime(1900, t + 0.08);
+      filter.frequency.exponentialRampToValueAtTime(1100, t + duration);
+      filter.Q.setValueAtTime(1.4, t);
+
+      // Very minimal, gentle gain (non-intrusive)
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.18, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+
+      noise.start(t);
+    } catch {}
+  }
 }
 
 export const typewriterAudio = new TypewriterAudio();
