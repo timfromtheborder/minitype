@@ -12,6 +12,7 @@ import {
   TypingEngineActions,
 } from '@/types';
 import { wrapLine, getLastPrintableCellIndex, createCellId, MAX_COLUMNS } from '@/lib/wrap';
+import { typewriterAudio } from '@/lib/sound';
 import {
   saveManuscript,
   savePage,
@@ -183,8 +184,14 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
     // 1. If currently in highlight mode, any keystroke immediately strikes out highlighted text:
     // Converts all 'highlighted' cells to 'struck', permanently marks isStruck: true, clears highlight mode, and snaps cursor.
     if (isHighlighting) {
-      lines = lines.map((line) => ({
+      lines = lines.map((line, idx) => ({
         ...line,
+        wrapType:
+          idx < activeLineIndex &&
+          (line.cells.some((c) => c.state === 'highlighted') ||
+            (highlightHead && highlightHead.lineIndex <= idx))
+            ? 'soft'
+            : line.wrapType,
         cells: line.cells.map((cell) =>
           cell.state === 'highlighted' ? { ...cell, state: 'struck' as const, isStruck: true } : cell
         ),
@@ -345,6 +352,7 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
       const currentLine = lines[activeLineIndex];
       const printableIndex = currentLine ? getLastPrintableCellIndex(currentLine.cells) : -1;
 
+      // If active line has printable characters, highlight the last one
       if (printableIndex >= 0) {
         // Highlight the last cell on the active line
         const targetCell = currentLine.cells[printableIndex];
@@ -375,10 +383,40 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
         return;
       }
 
-      // If active line is empty, try to step back into preceding visible line
-      if (activeLineIndex > minVisibleLine) {
+      // If active line is empty and was created by Enter (prevLine has wrapType === 'hard'):
+      // Backspace strikes out the carriage return!
+      if (activeLineIndex > 0) {
         const prevLineIndex = activeLineIndex - 1;
         const prevLine = lines[prevLineIndex];
+        if (prevLine && prevLine.wrapType === 'hard') {
+          // Strike out the carriage return: cancel the hard break and pop empty line
+          prevLine.wrapType = 'soft';
+          prevLine.isCommitted = false;
+          lines.pop();
+
+          typewriterAudio.playStrike();
+
+          if (state.manifest.mode === 'local') {
+            debounceSavePage({
+              id: `${state.manifest.id}-page-${state.currentPageNumber}`,
+              manuscriptId: state.manifest.id,
+              pageNumber: state.currentPageNumber,
+              lines,
+              completedAt: null,
+            });
+          }
+
+          set({
+            currentPageLines: lines,
+            activeLineIndex: prevLineIndex,
+            activeColIndex: prevLine.cells.length,
+            isHighlighting: false,
+            highlightHead: null,
+          });
+          return;
+        }
+
+        // If prevLine was soft-wrapped (not a manual carriage return), traverse back to highlight its last printable char
         if (prevLine) {
           const prevPrintableIndex = getLastPrintableCellIndex(prevLine.cells);
           if (prevPrintableIndex >= 0) {
@@ -409,6 +447,37 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
             return;
           }
         }
+      }
+
+      // If active line is at index 0, empty, and a previous completed page exists (e.g. paragraph mode):
+      // Strike out the paragraph carriage return and restore previous page
+      if (activeLineIndex === 0 && (!currentLine || currentLine.cells.length === 0) && state.historicalPages.length > 0) {
+        const historical = [...state.historicalPages];
+        const prevPage = historical.pop()!;
+        const restoredLines = [...prevPage.lines];
+        const lastLineIndex = Math.max(0, restoredLines.length - 1);
+        const lastLine = restoredLines[lastLineIndex];
+        if (lastLine && lastLine.wrapType === 'hard') {
+          lastLine.wrapType = 'soft';
+          lastLine.isCommitted = false;
+        }
+
+        typewriterAudio.playStrike();
+
+        set({
+          manifest: {
+            ...state.manifest,
+            outboxCount: Math.max(0, state.manifest.outboxCount - 1),
+          },
+          historicalPages: historical,
+          currentPageNumber: prevPage.pageNumber,
+          currentPageLines: restoredLines,
+          activeLineIndex: lastLineIndex,
+          activeColIndex: lastLine ? lastLine.cells.length : 0,
+          isHighlighting: false,
+          highlightHead: null,
+        });
+        return;
       }
 
       // Cannot highlight further backward
@@ -505,8 +574,15 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
       // Enter with active highlight:
       // Converts all 'highlighted' cells to 'struck', permanently marks isStruck: true, clears selection,
       // snaps cursor to end of active line without creating a newline.
-      lines = lines.map((line) => ({
+      // If the highlight spanned into preceding lines, those carriage returns were struck out (wrapType = 'soft').
+      lines = lines.map((line, idx) => ({
         ...line,
+        wrapType:
+          idx < state.activeLineIndex &&
+          (line.cells.some((c) => c.state === 'highlighted') ||
+            (state.highlightHead && state.highlightHead.lineIndex <= idx))
+            ? 'soft'
+            : line.wrapType,
         cells: line.cells.map((cell) =>
           cell.state === 'highlighted' ? { ...cell, state: 'struck' as const, isStruck: true } : cell
         ),

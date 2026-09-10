@@ -633,6 +633,70 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(sanitized.includes('\n')).toBe(false);
       expect(sanitized.endsWith('CORRECT')).toBe(true);
     });
+
+    it('strikes out carriage return when backspacing immediately after Enter', () => {
+      const store = useTypingStore.getState();
+      store.resetEngine({ mode: 'temp', pageMode: 'notecard' });
+
+      // Type "Hello" on line 0
+      for (const c of 'Hello') store.insertChar(c);
+
+      // Carriage Return (Enter)
+      store.handleEnter();
+      expect(useTypingStore.getState().currentPageLines).toHaveLength(2);
+      expect(useTypingStore.getState().activeLineIndex).toBe(1);
+      expect(useTypingStore.getState().activeColIndex).toBe(0);
+
+      // Immediately press Backspace on the empty line
+      store.handleBackspace();
+
+      // Carriage return should be struck out:
+      // Line 1 removed, cursor returns to Line 0 at col 5, Line 0 wrapType cancelled to 'soft'
+      const stateAfterBs = useTypingStore.getState();
+      expect(stateAfterBs.currentPageLines).toHaveLength(1);
+      expect(stateAfterBs.activeLineIndex).toBe(0);
+      expect(stateAfterBs.activeColIndex).toBe(5);
+      expect(stateAfterBs.currentPageLines[0].wrapType).toBe('soft');
+
+      // Continue typing on Line 0
+      for (const c of ' world') store.insertChar(c);
+      expect(useTypingStore.getState().currentPageLines[0].cells.map((c) => c.char).join('')).toBe('Hello world');
+
+      // Compiling via sanitizeManuscript produces "Hello world" with NO linebreak!
+      const sanitized = sanitizeManuscript([
+        { pageNumber: 1, lines: useTypingStore.getState().currentPageLines, completedAt: null },
+      ]);
+      expect(sanitized).toBe('Hello world');
+    });
+
+    it('strikes out carriage return in paragraph mode restoring the completed paragraph', () => {
+      const store = useTypingStore.getState();
+      store.resetEngine({ mode: 'temp', pageMode: 'paragraph' });
+
+      for (const c of 'Paragraph 1') store.insertChar(c);
+
+      // Enter completes Page 1 in paragraph mode
+      store.handleEnter();
+      expect(useTypingStore.getState().currentPageNumber).toBe(2);
+      expect(useTypingStore.getState().historicalPages).toHaveLength(1);
+      expect(useTypingStore.getState().manifest.outboxCount).toBe(1);
+
+      // Press Backspace on empty Page 2: strikes out carriage return and restores Page 1
+      store.handleBackspace();
+
+      const state = useTypingStore.getState();
+      expect(state.currentPageNumber).toBe(1);
+      expect(state.historicalPages).toHaveLength(0);
+      expect(state.manifest.outboxCount).toBe(0);
+      expect(state.currentPageLines[0].wrapType).toBe('soft');
+      expect(state.activeColIndex).toBe(11);
+
+      for (const c of ' continued') store.insertChar(c);
+      const sanitized = sanitizeManuscript([
+        { pageNumber: 1, lines: useTypingStore.getState().currentPageLines, completedAt: null },
+      ]);
+      expect(sanitized).toBe('Paragraph 1 continued');
+    });
   });
 
   describe('Settings Persistence & Local Mode Rehydration', () => {
