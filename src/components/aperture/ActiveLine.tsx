@@ -33,8 +33,11 @@ export const ActiveLine: React.FC<ActiveLineProps> = ({
           className={`inline-block w-[1ch] h-[1.3em] font-mono select-none pointer-events-none transition-colors duration-200 ${
             isLocked
               ? 'bg-amber-500 animate-pulse'
-              : 'bg-foreground/90 animate-[pulse_1s_infinite]'
+              : 'animate-[pulse_1s_infinite]'
           }`}
+          style={{
+            backgroundColor: isLocked ? '#f59e0b' : 'var(--cursor-color, currentColor)',
+          }}
           aria-hidden="true"
         />
       )}

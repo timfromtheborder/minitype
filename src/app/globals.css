@@ -48,73 +48,114 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+/* ==========================================================================
+   MINITYPE PALETTES & COLOR SCHEMES
+   ========================================================================== */
+
+/* 1. Default & Typewriter Paper */
+:root,
+[data-theme="typewriter"] {
+  --background: #F5F2EB;
+  --foreground: #1E1E1E;
+  --card: #EFE9DE;
+  --card-foreground: #1E1E1E;
+  --popover: #F5F2EB;
+  --popover-foreground: #1E1E1E;
+  --primary: #1E1E1E;
+  --primary-foreground: #F5F2EB;
+  --secondary: #E7DFD1;
+  --secondary-foreground: #1E1E1E;
+  --muted: #EADFCF;
+  --muted-foreground: #666056;
+  --accent: #DFD3BF;
+  --accent-foreground: #1E1E1E;
+  --destructive: #C0392B;
+  --border: #DCD1BE;
+  --input: #DCD1BE;
+  --ring: #887E6E;
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --highlight-bg: rgba(220, 206, 178, 0.9);
+  --highlight-text: #1E1E1E;
+  --struck-color: #C0392B;
+  --cursor-color: #1E1E1E;
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+/* 2. Dark Amber (CRT phosphor amber terminal) */
+[data-theme="dark-amber"] {
+  --background: #121212;
+  --foreground: #FFB000;
+  --card: #1A1710;
+  --card-foreground: #FFB000;
+  --popover: #18150E;
+  --popover-foreground: #FFB000;
+  --primary: #FFB000;
+  --primary-foreground: #121212;
+  --secondary: #262010;
+  --secondary-foreground: #FFB000;
+  --muted: #241D0D;
+  --muted-foreground: #B37D00;
+  --accent: #332808;
+  --accent-foreground: #FFB000;
+  --destructive: #FF453A;
+  --border: #3D2F0B;
+  --input: #3D2F0B;
+  --ring: #FFB000;
+  --highlight-bg: #4A3700;
+  --highlight-text: #FFDE7A;
+  --struck-color: #FF453A;
+  --cursor-color: #FFB000;
+}
+
+/* 3. Phosphor Green (Classic green CRT screen) */
+[data-theme="phosphor"] {
+  --background: #0A120A;
+  --foreground: #33FF33;
+  --card: #0E1C0E;
+  --card-foreground: #33FF33;
+  --popover: #0C170C;
+  --popover-foreground: #33FF33;
+  --primary: #33FF33;
+  --primary-foreground: #0A120A;
+  --secondary: #142E14;
+  --secondary-foreground: #33FF33;
+  --muted: #122812;
+  --muted-foreground: #1EAA1E;
+  --accent: #193819;
+  --accent-foreground: #33FF33;
+  --destructive: #FF3333;
+  --border: #1E461E;
+  --input: #1E461E;
+  --ring: #33FF33;
+  --highlight-bg: #104010;
+  --highlight-text: #88FF88;
+  --struck-color: #FF3333;
+  --cursor-color: #33FF33;
+}
+
+/* 4. High Contrast (Crisp Monochrome) */
+[data-theme="high-contrast"] {
+  --background: #FFFFFF;
+  --foreground: #000000;
+  --card: #FFFFFF;
+  --card-foreground: #000000;
+  --popover: #FFFFFF;
+  --popover-foreground: #000000;
+  --primary: #000000;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F0F0F0;
+  --secondary-foreground: #000000;
+  --muted: #F0F0F0;
+  --muted-foreground: #444444;
+  --accent: #E0E0E0;
+  --accent-foreground: #000000;
+  --destructive: #000000;
+  --border: #000000;
+  --input: #000000;
+  --ring: #000000;
+  --highlight-bg: #D4D4D4;
+  --highlight-text: #000000;
+  --struck-color: #000000;
+  --cursor-color: #000000;
 }
 
 @layer base {
@@ -122,9 +163,12 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    background-color: var(--background);
+    color: var(--foreground);
+    transition: background-color 200ms ease, color 200ms ease;
   }
   html {
     @apply font-sans;
+    background-color: var(--background);
   }
 }

@@ -18,23 +18,20 @@ export const CharacterCell = React.memo(function CharacterCell({ cell }: Charact
       data-col={cell.colIndex}
       data-state={cell.state}
       className={`inline-block relative font-mono text-center select-none w-[1ch] transition-colors duration-75 ${
-        isHighlighted
-          ? 'bg-amber-400/50 text-foreground dark:bg-amber-500/60 font-semibold'
-          : ''
-      } ${
-        isStruck
-          ? 'opacity-70 line-through decoration-destructive decoration-2'
-          : ''
-      }`}
+        isHighlighted ? 'font-semibold' : ''
+      } ${isStruck ? 'opacity-70' : ''}`}
       style={{
         userSelect: 'none',
+        backgroundColor: isHighlighted ? 'var(--highlight-bg, rgba(220, 206, 178, 0.9))' : undefined,
+        color: isHighlighted ? 'var(--highlight-text, inherit)' : undefined,
       }}
     >
       {displayChar}
       {isStruck && (
         <span
           aria-hidden="true"
-          className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[2px] bg-red-600 dark:bg-red-500 pointer-events-none"
+          className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[2px] pointer-events-none"
+          style={{ backgroundColor: 'var(--struck-color, #C0392B)' }}
         />
       )}
     </span>

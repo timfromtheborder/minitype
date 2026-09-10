@@ -29,7 +29,6 @@ export interface TypingEngineActions {
   handleEnter: () => void;
   feedPaper: (amount?: number) => void;
   setApertureHeight: (height: ManuscriptManifest['activeApertureHeight']) => void;
-  setWrapMode: (mode: ManuscriptManifest['wrapMode']) => void;
   setPageSize: (size: ManuscriptManifest['pageSize']) => void;
   setManifest: (manifest: Partial<ManuscriptManifest>) => void;
   resetEngine: (newManifest?: Partial<ManuscriptManifest>) => void;

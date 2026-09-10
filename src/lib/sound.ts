@@ -155,6 +155,60 @@ class TypewriterAudio {
       osc.stop(t + 0.04);
     } catch {}
   }
+
+  /**
+   * Synthesizes authentic dot-matrix printhead buzz (shredding ribbon across paper)
+   * followed by the line feed stepper motor click.
+   */
+  public playDotMatrixLine() {
+    if (this.isMuted) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    try {
+      const t = ctx.currentTime;
+
+      // High-speed needle chatter (burst of 9-pin strikes modulated)
+      const bufferSize = Math.floor(ctx.sampleRate * 0.16); // 160ms burst
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        const mod = Math.sin((i / ctx.sampleRate) * 2 * Math.PI * 140);
+        data[i] = (Math.random() * 2 - 1) * 0.4 * (mod > 0 ? 1 : -0.2);
+      }
+
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(2200, t);
+      filter.Q.setValueAtTime(2.8, t);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.22, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.16);
+
+      source.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      source.start(t);
+
+      // Stepper motor feed click at end of line (0.18s)
+      const stepOsc = ctx.createOscillator();
+      const stepGain = ctx.createGain();
+      stepOsc.type = 'square';
+      stepOsc.frequency.setValueAtTime(140, t + 0.18);
+      stepOsc.frequency.exponentialRampToValueAtTime(45, t + 0.22);
+      stepGain.gain.setValueAtTime(0.12, t + 0.18);
+      stepGain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+
+      stepOsc.connect(stepGain);
+      stepGain.connect(ctx.destination);
+      stepOsc.start(t + 0.18);
+      stepOsc.stop(t + 0.22);
+    } catch {}
+  }
 }
 
 export const typewriterAudio = new TypewriterAudio();

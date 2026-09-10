@@ -16,7 +16,6 @@ interface SettingsDrawerProps {
   onClose: () => void;
   manifest: ManuscriptManifest;
   onUpdateHeight: (height: ApertureHeight) => void;
-  onUpdateWrapMode: (mode: WrapMode) => void;
   onUpdatePageSize: (size: PageSize) => void;
   onUpdateManifest: (patch: Partial<ManuscriptManifest>) => void;
 }
@@ -26,7 +25,6 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   onClose,
   manifest,
   onUpdateHeight,
-  onUpdateWrapMode,
   onUpdatePageSize,
   onUpdateManifest,
 }) => {
@@ -43,7 +41,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-150"
       onClick={onClose}
     >
       <div
@@ -88,41 +86,6 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   {h} L
                 </button>
               ))}
-            </div>
-          </div>
-
-          {/* Line Wrap Mode */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-muted-foreground">Line Wrap Boundary (70 col):</label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => onUpdateWrapMode('soft')}
-                className={`py-2 px-3 rounded-md border text-left transition-all cursor-pointer ${
-                  manifest.wrapMode === 'soft'
-                    ? 'border-primary bg-primary/10 text-primary font-bold shadow-xs'
-                    : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground'
-                }`}
-              >
-                <div>Soft Word Wrap</div>
-                <div className="text-[10px] text-muted-foreground/80 font-normal">
-                  Carries word to next line
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => onUpdateWrapMode('hard')}
-                className={`py-2 px-3 rounded-md border text-left transition-all cursor-pointer ${
-                  manifest.wrapMode === 'hard'
-                    ? 'border-primary bg-primary/10 text-primary font-bold shadow-xs'
-                    : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground'
-                }`}
-              >
-                <div>Hard Break</div>
-                <div className="text-[10px] text-muted-foreground/80 font-normal">
-                  Splits strictly at col 70
-                </div>
-              </button>
             </div>
           </div>
 

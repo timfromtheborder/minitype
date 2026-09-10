@@ -23,29 +23,9 @@ export function wrapLine(
   incomingChar: string,
   pageNumber: number,
   nextLineIndex: number,
-  wrapMode: WrapMode
+  _wrapMode: WrapMode = 'soft'
 ): WrapResult {
   const currentCells = [...currentLine.cells];
-
-  if (wrapMode === 'hard') {
-    // In Hard Break: currentLine stays as is (70 chars: 0..69),
-    // and incomingChar becomes colIndex 0 of the next line.
-    const nextCell: CharacterCell = {
-      id: createCellId(pageNumber, nextLineIndex, 0),
-      char: incomingChar,
-      state: 'standard',
-      colIndex: 0,
-      lineIndex: nextLineIndex,
-    };
-
-    return {
-      updatedCurrentLine: {
-        ...currentLine,
-        isCommitted: true,
-      },
-      nextLineCells: [nextCell],
-    };
-  }
 
   // Soft Word Wrap:
   // If incomingChar is a space, it naturally ends the line cleanly.

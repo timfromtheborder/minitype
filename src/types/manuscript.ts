@@ -9,7 +9,7 @@ export interface PageRecord {
 }
 
 export type ApertureHeight = 1 | 2 | 3 | 4 | 5;
-export type WrapMode = 'hard' | 'soft';
+export type WrapMode = 'soft';
 export type PageSize = 30 | 40 | 54 | 60;
 export type ColorScheme = 'typewriter' | 'dark-amber' | 'phosphor' | 'high-contrast';
 export type Typeface = 'courier-prime' | 'jetbrains-mono' | 'ibm-plex-mono';

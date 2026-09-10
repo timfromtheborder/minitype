@@ -28,11 +28,10 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(state.currentPageLines[0].cells.map((c) => c.char).join('')).toBe('AAAAAAAAAA');
     });
 
-    it('handles Hard Break by wrapping at column 70 without mid-word hyphens', () => {
-      useTypingStore.getState().setWrapMode('hard');
+    it('wraps unbroken words exceeding 70 columns to the next line', () => {
       const store = useTypingStore.getState();
 
-      // Fill first line with 70 characters
+      // Fill first line with 70 continuous characters (unbroken word)
       for (let i = 0; i < 70; i++) {
         store.insertChar('X');
       }
@@ -41,7 +40,7 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(state.currentPageLines[0].cells).toHaveLength(70);
       expect(state.currentPageLines).toHaveLength(1);
 
-      // 71st character should be placed at column 0 of line 1
+      // 71st character should wrap to column 0 of line 1
       store.insertChar('Y');
       state = useTypingStore.getState();
       expect(state.currentPageLines).toHaveLength(2);
@@ -51,7 +50,6 @@ describe('Typing Engine & State Machine Invariants', () => {
     });
 
     it('handles Soft Word Wrap carrying overflowing word to next line and padding previous line', () => {
-      useTypingStore.getState().setWrapMode('soft');
       const store = useTypingStore.getState();
 
       // Type 65 characters of filler followed by a space (66 chars total)
@@ -139,7 +137,6 @@ describe('Typing Engine & State Machine Invariants', () => {
     });
 
     it('skips soft-wrap padding cells when backspacing across line boundaries', () => {
-      useTypingStore.getState().setWrapMode('soft');
       const store = useTypingStore.getState();
 
       // Write text that soft-wraps

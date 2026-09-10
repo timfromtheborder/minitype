@@ -95,16 +95,6 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
     });
   },
 
-  setWrapMode: (mode: WrapMode) => {
-    set((state) => {
-      const updated = { ...state.manifest, wrapMode: mode };
-      if (updated.mode === 'local') {
-        saveManuscript(updated).catch(console.error);
-      }
-      return { manifest: updated };
-    });
-  },
-
   setPageSize: (pageSize: PageSize) => {
     set((state) => {
       const updated = { ...state.manifest, pageSize };
@@ -141,10 +131,13 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
     const lineCells = [...currentLine.cells];
     const colCount = lineCells.length;
 
-    // Check if inserting this character requires wrapping
+    // Soft word wrap boundary check:
+    // If line has preceding spaces and an unfinished word crosses column 69, wrap that word.
+    // If line has no spaces (word spans entire 70 columns), let it fill column 69 and wrap on the 71st char.
+    const hasSpaceOnLine = lineCells.some((c) => c.char === ' ' && !c.isSoftPadding);
     const needsWrap =
       colCount >= MAX_COLUMNS ||
-      (state.manifest.wrapMode === 'soft' && colCount === MAX_COLUMNS - 1 && char !== ' ');
+      (hasSpaceOnLine && colCount === MAX_COLUMNS - 1 && char !== ' ');
 
     if (!needsWrap) {
       // Append directly to current line
@@ -170,14 +163,13 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
       return;
     }
 
-    // Line boundary reached (wrap triggered)
-    const wrapMode = state.manifest.wrapMode;
+    // Line boundary reached (soft wrap triggered)
     const wrapResult = wrapLine(
       currentLine,
       char,
       state.currentPageNumber,
       activeLineIndex + 1,
-      wrapMode
+      'soft'
     );
 
     lines[activeLineIndex] = wrapResult.updatedCurrentLine;
