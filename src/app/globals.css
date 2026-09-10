@@ -158,6 +158,58 @@
   --cursor-color: #000000;
 }
 
+/* 5. Dark Mode (Gray text on very dark gray background) */
+[data-theme="dark-mode"] {
+  --background: #121214;
+  --foreground: #A1A1AA;
+  --card: #1B1B1E;
+  --card-foreground: #A1A1AA;
+  --popover: #18181B;
+  --popover-foreground: #A1A1AA;
+  --primary: #A1A1AA;
+  --primary-foreground: #121214;
+  --secondary: #27272A;
+  --secondary-foreground: #E4E4E7;
+  --muted: #222226;
+  --muted-foreground: #71717A;
+  --accent: #2A2A30;
+  --accent-foreground: #F4F4F5;
+  --destructive: #EF4444;
+  --border: #2B2B32;
+  --input: #2B2B32;
+  --ring: #71717A;
+  --highlight-bg: #383840;
+  --highlight-text: #F4F4F5;
+  --struck-color: #EF4444;
+  --cursor-color: #A1A1AA;
+}
+
+/* 6. Low Contrast (Slate gray background, lighter text box, charcoal text) */
+[data-theme="low-contrast"] {
+  --background: #5B6A78;
+  --foreground: #24282C;
+  --card: #748494;
+  --card-foreground: #24282C;
+  --popover: #6B7B8B;
+  --popover-foreground: #24282C;
+  --primary: #24282C;
+  --primary-foreground: #748494;
+  --secondary: #657484;
+  --secondary-foreground: #24282C;
+  --muted: #53616E;
+  --muted-foreground: #343A40;
+  --accent: #6C7D8E;
+  --accent-foreground: #1D2124;
+  --destructive: #7E3333;
+  --border: #4D5B67;
+  --input: #4D5B67;
+  --ring: #343A40;
+  --highlight-bg: #536373;
+  --highlight-text: #E9ECEF;
+  --struck-color: #6E2C2C;
+  --cursor-color: #24282C;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

@@ -143,6 +143,20 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   fg: '#000000',
                   border: '#666666',
                 },
+                {
+                  id: 'dark-mode',
+                  label: 'Dark Mode',
+                  bg: '#121214',
+                  fg: '#A1A1AA',
+                  border: '#3F3F46',
+                },
+                {
+                  id: 'low-contrast',
+                  label: 'Low Contrast',
+                  bg: '#5B6A78',
+                  fg: '#24282C',
+                  border: '#748494',
+                },
               ].map((scheme) => {
                 const isSelected = manifest.colorScheme === scheme.id;
                 return (
