@@ -17,6 +17,8 @@ import {
   reconcileSessionsWithText,
   countWords,
 } from '@/lib/projectSerializer';
+import { db } from '@/db';
+import { textToManuscriptLines } from '@/lib/importer';
 
 describe('Typing Engine & State Machine Invariants', () => {
   beforeEach(() => {
@@ -2189,6 +2191,108 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(countWords('rock\'n\'roll')).toBe(1);
       expect(countWords('“Quoted words!”')).toBe(2);
       expect(countWords('<!-- minitype:session id="1" -->Hello world')).toBe(2);
+    });
+
+    it('does not duplicate text across multiple reloads in notecard mode', async () => {
+      const store = useTypingStore.getState();
+      await store.newProject();
+      store.setPageMode('notecard');
+
+      // Type 12 lines to span across 2 notecards (10 lines on Card 1, 2 lines on Card 2)
+      for (let i = 1; i <= 11; i++) {
+        `Line ${i}`.split('').forEach((c) => store.insertChar(c));
+        store.handleEnter();
+      }
+      `Line 12`.split('').forEach((c) => store.insertChar(c));
+
+      // Flush save to IndexedDB
+      await store.flushSave();
+
+      const initialPages = await db.pages.where('manuscriptId').equals(useTypingStore.getState().manifest.id).toArray();
+      expect(initialPages.length).toBe(2);
+
+      const wordCountBefore = useTypingStore.getState().manifest.totalWordCount;
+
+      // Simulate 3 consecutive hard refreshes / reloads
+      await useTypingStore.getState().rehydrate();
+      await useTypingStore.getState().rehydrate();
+      await useTypingStore.getState().rehydrate();
+
+      const stateAfter = useTypingStore.getState();
+      expect(stateAfter.manifest.totalWordCount).toBe(wordCountBefore);
+
+      const pagesAfter = await db.pages.where('manuscriptId').equals(stateAfter.manifest.id).toArray();
+      expect(pagesAfter.length).toBe(2);
+
+      // Verify no orphan pages and text remains identical
+      const textAfter = sanitizeManuscript(
+        [...stateAfter.historicalPages, { pageNumber: stateAfter.currentPageNumber, lines: stateAfter.currentPageLines, completedAt: null }],
+        { pageMode: 'notecard' }
+      );
+      expect(textAfter).toContain('Line 1');
+      expect(textAfter).toContain('Line 12');
+      // Verify Line 12 only occurs once
+      const occurrences = textAfter.split('Line 12').length - 1;
+      expect(occurrences).toBe(1);
+    });
+
+    it('deletes vacated page in IndexedDB when backspacing across page boundary', async () => {
+      const store = useTypingStore.getState();
+      await store.newProject();
+      store.setPageMode('paragraph');
+
+      // Paragraph 1
+      "First paragraph text".split('').forEach((c) => store.insertChar(c));
+      store.handleEnter(); // Completes page 1, creates page 2
+
+      await store.flushSave();
+      const projId = useTypingStore.getState().manifest.id;
+      let pages = await db.pages.where('manuscriptId').equals(projId).toArray();
+      expect(pages.length).toBe(2);
+
+      // On line 0 of page 2 with empty line, press backspace to cross back to page 1
+      store.handleBackspace();
+
+      expect(useTypingStore.getState().currentPageNumber).toBe(1);
+
+      // Page 2 must be deleted from Dexie
+      pages = await db.pages.where('manuscriptId').equals(projId).toArray();
+      expect(pages.length).toBe(1);
+      expect(pages[0].pageNumber).toBe(1);
+    });
+
+    it('heals and deduplicates previously corrupted text on reload', async () => {
+      const store = useTypingStore.getState();
+      await store.newProject();
+      const projId = store.manifest.id;
+
+      // Manually simulate corrupted pages in Dexie from previous reload duplication bug:
+      // Page 1 has [P1 + P2], Page 2 has [P2]
+      await db.pages.put({
+        id: `${projId}-page-1`,
+        manuscriptId: projId,
+        pageNumber: 1,
+        lines: textToManuscriptLines('Hello world.\n\nDuplicated paragraph.').lines,
+        completedAt: new Date().toISOString(),
+      });
+      await db.pages.put({
+        id: `${projId}-page-2`,
+        manuscriptId: projId,
+        pageNumber: 2,
+        lines: textToManuscriptLines('Duplicated paragraph.').lines,
+        completedAt: null,
+      });
+
+      // Reload project
+      await store.loadProject(projId, true);
+
+      const clean = sanitizeManuscript(
+        [...useTypingStore.getState().historicalPages, { pageNumber: useTypingStore.getState().currentPageNumber, lines: useTypingStore.getState().currentPageLines, completedAt: null }],
+        { pageMode: 'scroll' }
+      );
+
+      const occurrences = clean.split('Duplicated paragraph.').length - 1;
+      expect(occurrences).toBe(1);
     });
   });
 });

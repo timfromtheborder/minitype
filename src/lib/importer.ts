@@ -1,4 +1,4 @@
-import { CharacterCell, LineRecord } from '@/types';
+import { CharacterCell, LineRecord, PageRecord, PageMode } from '@/types';
 import { createCellId, MAX_COLUMNS } from './wrap';
 
 export interface ParsedManuscript {
@@ -188,3 +188,195 @@ export function textToManuscriptLines(
     activeColIndex: 0,
   };
 }
+
+export interface PartitionedManuscript {
+  historicalPages: PageRecord[];
+  currentPageNumber: number;
+  currentPageLines: LineRecord[];
+}
+
+/**
+ * Detects and removes repeating suffix blocks caused by stale orphan page duplication loops.
+ * Idempotently cleans corrupted text while leaving valid non-repeating manuscripts untouched.
+ */
+export function healDuplicatedManuscriptText(rawText: string): string {
+  if (!rawText || rawText.length < 10) return rawText;
+  let text = rawText;
+
+  // 1. Paragraph-level repeating suffix healing
+  const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const paragraphs = normalized.split('\n\n');
+  if (paragraphs.length >= 2) {
+    let healed = false;
+    let p = [...paragraphs];
+    for (let k = 1; k <= Math.floor(p.length / 2); k++) {
+      const suffix = p.slice(p.length - k);
+      let matches = 0;
+      while (p.length >= (matches + 2) * k) {
+        const prev = p.slice(p.length - (matches + 2) * k, p.length - (matches + 1) * k);
+        let equal = true;
+        for (let i = 0; i < k; i++) {
+          if (suffix[i].trim() === '' || suffix[i].trim() !== prev[i].trim()) {
+            equal = false;
+            break;
+          }
+        }
+        if (equal) {
+          matches++;
+        } else {
+          break;
+        }
+      }
+      if (matches > 0) {
+        p = p.slice(0, p.length - matches * k);
+        healed = true;
+        break;
+      }
+    }
+    if (healed) {
+      text = p.join('\n\n');
+    }
+  }
+
+  // 2. String-level repeating suffix healing (for single multi-line blocks or line-wrapped repeats)
+  let healedText = text.trimEnd();
+  for (let len = Math.floor(healedText.length / 2); len >= 15; len--) {
+    const suffix = healedText.slice(-len);
+    if (suffix.trim().length >= 10 && healedText.slice(0, -len).endsWith(suffix)) {
+      while (healedText.length >= len * 2 && healedText.slice(0, -len).endsWith(suffix)) {
+        healedText = healedText.slice(0, -len);
+      }
+      text = healedText;
+      break;
+    }
+  }
+
+  return text;
+}
+
+/**
+ * Partitions parsed manuscript lines into completed historical pages and active drafting lines,
+ * strictly conforming to the manuscript's pageMode ('scroll', 'page', 'notecard', 'paragraph')
+ * and pageSize constraints.
+ */
+export function partitionManuscriptLines(
+  lines: LineRecord[],
+  pageMode: PageMode = 'scroll',
+  pageSize: number = 54,
+  manifestId: string = 'manuscript'
+): PartitionedManuscript {
+  if (pageMode === 'scroll' || !pageMode) {
+    return {
+      historicalPages: [],
+      currentPageNumber: 1,
+      currentPageLines: lines,
+    };
+  }
+
+  if (pageMode === 'paragraph') {
+    const pageGroups: LineRecord[][] = [];
+    let currentGroup: LineRecord[] = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      // Skip lone empty separator lines between paragraphs
+      if (line.cells.length === 0 && currentGroup.length === 0 && i < lines.length - 1) {
+        continue;
+      }
+      currentGroup.push(line);
+      // Hard break marks the end of a paragraph page, unless it's the very last uncommitted line
+      if (line.wrapType === 'hard' && i < lines.length - 1) {
+        pageGroups.push(currentGroup);
+        currentGroup = [];
+      }
+    }
+    if (currentGroup.length > 0 || pageGroups.length === 0) {
+      pageGroups.push(currentGroup);
+    }
+
+    const historicalPages: PageRecord[] = [];
+    for (let pIdx = 0; pIdx < pageGroups.length - 1; pIdx++) {
+      const pageNum = pIdx + 1;
+      const pLines = pageGroups[pIdx].map((l, lIdx) => ({
+        ...l,
+        id: `p${pageNum}-line-${lIdx}`,
+        lineIndex: lIdx,
+        isCommitted: true,
+      }));
+      historicalPages.push({
+        id: `${manifestId}-page-${pageNum}`,
+        manuscriptId: manifestId,
+        pageNumber: pageNum,
+        lines: pLines,
+        completedAt: new Date().toISOString(),
+      });
+    }
+
+    const activePageNum = pageGroups.length;
+    const activeLines = (pageGroups[pageGroups.length - 1] || []).map((l, lIdx) => ({
+      ...l,
+      id: `p${activePageNum}-line-${lIdx}`,
+      lineIndex: lIdx,
+    }));
+
+    return {
+      historicalPages,
+      currentPageNumber: activePageNum,
+      currentPageLines: activeLines.length > 0 ? activeLines : [
+        {
+          id: `p${activePageNum}-line-0`,
+          lineIndex: 0,
+          cells: [],
+          isCommitted: false,
+        },
+      ],
+    };
+  }
+
+  // Notecard or Page mode
+  const limit = pageMode === 'notecard' ? 10 : (pageSize || 54);
+  if (lines.length <= limit) {
+    return {
+      historicalPages: [],
+      currentPageNumber: 1,
+      currentPageLines: lines,
+    };
+  }
+
+  const historicalPages: PageRecord[] = [];
+  let chunkStart = 0;
+  let pageNum = 1;
+
+  while (chunkStart + limit < lines.length) {
+    const chunk = lines.slice(chunkStart, chunkStart + limit);
+    const pLines = chunk.map((l, lIdx) => ({
+      ...l,
+      id: `p${pageNum}-line-${lIdx}`,
+      lineIndex: lIdx,
+      isCommitted: true,
+    }));
+    historicalPages.push({
+      id: `${manifestId}-page-${pageNum}`,
+      manuscriptId: manifestId,
+      pageNumber: pageNum,
+      lines: pLines,
+      completedAt: new Date().toISOString(),
+    });
+    chunkStart += limit;
+    pageNum++;
+  }
+
+  const activeChunk = lines.slice(chunkStart);
+  const activeLines = activeChunk.map((l, lIdx) => ({
+    ...l,
+    id: `p${pageNum}-line-${lIdx}`,
+    lineIndex: lIdx,
+  }));
+
+  return {
+    historicalPages,
+    currentPageNumber: pageNum,
+    currentPageLines: activeLines,
+  };
+}
+

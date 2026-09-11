@@ -262,3 +262,30 @@ export async function clearManuscriptData(manuscriptId: string): Promise<void> {
 export async function deletePagesForManuscript(manuscriptId: string): Promise<void> {
   await db.pages.where('manuscriptId').equals(manuscriptId).delete();
 }
+
+export async function deletePage(pageId: string): Promise<void> {
+  pendingPagesMap.delete(pageId);
+  try {
+    await db.pages.delete(pageId);
+  } catch (err) {
+    console.error('Failed to delete page:', err);
+  }
+}
+
+export async function pruneStalePagesForManuscript(manuscriptId: string, maxPageNumber: number): Promise<void> {
+  for (const [key, page] of pendingPagesMap.entries()) {
+    if (page.manuscriptId === manuscriptId && page.pageNumber > maxPageNumber) {
+      pendingPagesMap.delete(key);
+    }
+  }
+
+  try {
+    await db.pages
+      .where('manuscriptId')
+      .equals(manuscriptId)
+      .and((p) => p.pageNumber > maxPageNumber)
+      .delete();
+  } catch (err) {
+    console.error('Failed to prune stale pages for manuscript:', err);
+  }
+}

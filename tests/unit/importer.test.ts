@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { textToManuscriptLines } from '@/lib/importer';
+import { textToManuscriptLines, partitionManuscriptLines, healDuplicatedManuscriptText } from '@/lib/importer';
 
 describe('Importer - textToManuscriptLines (Option A)', () => {
   it('converts simple text into platen lines with trailing newline for immediate drafting', () => {
@@ -83,5 +83,63 @@ describe('Importer - textToManuscriptLines (Option A)', () => {
     expect(parsed.lines[1].cells.length).toBe(30);
     expect(parsed.activeLineIndex).toBe(parsed.lines.length - 1);
     expect(parsed.activeColIndex).toBe(0);
+  });
+});
+
+describe('healDuplicatedManuscriptText', () => {
+  it('collapses repeated paragraph suffixes created by orphan page reload loops', () => {
+    const text = 'Paragraph 1\n\nParagraph 2\n\nParagraph 2\n\nParagraph 2';
+    const healed = healDuplicatedManuscriptText(text);
+    expect(healed).toBe('Paragraph 1\n\nParagraph 2');
+  });
+
+  it('collapses multi-paragraph repeated blocks', () => {
+    const text = 'P1\n\nP2\n\nP3\n\nP2\n\nP3\n\nP2\n\nP3';
+    const healed = healDuplicatedManuscriptText(text);
+    expect(healed).toBe('P1\n\nP2\n\nP3');
+  });
+
+  it('leaves clean, non-repeating manuscripts completely untouched', () => {
+    const text = 'Chapter 1: The Departure.\n\nChapter 2: The Journey Begins.\n\nChapter 3: The Arrival.';
+    const healed = healDuplicatedManuscriptText(text);
+    expect(healed).toBe(text);
+  });
+});
+
+describe('partitionManuscriptLines', () => {
+  it('keeps all lines on single page in scroll mode', () => {
+    const parsed = textToManuscriptLines('Line 1\nLine 2\nLine 3', 1, 70);
+    const partitioned = partitionManuscriptLines(parsed.lines, 'scroll', 54, 'test-doc');
+
+    expect(partitioned.historicalPages.length).toBe(0);
+    expect(partitioned.currentPageNumber).toBe(1);
+    expect(partitioned.currentPageLines.length).toBe(parsed.lines.length);
+  });
+
+  it('partitions lines into historical pages and active page in notecard mode (10 lines per card)', () => {
+    // 25 lines total -> 2 completed cards (10 lines each) + 1 active card (5 lines)
+    const longText = Array.from({ length: 24 }, (_, i) => `Sentence ${i + 1}`).join('\n');
+    const parsed = textToManuscriptLines(longText, 1, 70);
+    const partitioned = partitionManuscriptLines(parsed.lines, 'notecard', 10, 'card-doc');
+
+    expect(partitioned.historicalPages.length).toBe(2);
+    expect(partitioned.historicalPages[0].pageNumber).toBe(1);
+    expect(partitioned.historicalPages[0].lines.length).toBe(10);
+    expect(partitioned.historicalPages[1].pageNumber).toBe(2);
+    expect(partitioned.historicalPages[1].lines.length).toBe(10);
+
+    expect(partitioned.currentPageNumber).toBe(3);
+    expect(partitioned.currentPageLines.length).toBe(parsed.lines.length - 20);
+  });
+
+  it('partitions lines by paragraph in paragraph mode', () => {
+    const text = 'Paragraph 1.\n\nParagraph 2.\n\nParagraph 3.';
+    const parsed = textToManuscriptLines(text, 1, 70);
+    const partitioned = partitionManuscriptLines(parsed.lines, 'paragraph', 54, 'para-doc');
+
+    // 3 completed paragraph pages + 1 active drafting page for typing the 4th paragraph
+    expect(partitioned.historicalPages.length).toBe(3);
+    expect(partitioned.currentPageNumber).toBe(4);
+    expect(partitioned.currentPageLines[0].cells.length).toBe(0);
   });
 });

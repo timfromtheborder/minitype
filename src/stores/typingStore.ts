@@ -19,6 +19,8 @@ import { typewriterAudio } from '@/lib/sound';
 import {
   saveManuscript,
   savePage,
+  deletePage,
+  pruneStalePagesForManuscript,
   saveSession,
   deleteSession,
   getSessionsForProject,
@@ -35,7 +37,7 @@ import {
   saveGlobalSettingsToDb,
   getGlobalSettingsFromDb,
 } from '@/db';
-import { textToManuscriptLines } from '@/lib/importer';
+import { textToManuscriptLines, partitionManuscriptLines, healDuplicatedManuscriptText } from '@/lib/importer';
 import { sanitizeManuscript } from '@/lib/sanitize';
 import {
   parseProjectFile,
@@ -165,6 +167,10 @@ export async function finalizeAndSaveCurrentProject(get: any, set: any): Promise
     };
     await saveManuscript(curManifest).catch(console.error);
 
+    for (const hp of freshState.historicalPages) {
+      await savePage(hp).catch(console.error);
+    }
+
     const curPage: PageRecord = {
       id: `${freshState.manifest.id}-page-${freshState.currentPageNumber}`,
       manuscriptId: freshState.manifest.id,
@@ -173,6 +179,7 @@ export async function finalizeAndSaveCurrentProject(get: any, set: any): Promise
       completedAt: null,
     };
     await savePage(curPage).catch(console.error);
+    await pruneStalePagesForManuscript(freshState.manifest.id, freshState.currentPageNumber).catch(console.error);
   }
 
   set({ activeSessions: sessions, isProjectDirty: false });
@@ -780,11 +787,6 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       const historical = [...state.historicalPages, completedPage];
       typewriterAudio.playPaperFeed();
 
-      if (state.manifest.mode === 'local') {
-        savePage(completedPage).catch(console.error);
-      }
-
-      // Automatically advance to next page seamlessly (no inbox locking)
       const newPageNum = state.currentPageNumber + 1;
       const firstLine: LineRecord = {
         id: `p${newPageNum}-line-0`,
@@ -792,6 +794,17 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         cells: wrapResult.nextLineCells,
         isCommitted: false,
       };
+
+      if (state.manifest.mode === 'local') {
+        savePage(completedPage).catch(console.error);
+        savePage({
+          id: `${state.manifest.id}-page-${newPageNum}`,
+          manuscriptId: state.manifest.id,
+          pageNumber: newPageNum,
+          lines: [firstLine],
+          completedAt: null,
+        }).catch(console.error);
+      }
 
       const updatedManifest = {
         ...state.manifest,
@@ -961,6 +974,20 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         }
 
         typewriterAudio.playStrike();
+
+        const abandonedPageId = `${state.manifest.id}-page-${state.currentPageNumber}`;
+        deletePage(abandonedPageId).catch(console.error);
+        pruneStalePagesForManuscript(state.manifest.id, prevPage.pageNumber).catch(console.error);
+
+        if (state.manifest.mode === 'local') {
+          savePage({
+            id: `${state.manifest.id}-page-${prevPage.pageNumber}`,
+            manuscriptId: state.manifest.id,
+            pageNumber: prevPage.pageNumber,
+            lines: restoredLines,
+            completedAt: null,
+          }).catch(console.error);
+        }
 
         set({
           manifest: {
@@ -1140,12 +1167,19 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       const historical = [...state.historicalPages, completedPage];
       typewriterAudio.playPaperFeed();
 
-      if (state.manifest.mode === 'local') {
-        savePage(completedPage).catch(console.error);
-      }
-
       const newPageNum = state.currentPageNumber + 1;
       const firstLine = createEmptyLine(newPageNum, 0);
+
+      if (state.manifest.mode === 'local') {
+        savePage(completedPage).catch(console.error);
+        savePage({
+          id: `${state.manifest.id}-page-${newPageNum}`,
+          manuscriptId: state.manifest.id,
+          pageNumber: newPageNum,
+          lines: [firstLine],
+          completedAt: null,
+        }).catch(console.error);
+      }
 
       const updatedManifest = {
         ...state.manifest,
@@ -1429,15 +1463,22 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     const { manifest: loadedManifest, pages, sessions: existingSessions } = data;
 
     // Requirement: When a file is loaded, strikeouts should be removed
-    const cleanText = sanitizeManuscript(pages, {
+    const rawCleanText = sanitizeManuscript(pages, {
       doubleSpaceLinebreaks: false,
       pageMode: loadedManifest.pageMode,
     });
+    const cleanText = healDuplicatedManuscriptText(rawCleanText);
 
     const state = get();
     const columnLimit = state.activeColumnLimit ?? MAX_COLUMNS;
     // Parse into platen lines with a fresh empty line at the end
     const parsed = textToManuscriptLines(cleanText, 1, columnLimit);
+    const partitioned = partitionManuscriptLines(
+      parsed.lines,
+      loadedManifest.pageMode,
+      loadedManifest.pageSize,
+      loadedManifest.id
+    );
 
     // Prepare sessions: if none exist in db, generate Session 1 from cleanText
     let rawSessions: SessionRecord[] = existingSessions && existingSessions.length > 0
@@ -1491,7 +1532,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       id: loadedManifest.id,
       title: loadedManifest.title || 'Untitled Project',
       mode: 'local',
-      outboxCount: 0, // Reset page-count graphic for clean session
+      outboxCount: partitioned.historicalPages.length,
       lastPrintedCharIndex: loadedManifest.lastPrintedCharIndex ?? 0,
       printedPagesCount: loadedManifest.printedPagesCount ?? 0,
       activeSessionId: sessions[sessions.length - 1]?.id || '',
@@ -1513,8 +1554,18 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       }
     }
 
-    // Read-only project load: Do NOT write to Dexie database on load.
-    // Preserves original updatedAt and eliminates unnecessary write churn.
+    // Prune stale pages from IndexedDB and sync valid pages
+    await pruneStalePagesForManuscript(loadedManifest.id, partitioned.currentPageNumber);
+    for (const hp of partitioned.historicalPages) {
+      savePage(hp).catch(console.error);
+    }
+    savePage({
+      id: `${loadedManifest.id}-page-${partitioned.currentPageNumber}`,
+      manuscriptId: loadedManifest.id,
+      pageNumber: partitioned.currentPageNumber,
+      lines: partitioned.currentPageLines,
+      completedAt: null,
+    }).catch(console.error);
 
     if (typeof window !== 'undefined') {
       localStorage.setItem(ACTIVE_PROJECT_KEY, id);
@@ -1522,11 +1573,11 @@ export const useTypingStore = create<TypingStore>((set, get) => {
 
     set({
       manifest: updatedManifest,
-      currentPageNumber: 1,
-      historicalPages: [],
-      currentPageLines: parsed.lines,
-      activeLineIndex: parsed.activeLineIndex,
-      activeColIndex: parsed.activeColIndex,
+      currentPageNumber: partitioned.currentPageNumber,
+      historicalPages: partitioned.historicalPages,
+      currentPageLines: partitioned.currentPageLines,
+      activeLineIndex: Math.max(0, partitioned.currentPageLines.length - 1),
+      activeColIndex: 0,
       activeSessions: sessions,
       isHighlighting: false,
       highlightHead: null,
@@ -1989,12 +2040,19 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         localStorage.setItem(ACTIVE_PROJECT_KEY, loadedManifest.id);
       }
 
-      const cleanText = sanitizeManuscript(pages, {
+      const rawCleanText = sanitizeManuscript(pages, {
         doubleSpaceLinebreaks: false,
         pageMode: loadedManifest.pageMode,
       });
+      const cleanText = healDuplicatedManuscriptText(rawCleanText);
       const columnLimit = get().activeColumnLimit ?? MAX_COLUMNS;
       const parsed = textToManuscriptLines(cleanText, 1, columnLimit);
+      const partitioned = partitionManuscriptLines(
+        parsed.lines,
+        loadedManifest.pageMode,
+        loadedManifest.pageSize,
+        loadedManifest.id
+      );
 
       let rawSessions = sessions && sessions.length > 0 ? sessions : [
         {
@@ -2075,7 +2133,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         id: loadedManifest.id,
         title: loadedManifest.title || 'Untitled Project',
         mode: 'local',
-        outboxCount: loadedManifest.outboxCount ?? 0,
+        outboxCount: partitioned.historicalPages.length,
         lastPrintedCharIndex: loadedManifest.lastPrintedCharIndex ?? 0,
         printedPagesCount: loadedManifest.printedPagesCount ?? 0,
         activeSessionId: loadedManifest.activeSessionId || normalizedSessions[normalizedSessions.length - 1].id,
@@ -2113,13 +2171,26 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         }
       }
 
+      // Prune stale pages from IndexedDB and sync valid pages
+      await pruneStalePagesForManuscript(loadedManifest.id, partitioned.currentPageNumber);
+      for (const hp of partitioned.historicalPages) {
+        savePage(hp).catch(console.error);
+      }
+      savePage({
+        id: `${loadedManifest.id}-page-${partitioned.currentPageNumber}`,
+        manuscriptId: loadedManifest.id,
+        pageNumber: partitioned.currentPageNumber,
+        lines: partitioned.currentPageLines,
+        completedAt: null,
+      }).catch(console.error);
+
       set({
         manifest: updatedManifest,
-        currentPageNumber: 1,
-        historicalPages: [],
-        currentPageLines: parsed.lines,
-        activeLineIndex: parsed.activeLineIndex,
-        activeColIndex: parsed.activeColIndex,
+        currentPageNumber: partitioned.currentPageNumber,
+        historicalPages: partitioned.historicalPages,
+        currentPageLines: partitioned.currentPageLines,
+        activeLineIndex: Math.max(0, partitioned.currentPageLines.length - 1),
+        activeColIndex: 0,
         activeSessions: normalizedSessions,
         isHighlighting: false,
         highlightHead: null,
