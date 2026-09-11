@@ -127,6 +127,7 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
               key={line.id}
               line={line}
               lineIndex={actualIndex}
+              isTopmost={idx === 0}
             />
           );
         })}

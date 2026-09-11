@@ -888,8 +888,9 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     const { manifest: loadedManifest, pages } = data;
 
     // Requirement: When a file is loaded, strikeouts should be removed!
+    // NEVER apply markdown doubleSpaceLinebreaks when restoring lines for drafting!
     const cleanText = sanitizeManuscript(pages, {
-      doubleSpaceLinebreaks: loadedManifest.doubleSpaceLinebreaks,
+      doubleSpaceLinebreaks: false,
     });
 
     const columnLimit = state.activeColumnLimit ?? MAX_COLUMNS;
@@ -976,10 +977,47 @@ export const useTypingStore = create<TypingStore>((set, get) => {
   },
 
   deleteProject: async (id: string) => {
+    await flushPendingSave();
     const state = get();
     await clearManuscriptData(id).catch(console.error);
+
     if (state.manifest.id === id) {
-      await state.newProject();
+      const newId = `manuscript-${Date.now()}`;
+      const newManifest: ManuscriptManifest = {
+        ...DEFAULT_MANIFEST,
+        ...state.manifest,
+        id: newId,
+        title: 'Untitled Manuscript',
+        outboxCount: 0,
+        lastPrintedCharIndex: 0,
+        printedPagesCount: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      persistSettings(newManifest);
+      if (newManifest.mode === 'local') {
+        await saveManuscript(newManifest).catch(console.error);
+        await savePage({
+          id: `${newId}-page-1`,
+          manuscriptId: newId,
+          pageNumber: 1,
+          lines: [createEmptyLine(1, 0)],
+          completedAt: null,
+        }).catch(console.error);
+      }
+      set({
+        currentPageNumber: 1,
+        historicalPages: [],
+        currentPageLines: [createEmptyLine(1, 0)],
+        activeLineIndex: 0,
+        activeColIndex: 0,
+        isHighlighting: false,
+        highlightHead: null,
+        isLocked: false,
+        lockReason: null,
+        pendingWrappedCells: null,
+        manifest: newManifest,
+      });
     }
   },
 

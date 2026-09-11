@@ -7,7 +7,7 @@ import { DocumentStats } from '@/components/aperture/DocumentStats';
 import { PaperTrayStack } from '@/components/stages/PaperTrayStack';
 import { SettingsDrawer } from '@/components/modals/SettingsDrawer';
 import { PrintModal } from '@/components/modals/PrintModal';
-import { Settings, Printer, Database, Zap, AlertTriangle } from 'lucide-react';
+import { Settings, FileText, Database, Zap, AlertTriangle } from 'lucide-react';
 
 export default function Home() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -84,7 +84,7 @@ export default function Home() {
       {/* 3. UTILITY DECK: Viewport Base, centered and matching input box width */}
       <footer className="w-full flex justify-center items-center pb-1.5 sm:pb-2 select-none text-xs shrink-0">
         <div className={`flex items-center justify-between ${boxWidthClass} gap-2`}>
-          {/* Project Button */}
+          {/* System Button */}
           <button
             type="button"
             onClick={() => setIsPrintOpen(true)}
@@ -93,10 +93,10 @@ export default function Home() {
                 ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground'
                 : 'border-border/70 bg-card hover:bg-muted text-card-foreground'
             }`}
-            title="Project"
+            title="System"
           >
-            <Printer className="w-3.5 h-3.5 opacity-70 shrink-0" />
-            <span>Project</span>
+            <FileText className="w-3.5 h-3.5 opacity-70 shrink-0" />
+            <span>System</span>
           </button>
 
           {/* Settings Button */}

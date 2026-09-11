@@ -189,7 +189,12 @@ export function sanitizeManuscript(
     }
 
     if (paragraphs.length > 0) {
-      pageTexts.push(paragraphs.join(lineDelimiter));
+      if (options?.doubleSpaceLinebreaks) {
+        const nonEmpty = paragraphs.filter((p) => p !== '');
+        pageTexts.push(nonEmpty.join('\n\n'));
+      } else {
+        pageTexts.push(paragraphs.join('\n'));
+      }
     }
   }
 

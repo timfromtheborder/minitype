@@ -1078,6 +1078,53 @@ describe('Typing Engine & State Machine Invariants', () => {
       store.toggleStats(true);
       expect(useTypingStore.getState().manifest.showStats).toBe(true);
     });
+
+    it('sanitizes with double-spaced linebreaks without multiplying explicit blank lines', () => {
+      const pages = [{
+        pageNumber: 1,
+        lines: [
+          {
+            id: 'l1',
+            lineIndex: 0,
+            cells: [{ id: 'c1', char: 'A', state: 'standard' as const, colIndex: 0, lineIndex: 0 }],
+            isCommitted: true,
+            wrapType: 'hard' as const,
+          },
+          {
+            id: 'l2',
+            lineIndex: 1,
+            cells: [],
+            isCommitted: true,
+            wrapType: 'hard' as const,
+          },
+          {
+            id: 'l3',
+            lineIndex: 2,
+            cells: [{ id: 'c2', char: 'B', state: 'standard' as const, colIndex: 0, lineIndex: 2 }],
+            isCommitted: true,
+            wrapType: 'hard' as const,
+          },
+        ],
+        completedAt: null,
+      }];
+
+      const doubleSpaced = sanitizeManuscript(pages, { doubleSpaceLinebreaks: true });
+      // Should have 2 newlines (a single blank line), not 4
+      expect(doubleSpaced).toBe('A\n\nB');
+    });
+
+    it('deleteProject on active project cleanly replaces with new project without duplicating', async () => {
+      const store = useTypingStore.getState();
+      const currentId = store.manifest.id;
+      await store.deleteProject(currentId);
+
+      const state = useTypingStore.getState();
+      expect(state.manifest.id).not.toBe(currentId);
+      expect(state.currentPageLines).toHaveLength(1);
+      expect(state.currentPageLines[0].cells).toHaveLength(0);
+      expect(state.activeLineIndex).toBe(0);
+      expect(state.activeColIndex).toBe(0);
+    });
   });
 });
 
