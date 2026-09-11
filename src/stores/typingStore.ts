@@ -21,6 +21,7 @@ import {
   getPagesForManuscript,
   debounceSavePage,
   flushPendingSave,
+  setPersistenceErrorHandler,
 } from '@/db';
 
 export function getPageLineLimit(mode?: PageMode, customSize?: number): number {
@@ -91,19 +92,27 @@ export interface TypingStore extends TypingEngineState, TypingEngineActions {
   pendingWrappedCells: CharacterCell[] | null;
 }
 
-export const useTypingStore = create<TypingStore>((set, get) => ({
-  manifest: { ...DEFAULT_MANIFEST },
-  currentPageNumber: 1,
-  historicalPages: [],
-  currentPageLines: [createEmptyLine(1, 0)],
-  activeLineIndex: 0,
-  activeColIndex: 0,
-  isHighlighting: false,
-  highlightHead: null,
-  isLocked: false,
-  lockReason: null,
-  activeColumnLimit: 70,
-  pendingWrappedCells: null,
+export const useTypingStore = create<TypingStore>((set, get) => {
+  if (typeof window !== 'undefined') {
+    setPersistenceErrorHandler((err) => {
+      set({ persistenceError: err ? err.message : null });
+    });
+  }
+
+  return {
+    manifest: getInitialManifest(),
+    currentPageNumber: 1,
+    historicalPages: [],
+    currentPageLines: [createEmptyLine(1, 0)],
+    activeLineIndex: 0,
+    activeColIndex: 0,
+    isHighlighting: false,
+    highlightHead: null,
+    isLocked: false,
+    lockReason: null,
+    activeColumnLimit: 70,
+    persistenceError: null,
+    pendingWrappedCells: null,
 
   setActiveColumnLimit: (limit: number) =>
     set((state) => (state.activeColumnLimit === limit ? state : { activeColumnLimit: limit })),
@@ -772,10 +781,10 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
     }
   },
 
-  clearText: () => {
+  clearText: async () => {
     const state = get();
     if (state.manifest.mode === 'local') {
-      clearManuscriptData(state.manifest.id).catch(console.error);
+      await clearManuscriptData(state.manifest.id).catch(console.error);
     }
     const updatedManifest: ManuscriptManifest = {
       ...state.manifest,
@@ -785,7 +794,7 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
     };
     persistSettings(updatedManifest);
     if (updatedManifest.mode === 'local') {
-      saveManuscript(updatedManifest).catch(console.error);
+      await saveManuscript(updatedManifest).catch(console.error);
     }
     set({
       currentPageNumber: 1,
@@ -957,4 +966,5 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
       console.error('Failed to rehydrate manuscript from IndexedDB:', e);
     }
   },
-}));
+};
+});

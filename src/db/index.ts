@@ -18,10 +18,17 @@ export const db = new MinitypeDatabase();
 
 export async function saveManuscript(manifest: ManuscriptManifest): Promise<void> {
   if (manifest.mode === 'temp') return;
-  await db.manuscripts.put({
-    ...manifest,
-    updatedAt: new Date().toISOString(),
-  });
+  try {
+    await db.manuscripts.put({
+      ...manifest,
+      updatedAt: new Date().toISOString(),
+    });
+    notifyPersistenceError(null);
+  } catch (err: any) {
+    console.error('Failed to save manuscript to IndexedDB:', err);
+    notifyPersistenceError(err instanceof Error ? err : new Error(String(err)));
+    throw err;
+  }
 }
 
 export async function getManuscript(id: string): Promise<ManuscriptManifest | undefined> {
@@ -30,10 +37,17 @@ export async function getManuscript(id: string): Promise<ManuscriptManifest | un
 
 export async function savePage(page: PageRecord): Promise<void> {
   const pageId = page.id || `${page.manuscriptId || 'default'}-page-${page.pageNumber}`;
-  await db.pages.put({
-    ...page,
-    id: pageId,
-  });
+  try {
+    await db.pages.put({
+      ...page,
+      id: pageId,
+    });
+    notifyPersistenceError(null);
+  } catch (err: any) {
+    console.error('Failed to save page to IndexedDB:', err);
+    notifyPersistenceError(err instanceof Error ? err : new Error(String(err)));
+    throw err;
+  }
 }
 
 export async function getPagesForManuscript(manuscriptId: string): Promise<PageRecord[]> {
@@ -44,27 +58,45 @@ export async function getPagesForManuscript(manuscriptId: string): Promise<PageR
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
-let pendingPageToSave: PageRecord | null = null;
+const pendingPagesMap = new Map<string, PageRecord>();
+let persistenceErrorHandler: ((err: Error | null) => void) | null = null;
+
+export function setPersistenceErrorHandler(handler: ((err: Error | null) => void) | null): void {
+  persistenceErrorHandler = handler;
+}
+
+function notifyPersistenceError(err: Error | null): void {
+  if (persistenceErrorHandler) {
+    persistenceErrorHandler(err);
+  }
+}
 
 export function debounceSavePage(page: PageRecord, delayMs = 250): void {
-  pendingPageToSave = page;
+  const pageId = page.id || `${page.manuscriptId || 'default'}-page-${page.pageNumber}`;
+  pendingPagesMap.set(pageId, page);
+
   if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    if (pendingPageToSave) {
-      savePage(pendingPageToSave).catch(console.error);
-      pendingPageToSave = null;
-    }
+  saveTimer = setTimeout(async () => {
+    await flushPendingSave();
   }, delayMs);
 }
 
-export function flushPendingSave(): void {
+export async function flushPendingSave(): Promise<void> {
   if (saveTimer) {
     clearTimeout(saveTimer);
     saveTimer = null;
   }
-  if (pendingPageToSave) {
-    savePage(pendingPageToSave).catch(console.error);
-    pendingPageToSave = null;
+  if (pendingPagesMap.size === 0) return;
+
+  const pagesToSave = Array.from(pendingPagesMap.values());
+  pendingPagesMap.clear();
+
+  try {
+    await Promise.all(pagesToSave.map((p) => savePage(p)));
+    notifyPersistenceError(null);
+  } catch (err: any) {
+    console.error('Failed to flush debounced pages to IndexedDB:', err);
+    notifyPersistenceError(err instanceof Error ? err : new Error(String(err)));
   }
 }
 
@@ -73,7 +105,7 @@ export async function clearManuscriptData(manuscriptId: string): Promise<void> {
     clearTimeout(saveTimer);
     saveTimer = null;
   }
-  pendingPageToSave = null;
+  pendingPagesMap.clear();
 
   await db.transaction('rw', db.manuscripts, db.pages, async () => {
     await db.manuscripts.delete(manuscriptId);

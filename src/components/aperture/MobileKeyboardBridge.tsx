@@ -90,6 +90,9 @@ export const MobileKeyboardBridge = forwardRef<
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Input deduplication tracker to prevent double-entry on mobile browsers that fire both keydown and beforeinput
+  const lastHandledInputRef = useRef<{ token: string; time: number }>({ token: '', time: 0 });
+
   const handleBeforeInput = (e: React.FormEvent<HTMLInputElement>) => {
     const nativeEvent = e.nativeEvent as InputEvent;
     if (isPaused || store.isLocked) {
@@ -98,12 +101,19 @@ export const MobileKeyboardBridge = forwardRef<
     }
 
     const { inputType, data } = nativeEvent;
+    const now = Date.now();
 
     if (inputType === 'insertText' || inputType === 'insertCompositionText') {
       e.preventDefault();
       e.stopPropagation();
       if (data) {
         for (const char of data) {
+          // Deduplicate if keydown already handled this exact character within 50ms
+          if (now - lastHandledInputRef.current.time < 50 && lastHandledInputRef.current.token === char) {
+            continue;
+          }
+          lastHandledInputRef.current = { token: char, time: now };
+
           if (store.isHighlighting) {
             typewriterAudio.playStrike();
           } else if (char === ' ') {
@@ -117,11 +127,19 @@ export const MobileKeyboardBridge = forwardRef<
     } else if (inputType === 'deleteContentBackward') {
       e.preventDefault();
       e.stopPropagation();
+      if (now - lastHandledInputRef.current.time < 50 && lastHandledInputRef.current.token === 'Backspace') {
+        return;
+      }
+      lastHandledInputRef.current = { token: 'Backspace', time: now };
       typewriterAudio.playBackspace();
       store.handleBackspace();
     } else if (inputType === 'insertParagraph' || inputType === 'insertLineBreak') {
       e.preventDefault();
       e.stopPropagation();
+      if (now - lastHandledInputRef.current.time < 50 && lastHandledInputRef.current.token === 'Enter') {
+        return;
+      }
+      lastHandledInputRef.current = { token: 'Enter', time: now };
       if (store.isHighlighting) {
         typewriterAudio.playStrike();
       } else {
@@ -137,16 +155,25 @@ export const MobileKeyboardBridge = forwardRef<
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (isPaused || store.isLocked) return;
+    const now = Date.now();
 
     // Direct key resolution for virtual or hardware keyboards attached to mobile or desktop
     if (e.key === 'Backspace') {
       e.preventDefault();
       e.stopPropagation();
+      if (now - lastHandledInputRef.current.time < 50 && lastHandledInputRef.current.token === 'Backspace') {
+        return;
+      }
+      lastHandledInputRef.current = { token: 'Backspace', time: now };
       typewriterAudio.playBackspace();
       store.handleBackspace();
     } else if (e.key === 'Enter') {
       e.preventDefault();
       e.stopPropagation();
+      if (now - lastHandledInputRef.current.time < 50 && lastHandledInputRef.current.token === 'Enter') {
+        return;
+      }
+      lastHandledInputRef.current = { token: 'Enter', time: now };
       if (store.isHighlighting) {
         typewriterAudio.playStrike();
       } else {
@@ -156,6 +183,10 @@ export const MobileKeyboardBridge = forwardRef<
     } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
       e.preventDefault();
       e.stopPropagation();
+      if (now - lastHandledInputRef.current.time < 50 && lastHandledInputRef.current.token === e.key) {
+        return;
+      }
+      lastHandledInputRef.current = { token: e.key, time: now };
       if (store.isHighlighting) {
         typewriterAudio.playStrike();
       } else if (e.key === ' ') {

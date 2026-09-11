@@ -63,40 +63,42 @@ export function useTypingEngine(options?: UseTypingEngineOptions) {
         return;
       }
 
+      const state = useTypingStore.getState();
+
       // 4. Backspace Trigger
       if (e.key === 'Backspace') {
         e.preventDefault();
         typewriterAudio.playBackspace();
-        store.handleBackspace();
+        state.handleBackspace();
         return;
       }
 
       // 5. Enter Key Resolution
       if (e.key === 'Enter') {
         e.preventDefault();
-        if (store.isHighlighting) {
+        if (state.isHighlighting) {
           typewriterAudio.playStrike();
         } else {
           typewriterAudio.playCarriageReturn();
         }
-        store.handleEnter();
+        state.handleEnter();
         return;
       }
 
       // 6. Printable character entry (length 1, no modifier keys)
       if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
         e.preventDefault();
-        if (store.isHighlighting) {
+        if (state.isHighlighting) {
           typewriterAudio.playStrike();
         } else if (e.key === ' ') {
           typewriterAudio.playSpace();
         } else {
           typewriterAudio.playKeyClick();
         }
-        store.insertChar(e.key);
+        state.insertChar(e.key);
       }
     },
-    [store, isPaused]
+    [isPaused]
   );
 
   // Global window keyboard listener

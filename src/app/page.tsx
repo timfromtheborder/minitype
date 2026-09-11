@@ -3,10 +3,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTypingEngine } from '@/hooks/useTypingEngine';
 import { ApertureFrame } from '@/components/aperture/ApertureFrame';
+import { DocumentStats } from '@/components/aperture/DocumentStats';
 import { PaperTrayStack } from '@/components/stages/PaperTrayStack';
 import { SettingsDrawer } from '@/components/modals/SettingsDrawer';
 import { PrintModal } from '@/components/modals/PrintModal';
-import { Settings, Printer, Database, Zap } from 'lucide-react';
+import { Settings, Printer, Database, Zap, AlertTriangle } from 'lucide-react';
 
 export default function Home() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -20,34 +21,18 @@ export default function Home() {
     }
   }, [engine.manifest.colorScheme]);
 
-  // Compute total characters and wordcount on current page: (character / 5 minus blank spaces)
-  const validCellsOnPage = useMemo(
-    () =>
-      engine.currentPageLines.flatMap((line) =>
-        line.cells.filter((c) => c.state !== 'struck' && !c.isSoftPadding)
-      ),
-    [engine.currentPageLines]
-  );
-  const totalCharsOnPage = validCellsOnPage.length;
-  const blankSpacesOnPage = useMemo(
-    () => validCellsOnPage.filter((c) => c.char === ' ').length,
-    [validCellsOnPage]
-  );
-  const nonSpaceChars = totalCharsOnPage - blankSpacesOnPage;
-  const wordCount = Math.max(0, Math.round(nonSpaceChars / 5));
-
-  // Stable pages array for print compilation
-  const manuscriptPages = useMemo(
-    () => [
+  // Compile full manuscript pages strictly on-demand when the Project dialog opens
+  const manuscriptPages = useMemo(() => {
+    if (!isPrintOpen) return [];
+    return [
       ...engine.historicalPages,
       {
         pageNumber: engine.currentPageNumber,
         lines: engine.currentPageLines,
         completedAt: null,
       },
-    ],
-    [engine.historicalPages, engine.currentPageNumber, engine.currentPageLines]
-  );
+    ];
+  }, [isPrintOpen, engine.historicalPages, engine.currentPageNumber, engine.currentPageLines]);
 
   const handlePrintedComplete = React.useCallback(
     (printedCount: number) => {
@@ -64,15 +49,6 @@ export default function Home() {
   const boxWidthClass = isPortrait
     ? 'w-[calc(36ch+1.5rem)] max-w-[calc(100vw-2rem)]'
     : 'w-[calc(71ch+4rem)] max-w-[calc(100vw-2.5rem)]';
-
-  const lineStatText =
-    engine.manifest.pageMode === 'scroll'
-      ? `line: ${engine.activeLineIndex + 1}`
-      : engine.manifest.pageMode === 'notecard'
-      ? `line: ${engine.activeLineIndex + 1}/10`
-      : engine.manifest.pageMode === 'paragraph'
-      ? `line: ${engine.activeLineIndex + 1}`
-      : `line: ${engine.activeLineIndex + 1}/${engine.manifest.pageSize || 54}`;
 
   return (
     <main
@@ -100,18 +76,8 @@ export default function Home() {
             isPaused={isPrintOpen || isSettingsOpen}
           />
 
-          {/* Live Drafting Metadata (centered beneath input box in Courier Prime) */}
-          {engine.manifest.showStats !== false && (
-            <div className={`flex items-center justify-center text-center ${boxWidthClass} px-3 sm:px-8 mt-1.5 text-muted-foreground text-[11px] font-mono pointer-events-none select-none`}>
-              <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
-                <span>{lineStatText}</span>
-                <span>·</span>
-                <span className="text-foreground/90 font-medium">{wordCount} words</span>
-                <span>·</span>
-                <span>{totalCharsOnPage} chars</span>
-              </div>
-            </div>
-          )}
+          {/* Live Drafting Metadata (Isolated subscriber component) */}
+          <DocumentStats />
         </div>
       </section>
 
@@ -158,16 +124,26 @@ export default function Home() {
             }
             className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-none border font-sans font-medium transition-all cursor-pointer text-[11px] sm:text-xs whitespace-nowrap ${
               engine.manifest.mode === 'local'
-                ? isSpotlight
+                ? engine.persistenceError
+                  ? 'border-red-500 bg-red-500/10 text-red-600 dark:text-red-400 font-semibold shadow-xs'
+                  : isSpotlight
                   ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground shadow-xs'
                   : 'border-border/70 bg-card text-card-foreground shadow-xs'
                 : 'border-amber-500/80 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold shadow-xs hover:bg-amber-500/20'
             }`}
-            title="Click to toggle between IndexedDB persistence and volatile RAM"
+            title={
+              engine.persistenceError
+                ? `IndexedDB Warning: ${engine.persistenceError}`
+                : 'Click to toggle between IndexedDB persistence and volatile RAM'
+            }
           >
             {engine.manifest.mode === 'local' ? (
               <>
-                <Database className="w-3.5 h-3.5 opacity-80 shrink-0" />
+                {engine.persistenceError ? (
+                  <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                ) : (
+                  <Database className="w-3.5 h-3.5 opacity-80 shrink-0" />
+                )}
                 <span>Local</span>
               </>
             ) : (

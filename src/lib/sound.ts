@@ -3,6 +3,9 @@
 class TypewriterAudio {
   private ctx: AudioContext | null = null;
   private isMuted: boolean = true; // Turned off by default
+  private keyClickBuffers: AudioBuffer[] = [];
+  private backspaceBuffers: AudioBuffer[] = [];
+  private strikeBuffers: AudioBuffer[] = [];
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -23,6 +26,7 @@ class TypewriterAudio {
           const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
           if (AudioCtx) {
             this.ctx = new AudioCtx();
+            this.initNoisePools(this.ctx);
           }
         }
         if (this.ctx && this.ctx.state === 'suspended') {
@@ -36,12 +40,57 @@ class TypewriterAudio {
     }
   }
 
+  private initNoisePools(ctx: AudioContext) {
+    if (this.keyClickBuffers.length > 0) return;
+    try {
+      const sampleRate = ctx.sampleRate;
+
+      // 1. Key click pool (4 variants)
+      const clickSize = Math.floor(sampleRate * 0.03);
+      for (let b = 0; b < 4; b++) {
+        const buf = ctx.createBuffer(1, clickSize, sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < clickSize; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (clickSize * 0.2));
+        }
+        this.keyClickBuffers.push(buf);
+      }
+
+      // 2. Backspace pool (4 variants)
+      const bsSize = Math.floor(sampleRate * 0.018);
+      for (let b = 0; b < 4; b++) {
+        const buf = ctx.createBuffer(1, bsSize, sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < bsSize; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bsSize * 0.15));
+        }
+        this.backspaceBuffers.push(buf);
+      }
+
+      // 3. Strikeout pool (4 variants)
+      const strikeDuration = 0.095;
+      const strikeSize = Math.floor(sampleRate * strikeDuration);
+      for (let b = 0; b < 4; b++) {
+        const buf = ctx.createBuffer(1, strikeSize, sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < strikeSize; i++) {
+          const progress = i / strikeSize;
+          const env = progress < 0.1 ? progress / 0.1 : Math.exp(-(progress - 0.1) * 4);
+          const texture = 1 + 0.3 * Math.sin(progress * 80 * Math.PI);
+          data[i] = (Math.random() * 2 - 1) * env * texture;
+        }
+        this.strikeBuffers.push(buf);
+      }
+    } catch {}
+  }
+
   private getContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
     if (!this.ctx) {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (AudioCtx) {
         this.ctx = new AudioCtx();
+        this.initNoisePools(this.ctx);
       }
     }
     if (this.ctx && this.ctx.state === 'suspended') {
@@ -78,14 +127,9 @@ class TypewriterAudio {
 
     try {
       const t = ctx.currentTime;
-
-      // Noise burst for mechanical strike
-      const bufferSize = Math.floor(ctx.sampleRate * 0.03); // 30ms
-      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.2));
-      }
+      const buffer =
+        this.keyClickBuffers[Math.floor(Math.random() * this.keyClickBuffers.length)];
+      if (!buffer) return;
 
       const noise = ctx.createBufferSource();
       noise.buffer = buffer;
@@ -147,14 +191,9 @@ class TypewriterAudio {
 
     try {
       const t = ctx.currentTime;
-
-      // Sharp transient click
-      const bufferSize = Math.floor(ctx.sampleRate * 0.018); // 18ms
-      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.15));
-      }
+      const buffer =
+        this.backspaceBuffers[Math.floor(Math.random() * this.backspaceBuffers.length)];
+      if (!buffer) return;
 
       const noise = ctx.createBufferSource();
       noise.buffer = buffer;
@@ -203,18 +242,9 @@ class TypewriterAudio {
     try {
       const t = ctx.currentTime;
       const duration = 0.095; // 95ms
-      const bufferSize = Math.floor(ctx.sampleRate * duration);
-      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-
-      // Textured frictional rip with fibrous roughness
-      for (let i = 0; i < bufferSize; i++) {
-        const progress = i / bufferSize;
-        // Envelope: quick 10ms rise, textured decay
-        const env = progress < 0.1 ? progress / 0.1 : Math.exp(-(progress - 0.1) * 4);
-        const texture = 1 + 0.3 * Math.sin(progress * 80 * Math.PI);
-        data[i] = (Math.random() * 2 - 1) * env * texture;
-      }
+      const buffer =
+        this.strikeBuffers[Math.floor(Math.random() * this.strikeBuffers.length)];
+      if (!buffer) return;
 
       const noise = ctx.createBufferSource();
       noise.buffer = buffer;

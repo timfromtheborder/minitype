@@ -21,6 +21,7 @@ export interface TypingEngineState {
   isLocked: boolean;
   lockReason: 'page_exhaustion' | null;
   activeColumnLimit: number; // 70 for desktop/landscape, 35 for mobile portrait
+  persistenceError: string | null;
 }
 
 export interface TypingEngineActions {
@@ -34,7 +35,7 @@ export interface TypingEngineActions {
   setPageMode: (mode: PageMode) => void;
   setManifest: (manifest: Partial<ManuscriptManifest>) => void;
   setActiveColumnLimit: (limit: number) => void;
-  clearText: () => void;
+  clearText: () => Promise<void>;
   newProject: () => Promise<void>;
   toggleStats: (show?: boolean) => void;
   toggleDoubleSpaceLinebreaks: (enabled?: boolean) => void;
