@@ -98,12 +98,43 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 max={8}
                 step={1}
                 value={manifest.activeApertureHeight}
-                onChange={(e) => onUpdateHeight(Number(e.target.value) as ApertureHeight)}
-                onInput={(e) => onUpdateHeight(Number(e.currentTarget.value) as ApertureHeight)}
+                onChange={(e) => {
+                  const val = Number(e.target.value) as ApertureHeight;
+                  onUpdateHeight(val);
+                  onUpdateManifest({ activeApertureHeight: val });
+                }}
+                onInput={(e) => {
+                  const val = Number(e.currentTarget.value) as ApertureHeight;
+                  onUpdateHeight(val);
+                  onUpdateManifest({ activeApertureHeight: val });
+                }}
                 className="w-full square-slider cursor-pointer"
                 aria-label="Aperture slider"
               />
               <span className="text-[10px] text-muted-foreground font-semibold">8</span>
+            </div>
+            {/* Discrete quick-tap line buttons [1] - [8] for reliable touch interaction on iOS */}
+            <div className="grid grid-cols-8 gap-1 pt-1">
+              {([1, 2, 3, 4, 5, 6, 7, 8] as ApertureHeight[]).map((num) => {
+                const isSelected = manifest.activeApertureHeight === num;
+                return (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => {
+                      onUpdateHeight(num);
+                      onUpdateManifest({ activeApertureHeight: num });
+                    }}
+                    className={`py-1.5 rounded-none border text-center transition-all cursor-pointer font-bold text-xs ${
+                      isSelected
+                        ? 'border-primary bg-primary text-primary-foreground shadow-xs'
+                        : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground'
+                    }`}
+                  >
+                    {num}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

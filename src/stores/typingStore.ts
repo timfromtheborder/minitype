@@ -1201,6 +1201,9 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       if (updatedManifest.textSize) {
         document.documentElement.setAttribute('data-text-size', updatedManifest.textSize);
       }
+      if (updatedManifest.activeApertureHeight) {
+        document.documentElement.setAttribute('data-aperture-height', String(updatedManifest.activeApertureHeight));
+      }
     }
 
     await saveManuscript(updatedManifest).catch(console.error);
@@ -1317,6 +1320,9 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       }
       if (updatedManifest.textSize) {
         document.documentElement.setAttribute('data-text-size', updatedManifest.textSize);
+      }
+      if (updatedManifest.activeApertureHeight) {
+        document.documentElement.setAttribute('data-aperture-height', String(updatedManifest.activeApertureHeight));
       }
     }
 
@@ -1834,7 +1840,12 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       // If a setting was NOT explicitly provided by syncSettings or db.settings, fallback to loadedManifest's setting
       const fallbackFromLoaded: any = {};
       for (const key of SETTING_KEYS) {
-        if ((explicitSync as any)[key] === undefined && (explicitDb as any)[key] === undefined && (loadedSettings as any)[key] !== undefined) {
+        if (
+          (explicitSync as any)[key] === undefined &&
+          (explicitDb as any)[key] === undefined &&
+          (currentManifest as any)[key] === undefined &&
+          (loadedSettings as any)[key] !== undefined
+        ) {
           fallbackFromLoaded[key] = (loadedSettings as any)[key];
         }
       }

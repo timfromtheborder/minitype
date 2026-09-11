@@ -15,13 +15,7 @@ export default function Home() {
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const engine = useTypingEngine({ isPaused: isPrintOpen || isSettingsOpen });
 
-  // Immediately synchronize store with saved synchronous settings on mount
-  useEffect(() => {
-    const syncSettings = readSynchronousSettings();
-    if (syncSettings && Object.keys(syncSettings).length > 0) {
-      engine.setManifest(syncSettings);
-    }
-  }, []);
+
 
   // Sync active palette data-theme and data-text-size attribute with document root
   useEffect(() => {
