@@ -86,9 +86,13 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <label className="text-muted-foreground">Aperture:</label>
-              <span className="font-bold text-foreground">
+              <span
+                className={`font-bold ${
+                  manifest.pageMode === 'notecard' ? 'text-muted-foreground/50' : 'text-foreground'
+                }`}
+              >
                 {manifest.pageMode === 'notecard'
-                  ? '10 lines (Locked for Notecard)'
+                  ? '10 lines'
                   : `${manifest.activeApertureHeight} ${manifest.activeApertureHeight === 1 ? 'line' : 'lines'}`}
               </span>
             </div>
@@ -162,7 +166,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           <div className="flex flex-col gap-1.5">
             <label className="text-muted-foreground">Page Mode:</label>
             <div className="grid grid-cols-3 gap-1.5">
-              {(['scroll', 'notecard', 'paragraph'] as PageMode[]).map((mode) => (
+              {(['scroll', 'paragraph', 'notecard'] as PageMode[]).map((mode) => (
                 <button
                   key={mode}
                   type="button"
@@ -366,7 +370,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.5.6
+              Minitype v0.9.5.7
             </span>
           </div>
         </div>

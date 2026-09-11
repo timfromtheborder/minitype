@@ -9,7 +9,6 @@ export const DocumentStats: React.FC = React.memo(function DocumentStats() {
   const pageMode = useTypingStore((state) => state.manifest.pageMode);
   const pageSize = useTypingStore((state) => state.manifest.pageSize);
   const activeLineIndex = useTypingStore((state) => state.activeLineIndex);
-  const activeColumnLimit = useTypingStore((state) => state.activeColumnLimit);
   const currentPageLines = useTypingStore((state) => state.currentPageLines);
   const historicalPages = useTypingStore((state) => state.historicalPages);
   const currentPageNumber = useTypingStore((state) => state.currentPageNumber);
@@ -18,12 +17,6 @@ export const DocumentStats: React.FC = React.memo(function DocumentStats() {
 
   const saveState = useTypingStore((state) => state.saveState);
   const persistenceError = useTypingStore((state) => state.persistenceError);
-  const flushSave = useTypingStore((state) => state.flushSave);
-
-  const isPortrait = (activeColumnLimit ?? 70) === 35;
-  const boxWidthClass = isPortrait
-    ? 'w-[calc(36ch+1.25rem)] max-w-[calc(100vw-1.5rem)]'
-    : 'w-[calc(71ch+3rem)] md:w-[calc(71ch+4rem)] max-w-[calc(100vw-2rem)] sm:max-w-[calc(100vw-2.5rem)]';
 
   const lineStatText =
     pageMode === 'scroll'
@@ -77,11 +70,11 @@ export const DocumentStats: React.FC = React.memo(function DocumentStats() {
 
   return (
     <div
-      className={`relative flex items-center justify-center ${boxWidthClass} px-2.5 sm:px-6 md:px-8 mt-1.5 text-muted-foreground text-xs font-mono select-none`}
+      className="relative flex items-center justify-center w-full max-w-[calc(100vw-1.5rem)] sm:max-w-[calc(100vw-2.5rem)] px-2.5 sm:px-6 md:px-8 mt-1.5 text-muted-foreground text-xs font-mono select-none"
     >
       {/* Centered Document Metadata - strictly on one line */}
       <div
-        className={`flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap overflow-hidden text-ellipsis px-5 pointer-events-none transition-opacity duration-150 ${
+        className={`flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap overflow-hidden text-ellipsis px-6 pointer-events-none transition-opacity duration-150 ${
           showStats === false ? 'opacity-0' : 'opacity-100'
         }`}
       >
@@ -94,21 +87,19 @@ export const DocumentStats: React.FC = React.memo(function DocumentStats() {
         <span className="text-foreground/90 font-medium">{totalProjectWords} words</span>
       </div>
 
-      {/* Right-Justified Save Status Checkbox - beneath bottom-right corner of platen */}
-      <button
-        type="button"
-        onClick={() => flushSave?.()}
-        className="absolute right-2.5 sm:right-6 md:right-8 flex items-center justify-center w-[0.85em] h-[0.85em] rounded-[1.5px] border border-border/80 bg-card text-card-foreground shadow-xs cursor-pointer active:scale-95 transition-all p-0 leading-none shrink-0"
-        aria-label="Save status"
+      {/* Right-Justified Save Status Indicator - aligned with right side of platen (with same inside padding) */}
+      <div
+        className="absolute right-2.5 sm:right-6 md:right-8 flex items-center justify-center pointer-events-none select-none"
+        aria-hidden="true"
       >
         {persistenceError || saveState === 'error' ? (
-          <span className="text-red-500 font-bold leading-none text-[0.65em]">!</span>
+          <span className="text-destructive font-bold leading-none text-[0.85em]">!</span>
         ) : saveState === 'saving' || saveState === 'typing' ? (
-          <Loader2 className="w-[0.7em] h-[0.7em] animate-spin text-card-foreground" />
+          <Loader2 className="w-[0.85em] h-[0.85em] animate-spin text-muted-foreground" />
         ) : (
-          <Check className="w-[0.7em] h-[0.7em] stroke-[2.5] text-card-foreground" />
+          <Check className="w-[0.85em] h-[0.85em] stroke-[2.5] text-muted-foreground" />
         )}
-      </button>
+      </div>
     </div>
   );
 });
