@@ -1018,6 +1018,8 @@ describe('Typing Engine & State Machine Invariants', () => {
 
   describe('New Project, Double-Space Markdown Mode & Aperture Slider', () => {
     it('clears text, pages, and resets manuscript title on newProject', async () => {
+      const { db } = await import('@/db');
+      await db.manuscripts.clear();
       const store = useTypingStore.getState();
       store.setManifest({ title: 'My Custom Novel' });
       expect(useTypingStore.getState().manifest.title).toBe('My Custom Novel');
@@ -1034,7 +1036,7 @@ describe('Typing Engine & State Machine Invariants', () => {
       await store.newProject();
 
       const state = useTypingStore.getState();
-      expect(state.manifest.title).toBe('Untitled Manuscript');
+      expect(state.manifest.title).toBe('Untitled Project');
       expect(state.currentPageNumber).toBe(1);
       expect(state.historicalPages).toHaveLength(0);
       expect(state.currentPageLines).toHaveLength(1);
@@ -1293,6 +1295,44 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(stateAfterNewSession.activeSessions[0].sessionNumber).toBe(1);
       expect(stateAfterNewSession.activeSessions[1].sessionNumber).toBe(2);
       expect(stateAfterNewSession.manifest.sessionCount).toBe(2);
+    });
+
+    it('appends incrementing numbers to duplicate Untitled Project titles', async () => {
+      const { db } = await import('@/db');
+      await db.manuscripts.clear();
+      const store = useTypingStore.getState();
+
+      await store.newProject();
+      expect(useTypingStore.getState().manifest.title).toBe('Untitled Project');
+
+      await store.newProject();
+      expect(useTypingStore.getState().manifest.title).toBe('Untitled Project (2)');
+
+      await store.newProject();
+      expect(useTypingStore.getState().manifest.title).toBe('Untitled Project (3)');
+    });
+
+    it('formats session date and time with weekday, date, time and wordcount', async () => {
+      const { formatSessionDateTime } = await import('@/components/modals/ProjectSessionsTab');
+      const formatted = formatSessionDateTime('2026-09-10T19:51:00.000Z');
+      expect(formatted).toContain('2026');
+      expect(formatted).toContain('Sep');
+    });
+
+    it('persists global settings to both localStorage and Dexie settings table', async () => {
+      const { getGlobalSettingsFromDb } = await import('@/db');
+      const store = useTypingStore.getState();
+      store.setApertureHeight(5);
+      store.setManifest({ colorScheme: 'dark-amber' });
+
+      const fromLocal = JSON.parse(localStorage.getItem('minitype_global_settings') || '{}');
+      expect(fromLocal.activeApertureHeight).toBe(5);
+      expect(fromLocal.colorScheme).toBe('dark-amber');
+
+      const fromDb = await getGlobalSettingsFromDb();
+      expect(fromDb).toBeTruthy();
+      expect(fromDb?.activeApertureHeight).toBe(5);
+      expect(fromDb?.colorScheme).toBe('dark-amber');
     });
   });
 });

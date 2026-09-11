@@ -8,6 +8,7 @@ export const DocumentStats: React.FC = React.memo(function DocumentStats() {
   const activeLineIndex = useTypingStore((state) => state.activeLineIndex);
   const activeColumnLimit = useTypingStore((state) => state.activeColumnLimit);
   const currentPageLines = useTypingStore((state) => state.currentPageLines);
+  const title = useTypingStore((state) => state.manifest.title || 'Untitled Project');
 
   const isPortrait = (activeColumnLimit ?? 70) === 35;
   const boxWidthClass = isPortrait
@@ -56,12 +57,14 @@ export const DocumentStats: React.FC = React.memo(function DocumentStats() {
     <div
       className={`flex items-center justify-center text-center ${boxWidthClass} px-3 sm:px-8 mt-1.5 text-muted-foreground text-[11px] font-mono pointer-events-none select-none`}
     >
-      <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+      <div className="flex items-center justify-center gap-1.5 sm:gap-2 flex-wrap">
         <span>{lineStatText}</span>
-        <span>·</span>
+        <span>-</span>
         <span className="text-foreground/90 font-medium">{wordCount} words</span>
-        <span>·</span>
+        <span>-</span>
         <span>{totalCharsOnPage} chars</span>
+        <span>-</span>
+        <span className="truncate max-w-[200px] sm:max-w-[300px]">{title.toLowerCase()}</span>
       </div>
     </div>
   );

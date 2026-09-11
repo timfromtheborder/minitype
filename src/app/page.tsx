@@ -118,38 +118,32 @@ export default function Home() {
           <button
             type="button"
             onClick={() => engine.flushSave?.()}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-none border font-sans font-medium transition-all cursor-pointer text-[11px] sm:text-xs whitespace-nowrap ${
+            className={`flex items-center justify-center px-2.5 py-1.5 rounded-none border font-sans transition-all cursor-pointer shadow-xs shrink-0 ${
               engine.saveState === 'saving'
-                ? 'border-amber-500/80 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold shadow-xs'
+                ? 'border-red-500/80 bg-red-500/10 text-red-600 dark:text-red-400'
                 : engine.saveState === 'error' || engine.persistenceError
-                ? 'border-red-500 bg-red-500/10 text-red-600 dark:text-red-400 font-semibold shadow-xs'
+                ? 'border-red-500 bg-red-500/10 text-red-600 dark:text-red-400 font-semibold'
                 : isSpotlight
-                ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground shadow-xs'
-                : 'border-border/70 bg-card text-card-foreground shadow-xs'
+                ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground'
+                : 'border-border/70 bg-card text-card-foreground hover:bg-muted'
             }`}
             title={
               engine.saveState === 'error' || engine.persistenceError
                 ? `Save Error: ${engine.persistenceError || 'IndexedDB write error'}`
                 : engine.saveState === 'saving'
                 ? 'Saving changes...'
-                : 'All changes saved to project. Click to force save now.'
+                : 'All changes saved. Click to force save now.'
             }
           >
             {engine.saveState === 'saving' ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-500 shrink-0" />
-                <span>Saving...</span>
-              </>
+              <span className="relative flex h-3 w-3 shrink-0 items-center justify-center">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+              </span>
             ) : engine.saveState === 'error' || engine.persistenceError ? (
-              <>
-                <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                <span>Save Error</span>
-              </>
+              <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
             ) : (
-              <>
-                <Check className="w-3.5 h-3.5 opacity-80 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                <span>Saved</span>
-              </>
+              <Check className="w-3.5 h-3.5 opacity-80 shrink-0 text-emerald-600 dark:text-emerald-400" />
             )}
           </button>
         </div>

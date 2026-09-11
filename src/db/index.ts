@@ -5,6 +5,7 @@ export class MinitypeDatabase extends Dexie {
   manuscripts!: EntityTable<ManuscriptManifest, 'id'>;
   pages!: EntityTable<PageRecord, 'id'>;
   sessions!: EntityTable<SessionRecord, 'id'>;
+  settings!: EntityTable<{ id: string; settings: Partial<ManuscriptManifest> }, 'id'>;
 
   constructor() {
     super('MinitypeDatabase');
@@ -16,6 +17,12 @@ export class MinitypeDatabase extends Dexie {
       manuscripts: 'id, mode, updatedAt, createdAt, title',
       pages: 'id, manuscriptId, pageNumber, [manuscriptId+pageNumber]',
       sessions: 'id, projectId, sessionNumber, startedAt',
+    });
+    this.version(3).stores({
+      manuscripts: 'id, mode, updatedAt, createdAt, title',
+      pages: 'id, manuscriptId, pageNumber, [manuscriptId+pageNumber]',
+      sessions: 'id, projectId, sessionNumber, startedAt',
+      settings: 'id',
     });
   }
 }
@@ -160,16 +167,37 @@ export async function getPagesForManuscript(manuscriptId: string): Promise<PageR
     .sortBy('pageNumber');
 }
 
+export async function saveGlobalSettingsToDb(settings: Partial<ManuscriptManifest>): Promise<void> {
+  try {
+    const existing = await db.settings.get('global');
+    const merged = { ...(existing?.settings || {}), ...settings };
+    await db.settings.put({ id: 'global', settings: merged });
+  } catch (err) {
+    console.error('Failed to save settings to IndexedDB:', err);
+  }
+}
+
+export async function getGlobalSettingsFromDb(): Promise<Partial<ManuscriptManifest> | null> {
+  try {
+    const record = await db.settings.get('global');
+    return record?.settings || null;
+  } catch (err) {
+    console.error('Failed to get settings from IndexedDB:', err);
+    return null;
+  }
+}
+
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 const pendingPagesMap = new Map<string, PageRecord>();
 
-export function debounceSavePage(page: PageRecord, delayMs = 250): void {
+export function debounceSavePage(page: PageRecord, delayMs = 2000): void {
   const pageId = page.id || `${page.manuscriptId || 'default'}-page-${page.pageNumber}`;
   pendingPagesMap.set(pageId, page);
-  notifySaveStatus('saving');
 
+  // Requirement: Only animate when typing stops for a few seconds. Do not trigger 'saving' on every key!
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
+    notifySaveStatus('saving');
     await flushPendingSave();
   }, delayMs);
 }
@@ -184,6 +212,7 @@ export async function flushPendingSave(): Promise<void> {
     return;
   }
 
+  notifySaveStatus('saving');
   const pagesToSave = Array.from(pendingPagesMap.values());
   pendingPagesMap.clear();
 

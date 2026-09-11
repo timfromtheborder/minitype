@@ -1,42 +1,34 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { SessionRecord } from '@/types';
-import { Calendar, Clock, FileText, ChevronDown, ChevronRight, Sparkles } from 'lucide-react';
+import { Clock, Sparkles } from 'lucide-react';
 
 interface ProjectSessionsTabProps {
   sessions: SessionRecord[];
   projectTitle: string;
 }
 
+export function formatSessionDateTime(isoStr?: string | null): string {
+  if (!isoStr) return '';
+  try {
+    const d = new Date(isoStr);
+    const weekday = d.toLocaleDateString('en-US', { weekday: 'long' });
+    const month = d.toLocaleDateString('en-US', { month: 'short' });
+    const day = d.getDate();
+    const year = d.getFullYear();
+    const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    return `${weekday}, ${month} ${day}, ${year}, ${time}`;
+  } catch {
+    return isoStr || '';
+  }
+}
+
 export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
   sessions,
   projectTitle,
 }) => {
-  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
-
   // Chronological order: oldest at top, newest at bottom
   const sortedSessions = [...sessions].sort((a, b) => a.sessionNumber - b.sessionNumber);
-
   const totalWords = sortedSessions.reduce((acc, s) => acc + (s.wordCount || 0), 0);
-
-  const formatDate = (isoStr?: string) => {
-    if (!isoStr) return '';
-    try {
-      const d = new Date(isoStr);
-      return d.toLocaleDateString(undefined, {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return '';
-    }
-  };
-
-  const toggleExpand = (sessionId: string) => {
-    setExpandedSessionId(expandedSessionId === sessionId ? null : sessionId);
-  };
 
   return (
     <div className="flex-1 min-h-0 flex flex-col gap-2.5 sm:gap-3 overflow-hidden font-sans">
@@ -47,7 +39,7 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
             Project Overview
           </span>
           <h3 className="text-xs sm:text-sm font-semibold truncate text-foreground font-mono">
-            {projectTitle || 'Untitled Manuscript'}
+            {projectTitle || 'Untitled Project'}
           </h3>
         </div>
         <div className="flex items-center gap-3 sm:gap-4 shrink-0 text-right">
@@ -70,18 +62,8 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
         </div>
       </div>
 
-      {/* Sessions Stream Header */}
-      <div className="flex items-center justify-between px-1 text-[11px] text-muted-foreground shrink-0">
-        <span className="font-semibold tracking-wide uppercase text-[10px]">
-          Session Timeline (Oldest to Newest)
-        </span>
-        <span className="text-[10px] opacity-70">
-          Click a session to inspect text
-        </span>
-      </div>
-
       {/* Sessions Scrollable List */}
-      <div className="flex-1 min-h-0 overflow-y-auto square-scrollbar border border-border/80 bg-card text-card-foreground divide-y divide-border/40">
+      <div className="flex-1 min-h-0 overflow-y-auto square-scrollbar border border-border/80 bg-card text-card-foreground p-2 sm:p-3 space-y-2">
         {sortedSessions.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 p-4 text-center gap-2 text-muted-foreground">
             <Clock className="w-8 h-8 opacity-40" />
@@ -93,79 +75,31 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
         ) : (
           sortedSessions.map((session, index) => {
             const isLatest = index === sortedSessions.length - 1;
-            const isExpanded = expandedSessionId === session.id;
+            const isActive = isLatest && !session.completedAt;
+            const timeRange = session.completedAt
+              ? `${formatSessionDateTime(session.startedAt)} - ${formatSessionDateTime(session.completedAt)}`
+              : `${formatSessionDateTime(session.startedAt)} - Present`;
 
             return (
               <div
                 key={session.id}
-                className={`flex flex-col transition-colors ${
-                  isExpanded ? 'bg-muted/30' : 'hover:bg-muted/15'
-                }`}
+                className="flex items-center justify-between p-2.5 sm:p-3 border border-border/60 bg-muted/20 text-foreground select-none gap-2 font-mono text-[11px] sm:text-xs"
               >
-                {/* Session Header Card */}
-                <div
-                  onClick={() => toggleExpand(session.id)}
-                  className="flex items-center justify-between p-2.5 sm:p-3 gap-2 cursor-pointer select-none"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    <button
-                      type="button"
-                      className="text-muted-foreground hover:text-foreground p-0.5 transition-colors"
-                      aria-label={isExpanded ? 'Collapse session' : 'Expand session'}
-                    >
-                      {isExpanded ? (
-                        <ChevronDown className="w-4 h-4 shrink-0" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4 shrink-0" />
-                      )}
-                    </button>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs sm:text-sm font-bold text-foreground">
-                          Session {session.sessionNumber}
-                        </span>
-                        {isLatest && !session.completedAt && (
-                          <span className="flex items-center gap-1 text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-none">
-                            <Sparkles className="w-2.5 h-2.5" />
-                            <span>Active</span>
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 text-[10px] text-muted-foreground mt-0.5">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3 opacity-70" />
-                          <span>{formatDate(session.startedAt)}</span>
-                        </span>
-                        {session.completedAt && (
-                          <span className="hidden sm:inline-flex items-center gap-1 opacity-75">
-                            <span>to {formatDate(session.completedAt)}</span>
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Word Count Pill */}
-                  <div className="text-right shrink-0">
-                    <span className="font-mono text-xs font-semibold px-2 py-0.5 bg-muted/60 border border-border/60 text-foreground">
-                      {session.wordCount.toLocaleString()} words
-                    </span>
-                  </div>
+                <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
+                  <span className="font-semibold text-foreground">
+                    {timeRange}
+                  </span>
+                  <span className="text-muted-foreground/60">|</span>
+                  <span className="text-muted-foreground font-medium shrink-0">
+                    {session.wordCount.toLocaleString()} words
+                  </span>
                 </div>
 
-                {/* Session Text Drawer */}
-                {isExpanded && (
-                  <div className="p-3 sm:p-4 pt-1 bg-background/50 border-t border-border/40 font-mono text-xs leading-relaxed text-foreground whitespace-pre-wrap max-h-60 overflow-y-auto square-scrollbar">
-                    {session.text && session.text.trim().length > 0 ? (
-                      session.text
-                    ) : (
-                      <span className="italic text-muted-foreground/70">
-                        {isLatest
-                          ? 'Drafting actively in the aperture. Text will sync automatically.'
-                          : 'Empty session content.'}
-                      </span>
-                    )}
-                  </div>
+                {isActive && (
+                  <span className="flex items-center gap-1 text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-none shrink-0 font-sans">
+                    <Sparkles className="w-2.5 h-2.5" />
+                    <span>Active</span>
+                  </span>
                 )}
               </div>
             );

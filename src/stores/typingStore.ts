@@ -30,6 +30,8 @@ import {
   setPersistenceErrorHandler,
   setSaveStatusHandler,
   getAllManuscripts,
+  saveGlobalSettingsToDb,
+  getGlobalSettingsFromDb,
 } from '@/db';
 import { textToManuscriptLines } from '@/lib/importer';
 import { sanitizeManuscript } from '@/lib/sanitize';
@@ -53,7 +55,7 @@ export function createEmptyLine(pageNumber: number, lineIndex: number): LineReco
 
 export const DEFAULT_MANIFEST: ManuscriptManifest = {
   id: 'default-manuscript',
-  title: 'Untitled Manuscript',
+  title: 'Untitled Project',
   mode: 'local',
   inboxCount: 0,
   outboxCount: 0,
@@ -102,7 +104,7 @@ export function getInitialManifest(): ManuscriptManifest {
   const base = { ...DEFAULT_MANIFEST };
   if (typeof window !== 'undefined') {
     try {
-      const cached = localStorage.getItem(SETTINGS_KEY) || localStorage.getItem('minitype_settings');
+      const cached = localStorage.getItem(SETTINGS_KEY);
       if (cached) {
         const settings = extractSettings(JSON.parse(cached));
         return { ...base, ...settings };
@@ -119,10 +121,11 @@ export function persistSettings(manifest: Partial<ManuscriptManifest>): void {
     try {
       const settings = extractSettings(manifest);
       if (Object.keys(settings).length === 0) return;
-      const existing = localStorage.getItem(SETTINGS_KEY) || localStorage.getItem('minitype_settings');
+      const existing = localStorage.getItem(SETTINGS_KEY);
       const current = existing ? JSON.parse(existing) : {};
       const merged = { ...current, ...settings };
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(merged));
+      saveGlobalSettingsToDb(merged).catch(console.error);
     } catch (e) {
       console.error('Failed to save settings to localStorage:', e);
     }
@@ -871,15 +874,22 @@ export const useTypingStore = create<TypingStore>((set, get) => {
   newProject: async () => {
     await flushPendingSave();
     const state = get();
-    await saveManuscript(state.manifest).catch(console.error);
-    const curPage: PageRecord = {
-      id: `${state.manifest.id}-page-${state.currentPageNumber}`,
-      manuscriptId: state.manifest.id,
-      pageNumber: state.currentPageNumber,
-      lines: state.currentPageLines,
-      completedAt: null,
-    };
-    await savePage(curPage).catch(console.error);
+    const hasContent =
+      state.historicalPages.length > 0 ||
+      state.currentPageLines.some((l) => l.cells.length > 0) ||
+      state.activeSessions.some((s) => s.text.trim().length > 0);
+
+    if (state.manifest.id !== 'default-manuscript' || hasContent) {
+      await saveManuscript(state.manifest).catch(console.error);
+      const curPage: PageRecord = {
+        id: `${state.manifest.id}-page-${state.currentPageNumber}`,
+        manuscriptId: state.manifest.id,
+        pageNumber: state.currentPageNumber,
+        lines: state.currentPageLines,
+        completedAt: null,
+      };
+      await savePage(curPage).catch(console.error);
+    }
 
     const newId = `manuscript-${Date.now()}`;
     const initialSession: SessionRecord = {
@@ -892,10 +902,36 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       wordCount: 0,
     };
 
+    // Calculate unique title with incremental duplicate counter if 'Untitled Project' exists
+    const existing = await getAllManuscripts().catch(() => []);
+    let title = 'Untitled Project';
+    const untitledRegex = /^Untitled Project(?:\s*\((\d+)\))?$/i;
+    const existingNumbers = new Set<number>();
+    let hasBaseUntitled = false;
+
+    for (const m of existing) {
+      const match = (m.title || '').trim().match(untitledRegex);
+      if (match) {
+        if (match[1] === undefined) {
+          hasBaseUntitled = true;
+        } else {
+          existingNumbers.add(parseInt(match[1], 10));
+        }
+      }
+    }
+
+    if (hasBaseUntitled) {
+      let num = 2;
+      while (existingNumbers.has(num)) {
+        num++;
+      }
+      title = `Untitled Project (${num})`;
+    }
+
     const updatedManifest: ManuscriptManifest = {
       ...state.manifest, // retains global settings
       id: newId,
-      title: 'Untitled Manuscript',
+      title,
       mode: 'local',
       outboxCount: 0,
       lastPrintedCharIndex: 0,
@@ -998,7 +1034,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     const updatedManifest: ManuscriptManifest = {
       ...state.manifest,
       id: loadedManifest.id,
-      title: loadedManifest.title || 'Untitled Manuscript',
+      title: loadedManifest.title || 'Untitled Project',
       mode: 'local',
       outboxCount: loadedManifest.outboxCount ?? 0,
       lastPrintedCharIndex: loadedManifest.lastPrintedCharIndex ?? 0,
@@ -1045,7 +1081,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
   importTextFileAsProject: async (title: string, rawText: string) => {
     await flushPendingSave();
     const state = get();
-    const cleanTitle = title.replace(/\.(txt|md|minitype)$/i, '').trim() || 'Untitled Manuscript';
+    const cleanTitle = title.replace(/\.(txt|md|minitype)$/i, '').trim() || 'Untitled Project';
     const newId = `manuscript-${Date.now()}`;
 
     // Parse sessions if delimiter codes exist in project file
@@ -1278,18 +1314,28 @@ export const useTypingStore = create<TypingStore>((set, get) => {
   rehydrate: async () => {
     if (typeof window === 'undefined') return;
 
-    // 1. Rehydrate global settings from localStorage
+    // 1. Rehydrate global settings from localStorage & IndexedDB
     let currentManifest = get().manifest;
     try {
-      const cached = localStorage.getItem(SETTINGS_KEY) || localStorage.getItem('minitype_settings');
+      const cached = localStorage.getItem(SETTINGS_KEY);
       if (cached) {
         const parsed = extractSettings(JSON.parse(cached));
         currentManifest = { ...currentManifest, ...parsed };
-        set({ manifest: currentManifest });
       }
     } catch (e) {
       console.error('Failed to parse cached settings from localStorage:', e);
     }
+
+    try {
+      const dbSettings = await getGlobalSettingsFromDb();
+      if (dbSettings) {
+        currentManifest = { ...currentManifest, ...dbSettings };
+      }
+    } catch (e) {
+      console.error('Failed to load settings from IndexedDB:', e);
+    }
+
+    set({ manifest: currentManifest });
 
     // 2. Rehydrate active project from IndexedDB
     try {
@@ -1334,7 +1380,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       const updatedManifest: ManuscriptManifest = {
         ...currentManifest, // retains global settings!
         id: loadedManifest.id,
-        title: loadedManifest.title || 'Untitled Manuscript',
+        title: loadedManifest.title || 'Untitled Project',
         mode: 'local',
         outboxCount: loadedManifest.outboxCount ?? 0,
         lastPrintedCharIndex: loadedManifest.lastPrintedCharIndex ?? 0,
