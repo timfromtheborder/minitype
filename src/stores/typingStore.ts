@@ -19,10 +19,14 @@ import {
   clearManuscriptData,
   getManuscript,
   getPagesForManuscript,
+  loadManuscriptProject,
+  deletePagesForManuscript,
   debounceSavePage,
   flushPendingSave,
   setPersistenceErrorHandler,
 } from '@/db';
+import { textToManuscriptLines } from '@/lib/importer';
+import { sanitizeManuscript } from '@/lib/sanitize';
 
 export function getPageLineLimit(mode?: PageMode, customSize?: number): number {
   if (mode === 'scroll') return Infinity;
@@ -812,20 +816,40 @@ export const useTypingStore = create<TypingStore>((set, get) => {
   },
 
   newProject: async () => {
+    await flushPendingSave();
     const state = get();
     if (state.manifest.mode === 'local') {
-      await clearManuscriptData(state.manifest.id).catch(console.error);
+      await saveManuscript(state.manifest).catch(console.error);
+      const curPage: PageRecord = {
+        id: `${state.manifest.id}-page-${state.currentPageNumber}`,
+        manuscriptId: state.manifest.id,
+        pageNumber: state.currentPageNumber,
+        lines: state.currentPageLines,
+        completedAt: null,
+      };
+      await savePage(curPage).catch(console.error);
     }
+    const newId = `manuscript-${Date.now()}`;
     const updatedManifest: ManuscriptManifest = {
       ...state.manifest,
+      id: newId,
       title: 'Untitled Manuscript',
       outboxCount: 0,
       lastPrintedCharIndex: 0,
       printedPagesCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
     persistSettings(updatedManifest);
     if (updatedManifest.mode === 'local') {
       await saveManuscript(updatedManifest).catch(console.error);
+      await savePage({
+        id: `${newId}-page-1`,
+        manuscriptId: newId,
+        pageNumber: 1,
+        lines: [createEmptyLine(1, 0)],
+        completedAt: null,
+      }).catch(console.error);
     }
     set({
       currentPageNumber: 1,
@@ -840,6 +864,134 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       pendingWrappedCells: null,
       manifest: updatedManifest,
     });
+  },
+
+  loadProject: async (id: string) => {
+    await flushPendingSave();
+    const state = get();
+    // Save current active project state before switching
+    if (state.manifest.mode === 'local') {
+      await saveManuscript(state.manifest).catch(console.error);
+      const curPage: PageRecord = {
+        id: `${state.manifest.id}-page-${state.currentPageNumber}`,
+        manuscriptId: state.manifest.id,
+        pageNumber: state.currentPageNumber,
+        lines: state.currentPageLines,
+        completedAt: null,
+      };
+      await savePage(curPage).catch(console.error);
+    }
+
+    const data = await loadManuscriptProject(id);
+    if (!data) return;
+
+    const { manifest: loadedManifest, pages } = data;
+
+    // Requirement: When a file is loaded, strikeouts should be removed!
+    const cleanText = sanitizeManuscript(pages, {
+      doubleSpaceLinebreaks: loadedManifest.doubleSpaceLinebreaks,
+    });
+
+    const columnLimit = state.activeColumnLimit ?? MAX_COLUMNS;
+    // Requirement (Option A): Parse into platen lines with a fresh empty line at the end
+    const parsed = textToManuscriptLines(cleanText, 1, columnLimit);
+
+    // Save the sanitized clean manuscript back to Dexie
+    if (loadedManifest.mode === 'local') {
+      await deletePagesForManuscript(loadedManifest.id).catch(console.error);
+      const sanitizedPage: PageRecord = {
+        id: `${loadedManifest.id}-page-1`,
+        manuscriptId: loadedManifest.id,
+        pageNumber: 1,
+        lines: parsed.lines,
+        completedAt: null,
+      };
+      await saveManuscript({ ...loadedManifest, updatedAt: new Date().toISOString() }).catch(console.error);
+      await savePage(sanitizedPage).catch(console.error);
+    }
+
+    persistSettings(loadedManifest);
+
+    set({
+      manifest: loadedManifest,
+      currentPageNumber: 1,
+      historicalPages: [],
+      currentPageLines: parsed.lines,
+      activeLineIndex: parsed.activeLineIndex,
+      activeColIndex: parsed.activeColIndex,
+      isHighlighting: false,
+      highlightHead: null,
+      isLocked: false,
+      lockReason: null,
+      pendingWrappedCells: null,
+    });
+  },
+
+  importTextFileAsProject: async (title: string, rawText: string) => {
+    await flushPendingSave();
+    const state = get();
+    const cleanTitle = title.replace(/\.(txt|md)$/i, '').trim() || 'Untitled Manuscript';
+    const newId = `manuscript-${Date.now()}`;
+
+    const columnLimit = state.activeColumnLimit ?? MAX_COLUMNS;
+    const parsed = textToManuscriptLines(rawText, 1, columnLimit);
+
+    const newManifest: ManuscriptManifest = {
+      ...state.manifest,
+      id: newId,
+      title: cleanTitle,
+      mode: 'local',
+      outboxCount: 0,
+      lastPrintedCharIndex: 0,
+      printedPagesCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const newPage: PageRecord = {
+      id: `${newId}-page-1`,
+      manuscriptId: newId,
+      pageNumber: 1,
+      lines: parsed.lines,
+      completedAt: null,
+    };
+
+    await saveManuscript(newManifest).catch(console.error);
+    await savePage(newPage).catch(console.error);
+    persistSettings(newManifest);
+
+    set({
+      manifest: newManifest,
+      currentPageNumber: 1,
+      historicalPages: [],
+      currentPageLines: parsed.lines,
+      activeLineIndex: parsed.activeLineIndex,
+      activeColIndex: parsed.activeColIndex,
+      isHighlighting: false,
+      highlightHead: null,
+      isLocked: false,
+      lockReason: null,
+      pendingWrappedCells: null,
+    });
+  },
+
+  deleteProject: async (id: string) => {
+    const state = get();
+    await clearManuscriptData(id).catch(console.error);
+    if (state.manifest.id === id) {
+      await state.newProject();
+    }
+  },
+
+  renameProject: async (id: string, newTitle: string) => {
+    const state = get();
+    if (state.manifest.id === id) {
+      state.setManifest({ title: newTitle });
+    }
+    const m = await getManuscript(id);
+    if (m) {
+      await saveManuscript({ ...m, title: newTitle, updatedAt: new Date().toISOString() }).catch(console.error);
+    }
   },
 
   toggleStats: (show?: boolean) => {

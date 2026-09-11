@@ -35,6 +35,31 @@ export async function getManuscript(id: string): Promise<ManuscriptManifest | un
   return await db.manuscripts.get(id);
 }
 
+export async function getAllManuscripts(): Promise<ManuscriptManifest[]> {
+  try {
+    const list = await db.manuscripts.toArray();
+    list.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
+    return list;
+  } catch (err) {
+    console.error('Failed to get manuscripts list:', err);
+    return [];
+  }
+}
+
+export async function loadManuscriptProject(
+  id: string
+): Promise<{ manifest: ManuscriptManifest; pages: PageRecord[] } | null> {
+  try {
+    const manifest = await db.manuscripts.get(id);
+    if (!manifest) return null;
+    const pages = await db.pages.where('manuscriptId').equals(id).sortBy('pageNumber');
+    return { manifest, pages };
+  } catch (err) {
+    console.error('Failed to load manuscript project:', err);
+    return null;
+  }
+}
+
 export async function savePage(page: PageRecord): Promise<void> {
   const pageId = page.id || `${page.manuscriptId || 'default'}-page-${page.pageNumber}`;
   try {
@@ -111,5 +136,9 @@ export async function clearManuscriptData(manuscriptId: string): Promise<void> {
     await db.manuscripts.delete(manuscriptId);
     await db.pages.where('manuscriptId').equals(manuscriptId).delete();
   });
+}
+
+export async function deletePagesForManuscript(manuscriptId: string): Promise<void> {
+  await db.pages.where('manuscriptId').equals(manuscriptId).delete();
 }
 

@@ -37,6 +37,10 @@ export interface TypingEngineActions {
   setActiveColumnLimit: (limit: number) => void;
   clearText: () => Promise<void>;
   newProject: () => Promise<void>;
+  loadProject: (id: string) => Promise<void>;
+  importTextFileAsProject: (title: string, rawText: string) => Promise<void>;
+  deleteProject: (id: string) => Promise<void>;
+  renameProject: (id: string, newTitle: string) => Promise<void>;
   toggleStats: (show?: boolean) => void;
   toggleDoubleSpaceLinebreaks: (enabled?: boolean) => void;
   resetEngine: (newManifest?: Partial<ManuscriptManifest>) => void;
