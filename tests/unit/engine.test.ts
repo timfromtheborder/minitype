@@ -12,6 +12,22 @@ import { serializeProjectFile, parseProjectFile, stripSessionMarkers } from '@/l
 
 describe('Typing Engine & State Machine Invariants', () => {
   beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+    if (typeof window !== 'undefined') {
+      window.name = '';
+    }
+    if (typeof document !== 'undefined') {
+      document.cookie = 'minitype_global_settings=; max-age=0; path=/;';
+      document.documentElement.removeAttribute('data-theme');
+      document.documentElement.removeAttribute('data-text-size');
+      document.documentElement.removeAttribute('data-aperture-height');
+      document.documentElement.removeAttribute('data-page-mode');
+      document.documentElement.removeAttribute('data-page-size');
+      document.documentElement.removeAttribute('data-show-stats');
+      document.documentElement.removeAttribute('data-double-space');
+      document.documentElement.removeAttribute('data-updated-at');
+    }
     useTypingStore.getState().resetEngine({
       mode: 'local',
       inboxCount: 2,
@@ -1495,6 +1511,14 @@ describe('Typing Engine & State Machine Invariants', () => {
       sessionStorage.clear();
       window.name = '';
       document.cookie = 'minitype_global_settings=; max-age=0; path=/;';
+      document.documentElement.removeAttribute('data-theme');
+      document.documentElement.removeAttribute('data-text-size');
+      document.documentElement.removeAttribute('data-aperture-height');
+      document.documentElement.removeAttribute('data-page-mode');
+      document.documentElement.removeAttribute('data-page-size');
+      document.documentElement.removeAttribute('data-show-stats');
+      document.documentElement.removeAttribute('data-double-space');
+      document.documentElement.removeAttribute('data-updated-at');
 
       // Save custom settings directly in IndexedDB settings table
       await saveGlobalSettingsToDb({
@@ -1556,6 +1580,62 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(sync?.colorScheme).toBe('spotlight');
       expect(sync?.textSize).toBe('l');
       expect(sync?._updatedAt).toBe(2000);
+    });
+
+    it('persists and restores aperture height in scroll mode across reloads', async () => {
+      const store = useTypingStore.getState();
+      store.setPageMode('scroll');
+      store.setApertureHeight(6);
+
+      const state = useTypingStore.getState();
+      expect(state.manifest.pageMode).toBe('scroll');
+      expect(state.manifest.activeApertureHeight).toBe(6);
+      expect(document.documentElement.getAttribute('data-aperture-height')).toBe('6');
+      expect(document.documentElement.getAttribute('data-page-mode')).toBe('scroll');
+
+      // Rehydrate store
+      await useTypingStore.getState().rehydrate();
+
+      const stateAfter = useTypingStore.getState();
+      expect(stateAfter.manifest.pageMode).toBe('scroll');
+      expect(stateAfter.manifest.activeApertureHeight).toBe(6);
+    });
+
+    it('persists and restores aperture height in page mode across reloads', async () => {
+      const store = useTypingStore.getState();
+      store.setPageMode('page');
+      store.setApertureHeight(4);
+
+      const state = useTypingStore.getState();
+      expect(state.manifest.pageMode).toBe('page');
+      expect(state.manifest.activeApertureHeight).toBe(4);
+      expect(document.documentElement.getAttribute('data-aperture-height')).toBe('4');
+      expect(document.documentElement.getAttribute('data-page-mode')).toBe('page');
+
+      // Rehydrate store
+      await useTypingStore.getState().rehydrate();
+
+      const stateAfter = useTypingStore.getState();
+      expect(stateAfter.manifest.pageMode).toBe('page');
+      expect(stateAfter.manifest.activeApertureHeight).toBe(4);
+    });
+
+    it('synchronously reads aperture height and page mode from documentElement attributes', () => {
+      localStorage.clear();
+      sessionStorage.clear();
+      window.name = '';
+      document.cookie = 'minitype_global_settings=; max-age=0; path=/;';
+
+      // Simulate layout.tsx inline script having populated DOM attributes
+      document.documentElement.setAttribute('data-aperture-height', '7');
+      document.documentElement.setAttribute('data-page-mode', 'scroll');
+      document.documentElement.setAttribute('data-text-size', 'xl');
+
+      const sync = readSynchronousSettings();
+      expect(sync).not.toBeNull();
+      expect(sync?.activeApertureHeight).toBe(7);
+      expect(sync?.pageMode).toBe('scroll');
+      expect(sync?.textSize).toBe('xl');
     });
   });
 });

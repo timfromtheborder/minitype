@@ -59,7 +59,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                   if (!raw) return;
                   try {
                     var parsed = JSON.parse(raw);
-                    if (parsed && (parsed.colorScheme || parsed.textSize)) {
+                    if (parsed && typeof parsed === 'object') {
                       candidates.push({ s: parsed, t: typeof parsed._updatedAt === 'number' ? parsed._updatedAt : 0 });
                     }
                   } catch (e) {}
@@ -80,14 +80,35 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                   var finalS = {};
                   for (var i = candidates.length - 1; i >= 0; i--) {
                     var item = candidates[i].s;
-                    if (item.colorScheme) finalS.colorScheme = item.colorScheme;
-                    if (item.textSize) finalS.textSize = item.textSize;
+                    for (var k in item) {
+                      if (item[k] !== undefined) {
+                        finalS[k] = item[k];
+                      }
+                    }
                   }
                   if (finalS.colorScheme) {
                     document.documentElement.setAttribute('data-theme', finalS.colorScheme);
                   }
                   if (finalS.textSize) {
                     document.documentElement.setAttribute('data-text-size', finalS.textSize);
+                  }
+                  if (finalS.activeApertureHeight) {
+                    document.documentElement.setAttribute('data-aperture-height', String(finalS.activeApertureHeight));
+                  }
+                  if (finalS.pageMode) {
+                    document.documentElement.setAttribute('data-page-mode', finalS.pageMode);
+                  }
+                  if (finalS.pageSize) {
+                    document.documentElement.setAttribute('data-page-size', String(finalS.pageSize));
+                  }
+                  if (finalS.showStats !== undefined) {
+                    document.documentElement.setAttribute('data-show-stats', String(finalS.showStats));
+                  }
+                  if (finalS.doubleSpaceLinebreaks !== undefined) {
+                    document.documentElement.setAttribute('data-double-space', String(finalS.doubleSpaceLinebreaks));
+                  }
+                  if (candidates[0] && candidates[0].t) {
+                    document.documentElement.setAttribute('data-updated-at', String(candidates[0].t));
                   }
                 }
               })();

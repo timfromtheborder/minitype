@@ -66,6 +66,7 @@ function notifySaveStatus(status: SaveStatus): void {
 export async function saveManuscript(manifest: ManuscriptManifest): Promise<void> {
   try {
     const docData: any = {
+      ...manifest,
       id: manifest.id,
       title: manifest.title || 'Untitled Manuscript',
       mode: 'local',

@@ -166,10 +166,23 @@ export function readSynchronousSettings(): (Partial<ManuscriptManifest> & { _upd
   if (typeof document !== 'undefined') {
     const theme = document.documentElement.getAttribute('data-theme') as any;
     const textSize = document.documentElement.getAttribute('data-text-size') as any;
-    if (theme || textSize) {
+    const apertureHeight = document.documentElement.getAttribute('data-aperture-height');
+    const pageMode = document.documentElement.getAttribute('data-page-mode') as any;
+    const pageSize = document.documentElement.getAttribute('data-page-size');
+    const showStats = document.documentElement.getAttribute('data-show-stats');
+    const doubleSpace = document.documentElement.getAttribute('data-double-space');
+    const updatedAt = document.documentElement.getAttribute('data-updated-at');
+
+    if (theme || textSize || apertureHeight || pageMode || pageSize) {
       const fallback: any = {};
       if (theme) fallback.colorScheme = theme;
       if (textSize) fallback.textSize = textSize;
+      if (apertureHeight) fallback.activeApertureHeight = parseInt(apertureHeight, 10);
+      if (pageMode) fallback.pageMode = pageMode;
+      if (pageSize) fallback.pageSize = parseInt(pageSize, 10);
+      if (showStats !== null && showStats !== undefined) fallback.showStats = showStats === 'true';
+      if (doubleSpace !== null && doubleSpace !== undefined) fallback.doubleSpaceLinebreaks = doubleSpace === 'true';
+      if (updatedAt) fallback._updatedAt = parseInt(updatedAt, 10);
       return fallback;
     }
   }
@@ -246,6 +259,24 @@ export function persistSettings(manifest: Partial<ManuscriptManifest>): void {
       }
       if (merged.textSize) {
         document.documentElement.setAttribute('data-text-size', merged.textSize);
+      }
+      if (merged.activeApertureHeight) {
+        document.documentElement.setAttribute('data-aperture-height', String(merged.activeApertureHeight));
+      }
+      if (merged.pageMode) {
+        document.documentElement.setAttribute('data-page-mode', merged.pageMode);
+      }
+      if (merged.pageSize) {
+        document.documentElement.setAttribute('data-page-size', String(merged.pageSize));
+      }
+      if (merged.showStats !== undefined) {
+        document.documentElement.setAttribute('data-show-stats', String(merged.showStats));
+      }
+      if (merged.doubleSpaceLinebreaks !== undefined) {
+        document.documentElement.setAttribute('data-double-space', String(merged.doubleSpaceLinebreaks));
+      }
+      if (merged._updatedAt) {
+        document.documentElement.setAttribute('data-updated-at', String(merged._updatedAt));
       }
     }
   } catch (e) {
@@ -394,7 +425,10 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       }
 
       const updatedManifest = { ...state.manifest, activeApertureHeight: height };
-      persistSettings({ activeApertureHeight: height });
+      persistSettings(updatedManifest);
+      if (updatedManifest.mode === 'local') {
+        saveManuscript(updatedManifest).catch(console.error);
+      }
 
       return {
         manifest: updatedManifest,
@@ -408,16 +442,22 @@ export const useTypingStore = create<TypingStore>((set, get) => {
   setPageSize: (pageSize: PageSize) => {
     set((state) => {
       const updated = { ...state.manifest, pageSize, pageMode: 'page' as const };
-      persistSettings({ pageSize, pageMode: 'page' });
+      persistSettings(updated);
+      if (updated.mode === 'local') {
+        saveManuscript(updated).catch(console.error);
+      }
       return { manifest: updated };
     });
   },
 
   setPageMode: (pageMode: PageMode) => {
+    const pageSize = pageMode === 'scroll' ? 999999 : pageMode === 'notecard' ? 10 : pageMode === 'page' ? 54 : 9999;
     set((state) => {
-      const pageSize = pageMode === 'notecard' ? 10 : pageMode === 'page' ? 54 : 9999;
       const updated = { ...state.manifest, pageMode, pageSize };
-      persistSettings({ pageMode, pageSize });
+      persistSettings(updated);
+      if (updated.mode === 'local') {
+        saveManuscript(updated).catch(console.error);
+      }
       return { manifest: updated };
     });
   },
@@ -425,7 +465,10 @@ export const useTypingStore = create<TypingStore>((set, get) => {
   setTextSize: (textSize: TextSize) => {
     set((state) => {
       const updated = { ...state.manifest, textSize };
-      persistSettings({ textSize });
+      persistSettings(updated);
+      if (updated.mode === 'local') {
+        saveManuscript(updated).catch(console.error);
+      }
       return { manifest: updated };
     });
   },
@@ -1552,7 +1595,10 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     set((state) => {
       const showStats = show !== undefined ? show : !(state.manifest.showStats ?? true);
       const updatedManifest = { ...state.manifest, showStats };
-      persistSettings({ showStats });
+      persistSettings(updatedManifest);
+      if (updatedManifest.mode === 'local') {
+        saveManuscript(updatedManifest).catch(console.error);
+      }
       return { manifest: updatedManifest };
     });
   },
@@ -1561,7 +1607,10 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     set((state) => {
       const doubleSpaceLinebreaks = enabled !== undefined ? enabled : !(state.manifest.doubleSpaceLinebreaks ?? false);
       const updatedManifest = { ...state.manifest, doubleSpaceLinebreaks };
-      persistSettings({ doubleSpaceLinebreaks });
+      persistSettings(updatedManifest);
+      if (updatedManifest.mode === 'local') {
+        saveManuscript(updatedManifest).catch(console.error);
+      }
       return { manifest: updatedManifest };
     });
   },
@@ -1600,25 +1649,35 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     // 1. Rehydrate global settings from synchronous stores & IndexedDB
     let currentManifest = get().manifest;
     const syncSettings = readSynchronousSettings();
+    const explicitSync = syncSettings ? extractSettings(syncSettings) : {};
+    let explicitDb: Partial<ManuscriptManifest> = {};
+
     if (syncSettings) {
-      currentManifest = { ...currentManifest, ...extractSettings(syncSettings) };
+      currentManifest = { ...currentManifest, ...explicitSync };
     }
 
     try {
       const dbRecord = await getGlobalSettingsFromDb();
       if (dbRecord) {
-        const dbSettings = extractSettings(dbRecord);
+        explicitDb = extractSettings(dbRecord);
         const syncUpdatedAt = (syncSettings as any)?._updatedAt || 0;
         const dbUpdatedAt = (dbRecord as any)?._updatedAt || 0;
 
-        // If DB has settings, and either sync was missing or DB is strictly newer
-        if (!syncSettings || (dbUpdatedAt > syncUpdatedAt && dbUpdatedAt > 0)) {
-          currentManifest = { ...currentManifest, ...dbSettings };
+        // If DB has settings, and either sync was missing or DB is newer/equal
+        if (!syncSettings || dbUpdatedAt >= syncUpdatedAt) {
+          currentManifest = { ...currentManifest, ...explicitDb };
           // Reseed all synchronous stores with database settings
           persistSettings(currentManifest);
-        } else if (syncSettings) {
-          // Sync settings are newer -> update IndexedDB
-          saveGlobalSettingsToDb({ ...extractSettings(currentManifest), _updatedAt: syncUpdatedAt || Date.now() } as any).catch(console.error);
+        } else {
+          // Sync settings are newer -> preserve any settings that were missing from syncSettings
+          const missingKeys: any = {};
+          for (const key of SETTING_KEYS) {
+            if ((explicitSync as any)[key] === undefined && (explicitDb as any)[key] !== undefined) {
+              missingKeys[key] = (explicitDb as any)[key];
+            }
+          }
+          currentManifest = { ...currentManifest, ...missingKeys };
+          persistSettings(currentManifest);
         }
       } else if (syncSettings) {
         // No DB record yet -> save current sync settings to IndexedDB
@@ -1634,6 +1693,21 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       }
       if (currentManifest.textSize) {
         document.documentElement.setAttribute('data-text-size', currentManifest.textSize);
+      }
+      if (currentManifest.activeApertureHeight) {
+        document.documentElement.setAttribute('data-aperture-height', String(currentManifest.activeApertureHeight));
+      }
+      if (currentManifest.pageMode) {
+        document.documentElement.setAttribute('data-page-mode', currentManifest.pageMode);
+      }
+      if (currentManifest.pageSize) {
+        document.documentElement.setAttribute('data-page-size', String(currentManifest.pageSize));
+      }
+      if (currentManifest.showStats !== undefined) {
+        document.documentElement.setAttribute('data-show-stats', String(currentManifest.showStats));
+      }
+      if (currentManifest.doubleSpaceLinebreaks !== undefined) {
+        document.documentElement.setAttribute('data-double-space', String(currentManifest.doubleSpaceLinebreaks));
       }
     }
 
@@ -1679,8 +1753,18 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         },
       ];
 
+      const loadedSettings = extractSettings(loadedManifest);
+      // If a setting was NOT explicitly provided by syncSettings or db.settings, fallback to loadedManifest's setting
+      const fallbackFromLoaded: any = {};
+      for (const key of SETTING_KEYS) {
+        if ((explicitSync as any)[key] === undefined && (explicitDb as any)[key] === undefined && (loadedSettings as any)[key] !== undefined) {
+          fallbackFromLoaded[key] = (loadedSettings as any)[key];
+        }
+      }
+
       const updatedManifest: ManuscriptManifest = {
         ...currentManifest, // retains global settings!
+        ...fallbackFromLoaded,
         id: loadedManifest.id,
         title: loadedManifest.title || 'Untitled Project',
         mode: 'local',
@@ -1694,12 +1778,31 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         updatedAt: loadedManifest.updatedAt || new Date().toISOString(),
       };
 
+      if (Object.keys(fallbackFromLoaded).length > 0) {
+        persistSettings(updatedManifest);
+      }
+
       if (typeof document !== 'undefined') {
         if (updatedManifest.colorScheme) {
           document.documentElement.setAttribute('data-theme', updatedManifest.colorScheme);
         }
         if (updatedManifest.textSize) {
           document.documentElement.setAttribute('data-text-size', updatedManifest.textSize);
+        }
+        if (updatedManifest.activeApertureHeight) {
+          document.documentElement.setAttribute('data-aperture-height', String(updatedManifest.activeApertureHeight));
+        }
+        if (updatedManifest.pageMode) {
+          document.documentElement.setAttribute('data-page-mode', updatedManifest.pageMode);
+        }
+        if (updatedManifest.pageSize) {
+          document.documentElement.setAttribute('data-page-size', String(updatedManifest.pageSize));
+        }
+        if (updatedManifest.showStats !== undefined) {
+          document.documentElement.setAttribute('data-show-stats', String(updatedManifest.showStats));
+        }
+        if (updatedManifest.doubleSpaceLinebreaks !== undefined) {
+          document.documentElement.setAttribute('data-double-space', String(updatedManifest.doubleSpaceLinebreaks));
         }
       }
 
