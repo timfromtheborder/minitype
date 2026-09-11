@@ -14,8 +14,8 @@ interface PrintModalProps {
   onClearText?: () => void;
 }
 
-// Persist scroll position across tab switching and modal reopens
-let lastPreviewScrollTop = 0;
+// Persist scroll position per document ID while open
+const documentScrollPositions = new Map<string, number>();
 
 export const PrintModal: React.FC<PrintModalProps> = ({
   isOpen,
@@ -42,12 +42,13 @@ export const PrintModal: React.FC<PrintModalProps> = ({
     }
   }, [isOpen, manifest.id, manifest.title, manifest.doubleSpaceLinebreaks, pages]);
 
-  // Restore scroll position when document preview is visible
+  // Restore scroll position specifically for the currently open document
   useEffect(() => {
     if (isOpen && activeTab === 'document' && previewScrollRef.current) {
-      previewScrollRef.current.scrollTop = lastPreviewScrollTop;
+      const savedPos = documentScrollPositions.get(manifest.id) ?? 0;
+      previewScrollRef.current.scrollTop = savedPos;
     }
-  }, [isOpen, activeTab, sanitizedFullText]);
+  }, [isOpen, activeTab, manifest.id, sanitizedFullText]);
 
   if (!isOpen) return null;
 
@@ -166,7 +167,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
             <div
               ref={previewScrollRef}
               onScroll={(e) => {
-                lastPreviewScrollTop = e.currentTarget.scrollTop;
+                documentScrollPositions.set(manifest.id, e.currentTarget.scrollTop);
               }}
               className="relative w-full flex-1 min-h-0 p-3 sm:p-5 rounded-none border border-border/80 bg-card text-card-foreground font-mono text-xs sm:text-sm leading-[1.3] overflow-y-auto square-scrollbar whitespace-pre-wrap select-text shadow-inner"
             >
