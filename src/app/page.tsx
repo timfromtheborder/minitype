@@ -70,10 +70,10 @@ export default function Home() {
           {/* Visual Wireframe Isometric Paper Outbox Tray (rendered only in notecard mode, above platen / target tracker) */}
           {engine.manifest.pageMode === 'notecard' && (
             <div
-              className={`absolute bottom-full left-1/2 -translate-x-1/2 pointer-events-none transition-all ${
+              className={`absolute bottom-full left-0 right-0 pointer-events-none transition-all ${
                 engine.manifest.showSessionTargetTracker !== false && (engine.manifest.sessionWordTarget ?? 0) > 0
-                  ? 'mb-4 sm:mb-5'
-                  : 'mb-1.5 sm:mb-2'
+                  ? 'mb-3 sm:mb-3.5'
+                  : 'mb-1 sm:mb-1.5'
               }`}
             >
               <PaperTrayStack count={engine.manifest.outboxCount} />
@@ -104,35 +104,35 @@ export default function Home() {
 
       {/* UTILITY DECK: Viewport Base, centered and matching input box width */}
       <footer className="absolute bottom-0 left-0 right-0 flex justify-center items-center pb-[max(0.75rem,env(safe-area-inset-bottom))] px-2.5 sm:px-6 select-none text-xs">
-        <div className={`flex items-center justify-between ${boxWidthClass} gap-2`}>
+        <div className={`flex items-center justify-end ${boxWidthClass} gap-1.5`}>
           {/* System Button */}
           <button
             type="button"
             onClick={() => setIsPrintOpen(true)}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
+            className={`w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 ${
               isSpotlight
                 ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground'
                 : 'border-border/70 bg-card hover:bg-muted text-card-foreground'
             }`}
             title="System"
+            aria-label="System"
           >
             <FileText className="w-3.5 h-3.5 opacity-70 shrink-0" />
-            <span>System</span>
           </button>
 
           {/* Settings Button */}
           <button
             type="button"
             onClick={() => setIsSettingsOpen(true)}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
+            className={`w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 ${
               isSpotlight
                 ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground'
                 : 'border-border/70 bg-card hover:bg-muted text-card-foreground'
             }`}
             title="Settings"
+            aria-label="Settings"
           >
             <Settings className="w-3.5 h-3.5 opacity-70 shrink-0" />
-            <span>Settings</span>
           </button>
         </div>
       </footer>

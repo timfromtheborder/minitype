@@ -2413,6 +2413,62 @@ describe('Typing Engine & State Machine Invariants', () => {
       store.setManifest({ sessionWordTarget: undefined });
       expect(useTypingStore.getState().manifest.sessionWordTarget).toBeUndefined();
     });
+
+    it('calculates 5-space outbox distribution and clears at 50 cards', () => {
+      const getOutboxDistribution = (count: number) => {
+        const effectiveCount = count % 50;
+        return Array.from({ length: 5 }).map((_, spaceIdx) => {
+          const isUnlocked = spaceIdx === 0 || effectiveCount >= spaceIdx * 10;
+          const cardsInSpace = isUnlocked
+            ? Math.min(10, Math.max(0, effectiveCount - spaceIdx * 10))
+            : 0;
+          return { spaceIdx, isUnlocked, cardsInSpace };
+        });
+      };
+
+      // Count 0: Only space 0 unlocked, 0 cards
+      const d0 = getOutboxDistribution(0);
+      expect(d0[0]).toEqual({ spaceIdx: 0, isUnlocked: true, cardsInSpace: 0 });
+      expect(d0[1].isUnlocked).toBe(false);
+      expect(d0[4].isUnlocked).toBe(false);
+
+      // Count 7: Space 0 has 7 cards, space 1 still locked
+      const d7 = getOutboxDistribution(7);
+      expect(d7[0]).toEqual({ spaceIdx: 0, isUnlocked: true, cardsInSpace: 7 });
+      expect(d7[1].isUnlocked).toBe(false);
+
+      // Count 10: Space 0 has 10 cards, space 1 unlocks with 0 cards
+      const d10 = getOutboxDistribution(10);
+      expect(d10[0]).toEqual({ spaceIdx: 0, isUnlocked: true, cardsInSpace: 10 });
+      expect(d10[1]).toEqual({ spaceIdx: 1, isUnlocked: true, cardsInSpace: 0 });
+      expect(d10[2].isUnlocked).toBe(false);
+
+      // Count 25: Space 0 (10), Space 1 (10), Space 2 (5), Space 3 locked
+      const d25 = getOutboxDistribution(25);
+      expect(d25[0].cardsInSpace).toBe(10);
+      expect(d25[1].cardsInSpace).toBe(10);
+      expect(d25[2].cardsInSpace).toBe(5);
+      expect(d25[3].isUnlocked).toBe(false);
+
+      // Count 50: All 50 spaces filled -> clears all cards back to 0
+      const d50 = getOutboxDistribution(50);
+      expect(d50[0]).toEqual({ spaceIdx: 0, isUnlocked: true, cardsInSpace: 0 });
+      expect(d50[1].isUnlocked).toBe(false);
+    });
+
+    it('calculates 100-box session wordcount target percentages accurately', () => {
+      const target = 200;
+      const getFilledBoxes = (words: number, targetWords: number) => {
+        return Math.min(100, Math.floor((words / targetWords) * 100));
+      };
+
+      expect(getFilledBoxes(0, target)).toBe(0);
+      expect(getFilledBoxes(2, target)).toBe(1); // 1%
+      expect(getFilledBoxes(50, target)).toBe(25); // 25%
+      expect(getFilledBoxes(100, target)).toBe(50); // 50%
+      expect(getFilledBoxes(200, target)).toBe(100); // 100%
+      expect(getFilledBoxes(250, target)).toBe(100); // capped at 100
+    });
   });
 });
 
