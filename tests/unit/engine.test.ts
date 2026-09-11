@@ -1154,6 +1154,58 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(afterNew.showStats).toBe(false);
       expect(afterNew.doubleSpaceLinebreaks).toBe(true);
     });
+
+    it('only marks the oldest line as topmost when the aperture is completely full', () => {
+      const height = 5;
+
+      // Helper simulating ApertureFrame's calculation
+      const computeLineFading = (lineCount: number) => {
+        const dummyLines = Array.from({ length: lineCount }, (_, i) => ({
+          ...createEmptyLine(1, i),
+          id: `line-${i}`,
+          isCommitted: i < lineCount - 1,
+        }));
+        const startIdx = Math.max(0, dummyLines.length - height);
+        const visibleLines = dummyLines.slice(startIdx);
+        return visibleLines.map((l, idx) => {
+          const actualIndex = startIdx + idx;
+          const isActive = actualIndex === dummyLines.length - 1;
+          const isTopmost = visibleLines.length === height && height > 1 && idx === 0;
+          return { id: l.id, actualIndex, isActive, isTopmost };
+        });
+      };
+
+      // Case 1: Only 2 lines in a 5-line aperture (e.g. user typed line 1, pressed Enter, currently typing line 2)
+      const twoLines = computeLineFading(2);
+      expect(twoLines).toHaveLength(2);
+      // Line 0 is sitting at slot 3 (not slot 0 / top edge of aperture) -> MUST NOT BE TOPMOST
+      expect(twoLines[0].isTopmost).toBe(false);
+      expect(twoLines[1].isTopmost).toBe(false);
+
+      // Case 2: 4 lines in a 5-line aperture
+      const fourLines = computeLineFading(4);
+      expect(fourLines).toHaveLength(4);
+      expect(fourLines.every((l) => !l.isTopmost)).toBe(true);
+
+      // Case 3: Exactly 5 lines in a 5-line aperture (viewport is now full to capacity)
+      const fiveLines = computeLineFading(5);
+      expect(fiveLines).toHaveLength(5);
+      // Slot 0 (the first line) has now reached the top edge of the aperture!
+      expect(fiveLines[0].isTopmost).toBe(true);
+      // All other lines are standard opacity
+      expect(fiveLines[1].isTopmost).toBe(false);
+      expect(fiveLines[2].isTopmost).toBe(false);
+      expect(fiveLines[3].isTopmost).toBe(false);
+      expect(fiveLines[4].isTopmost).toBe(false);
+
+      // Case 4: 6 lines in a 5-line aperture (window scrolled down by 1)
+      const sixLines = computeLineFading(6);
+      expect(sixLines).toHaveLength(5);
+      // The new oldest visible line (actualIndex = 1) is at slot 0 -> topmost
+      expect(sixLines[0].actualIndex).toBe(1);
+      expect(sixLines[0].isTopmost).toBe(true);
+      expect(sixLines[1].isTopmost).toBe(false);
+    });
   });
 });
 

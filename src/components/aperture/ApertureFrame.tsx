@@ -122,7 +122,9 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
             );
           }
 
-          const isOldestInAperture = total >= height && height > 1 && idx === 0;
+          // A line is at the topmost spot of the aperture window ONLY when the aperture is completely
+          // full to capacity (visibleLines.length === height) and this line occupies the 0th (topmost) slot.
+          const isOldestInAperture = visibleLines.length === height && height > 1 && idx === 0;
 
           return (
             <HistoricalLine
