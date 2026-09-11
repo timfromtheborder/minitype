@@ -5,7 +5,6 @@ import { useTypingEngine } from '@/hooks/useTypingEngine';
 import { readSynchronousSettings } from '@/stores/typingStore';
 import { ApertureFrame } from '@/components/aperture/ApertureFrame';
 import { DocumentStats } from '@/components/aperture/DocumentStats';
-import { PaperTrayStack } from '@/components/stages/PaperTrayStack';
 import { SessionTargetTracker } from '@/components/stages/SessionTargetTracker';
 import { SettingsDrawer } from '@/components/modals/SettingsDrawer';
 import { PrintModal } from '@/components/modals/PrintModal';
@@ -54,10 +53,6 @@ export default function Home() {
   );
 
   const isSpotlight = engine.manifest.colorScheme === 'spotlight';
-  const isPortrait = (engine.activeColumnLimit ?? 70) === 35;
-  const boxWidthClass = isPortrait
-    ? 'w-[calc(36ch+1.25rem)] max-w-[calc(100vw-1.5rem)]'
-    : 'w-[calc(71ch+3rem)] md:w-[calc(71ch+4rem)] max-w-[calc(100vw-2rem)] sm:max-w-[calc(100vw-2.5rem)]';
 
   return (
     <main
@@ -67,19 +62,6 @@ export default function Home() {
       {/* Exactly Centered Monospace Aperture */}
       <section className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
         <div className="relative flex flex-col items-center">
-          {/* Visual Wireframe Isometric Paper Outbox Tray (rendered only in notecard mode, above platen / target tracker) */}
-          {engine.manifest.pageMode === 'notecard' && (
-            <div
-              className={`absolute bottom-full left-0 right-0 pointer-events-none transition-all ${
-                engine.manifest.showSessionTargetTracker !== false && (engine.manifest.sessionWordTarget ?? 0) > 0
-                  ? 'mb-3 sm:mb-3.5'
-                  : 'mb-1 sm:mb-1.5'
-              }`}
-            >
-              <PaperTrayStack count={engine.manifest.outboxCount} />
-            </div>
-          )}
-
           {/* Session Target Tracking Graphic (rendered directly above platen with minimal space between) */}
           {engine.manifest.showSessionTargetTracker !== false && (engine.manifest.sessionWordTarget ?? 0) > 0 && (
             <div className="absolute bottom-full mb-1 sm:mb-1.5 left-0 right-0 pointer-events-none">
@@ -102,29 +84,30 @@ export default function Home() {
         </div>
       </section>
 
-      {/* UTILITY DECK: Viewport Base, centered and matching input box width */}
+      {/* UTILITY DECK: Viewport Base, centered */}
       <footer className="absolute bottom-0 left-0 right-0 flex justify-center items-center pb-[max(0.75rem,env(safe-area-inset-bottom))] px-2.5 sm:px-6 select-none text-xs">
-        <div className={`flex items-center justify-end ${boxWidthClass} gap-1.5`}>
-          {/* System Button */}
+        <div className="flex items-center justify-center gap-2 sm:gap-3">
+          {/* Project Button */}
           <button
             type="button"
             onClick={() => setIsPrintOpen(true)}
-            className={`w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 ${
+            className={`flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
               isSpotlight
                 ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground'
                 : 'border-border/70 bg-card hover:bg-muted text-card-foreground'
             }`}
-            title="System"
-            aria-label="System"
+            title="Project"
+            aria-label="Project"
           >
             <FileText className="w-3.5 h-3.5 opacity-70 shrink-0" />
+            <span>Project</span>
           </button>
 
           {/* Settings Button */}
           <button
             type="button"
             onClick={() => setIsSettingsOpen(true)}
-            className={`w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 ${
+            className={`flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
               isSpotlight
                 ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground'
                 : 'border-border/70 bg-card hover:bg-muted text-card-foreground'
@@ -133,6 +116,7 @@ export default function Home() {
             aria-label="Settings"
           >
             <Settings className="w-3.5 h-3.5 opacity-70 shrink-0" />
+            <span>Settings</span>
           </button>
         </div>
       </footer>

@@ -150,6 +150,12 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
                   const val = e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0);
                   setManifest({ sessionWordTarget: val > 0 ? val : undefined });
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    window.getSelection()?.removeAllRanges();
+                    e.currentTarget.blur();
+                  }
+                }}
                 className="w-16 sm:w-20 px-1.5 py-0.5 text-xs font-mono font-bold text-right rounded-[2px] border border-border/80 bg-background text-foreground focus:outline-hidden focus:border-primary"
                 title="Target words per session (enter 0 or clear to turn off)"
               />

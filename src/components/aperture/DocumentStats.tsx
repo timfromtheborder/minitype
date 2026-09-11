@@ -102,9 +102,9 @@ export const DocumentStats: React.FC = React.memo(function DocumentStats() {
         <span className="text-foreground/90 font-medium">{totalProjectWords} words</span>
       </div>
 
-      {/* Right-Justified Save Status Indicator - aligned with right side of platen (with same inside padding) */}
+      {/* Right-Justified Save Status Indicator - aligned vertically with right outside edge of platen */}
       <div
-        className="absolute right-2.5 sm:right-6 md:right-8 flex items-center justify-center pointer-events-none select-none"
+        className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none select-none"
         aria-hidden="true"
       >
         {persistenceError || saveState === 'error' ? (

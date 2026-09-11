@@ -179,6 +179,12 @@ export const PrintModal: React.FC<PrintModalProps> = ({
                     setTitle(val);
                     useTypingStore.getState().setManifest({ title: val });
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      window.getSelection()?.removeAllRanges();
+                      e.currentTarget.blur();
+                    }
+                  }}
                   placeholder="Untitled Manuscript"
                   className="bg-transparent text-sm font-sans font-semibold tracking-wide text-foreground border-b border-dashed border-border/80 hover:border-foreground focus:border-foreground focus:outline-none px-1 py-0.5 w-full max-w-[240px] sm:max-w-[340px] truncate transition-colors cursor-text"
                   title="Click to edit document title"
