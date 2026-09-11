@@ -2764,6 +2764,114 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(double).toBe('Section 1\n\n\n\n\n\nSection 2');
     });
   });
+
+  describe('File Import Isolation & Mode Transitions (v0.9.6.3)', () => {
+    it('isolates imported file text in notecard view into historical cards and starts a blank card', async () => {
+      const store = useTypingStore.getState();
+      store.setPageMode('notecard');
+
+      const sampleLines = Array.from({ length: 15 }, (_, i) => `Notecard line ${i + 1}`).join('\n');
+      await store.importTextFileAsProject('Notes Import', sampleLines);
+
+      const state = useTypingStore.getState();
+      expect(state.manifest.pageMode).toBe('notecard');
+      // 15 lines chunked into 10 + 5 -> 2 historical pages
+      expect(state.historicalPages).toHaveLength(2);
+      expect(state.historicalPages[0].lines).toHaveLength(10);
+      expect(state.historicalPages[1].lines).toHaveLength(5);
+      // Active notecard is blank (does not display imported text)
+      expect(state.currentPageNumber).toBe(3);
+      expect(state.currentPageLines).toHaveLength(1);
+      expect(state.currentPageLines[0].cells).toHaveLength(0);
+      expect(state.activeLineIndex).toBe(0);
+      expect(state.activeColIndex).toBe(0);
+    });
+
+    it('isolates imported file text in paragraph view into historical paragraphs and starts a blank line', async () => {
+      const store = useTypingStore.getState();
+      store.setPageMode('paragraph');
+
+      const sampleText = 'Paragraph one content.\n\nParagraph two content.\n\nParagraph three content.';
+      await store.importTextFileAsProject('Paragraph Import', sampleText);
+
+      const state = useTypingStore.getState();
+      expect(state.manifest.pageMode).toBe('paragraph');
+      expect(state.historicalPages.length).toBeGreaterThanOrEqual(2);
+      // Active line is blank
+      expect(state.currentPageLines).toHaveLength(1);
+      expect(state.currentPageLines[0].cells).toHaveLength(0);
+      expect(state.activeLineIndex).toBe(0);
+      expect(state.activeColIndex).toBe(0);
+    });
+
+    it('populates preceding text immediately when switching to scroll mode', async () => {
+      const store = useTypingStore.getState();
+      store.setPageMode('notecard');
+
+      const sampleLines = Array.from({ length: 12 }, (_, i) => `Card line ${i + 1}`).join('\n');
+      await store.importTextFileAsProject('Switch Test', sampleLines);
+
+      // Now on blank card 3. Let's switch to scroll mode
+      store.setPageMode('scroll');
+
+      const state = useTypingStore.getState();
+      expect(state.manifest.pageMode).toBe('scroll');
+      expect(state.historicalPages).toHaveLength(0);
+      expect(state.currentPageNumber).toBe(1);
+      // All 12 preceding lines plus 1 active empty drafting line at the end
+      expect(state.currentPageLines.length).toBe(13);
+      expect(state.activeLineIndex).toBe(12);
+      expect(state.activeColIndex).toBe(0);
+    });
+
+    it('always begins a fresh new notecard when switching to notecard view', async () => {
+      const store = useTypingStore.getState();
+      store.setPageMode('scroll');
+
+      await store.newProject(true);
+      // Type 5 lines in scroll mode
+      for (let i = 0; i < 5; i++) {
+        for (const ch of `Line ${i}`) {
+          store.insertChar(ch);
+        }
+        store.handleEnter();
+      }
+
+      // Switch to notecard mode
+      store.setPageMode('notecard');
+
+      const state = useTypingStore.getState();
+      expect(state.manifest.pageMode).toBe('notecard');
+      // Previous lines placed into historical cards
+      expect(state.historicalPages.length).toBeGreaterThanOrEqual(1);
+      // Active notecard is fresh and empty
+      expect(state.currentPageLines).toHaveLength(1);
+      expect(state.currentPageLines[0].cells).toHaveLength(0);
+      expect(state.activeLineIndex).toBe(0);
+      expect(state.activeColIndex).toBe(0);
+    });
+
+    it('does not alter platen lines or historical pages when switching to paragraph view', () => {
+      const store = useTypingStore.getState();
+      store.setPageMode('scroll');
+
+      store.insertChar('A');
+      store.insertChar('B');
+      const beforeState = useTypingStore.getState();
+      const beforeLines = beforeState.currentPageLines;
+      const beforeHist = beforeState.historicalPages;
+      const beforeActive = beforeState.activeLineIndex;
+
+      // Switch to paragraph mode
+      store.setPageMode('paragraph');
+
+      const afterState = useTypingStore.getState();
+      expect(afterState.manifest.pageMode).toBe('paragraph');
+      expect(afterState.currentPageLines).toBe(beforeLines);
+      expect(afterState.historicalPages).toBe(beforeHist);
+      expect(afterState.activeLineIndex).toBe(beforeActive);
+    });
+  });
 });
 
 

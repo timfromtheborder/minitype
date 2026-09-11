@@ -247,6 +247,202 @@ function ensureActiveSessionOnTyping(set: any, get: any): void {
   });
 }
 
+export function applyPageModeTransition(
+  targetMode: PageMode,
+  state: any,
+  manifestOverrides: Partial<ManuscriptManifest> = {}
+): any {
+  const currentMode = state.manifest.pageMode || 'scroll';
+  const targetPageSize = targetMode === 'scroll' ? 999999 : targetMode === 'notecard' ? 10 : 9999;
+  const targetApertureHeight =
+    targetMode === 'notecard'
+      ? 10
+      : (manifestOverrides.activeApertureHeight ?? state.manifest.activeApertureHeight);
+
+  if (targetMode === currentMode) {
+    const updatedManifest: ManuscriptManifest = {
+      ...state.manifest,
+      ...manifestOverrides,
+      pageMode: targetMode,
+      pageSize: targetPageSize,
+      activeApertureHeight: targetApertureHeight,
+    };
+    persistSettings(updatedManifest);
+    if (updatedManifest.mode === 'local') {
+      saveManuscript(updatedManifest).catch(console.error);
+    }
+    return { manifest: updatedManifest };
+  }
+
+  // 1. Switching to 'scroll': populate platen immediately with preceding text from all pages
+  if (targetMode === 'scroll') {
+    const allLines: LineRecord[] = [];
+    for (const page of state.historicalPages) {
+      for (const line of page.lines) {
+        allLines.push(line);
+      }
+    }
+    for (const line of state.currentPageLines) {
+      if (line.cells.length > 0 || line.isCommitted) {
+        allLines.push(line);
+      }
+    }
+
+    const unifiedLines: LineRecord[] = allLines.map((line, idx) => ({
+      ...line,
+      id: `p1-line-${idx}`,
+      lineIndex: idx,
+      isCommitted: true,
+      cells: line.cells.map((c, colIdx) => ({
+        ...c,
+        id: createCellId(1, idx, colIdx),
+        lineIndex: idx,
+        state: c.state === 'highlighted' ? ('struck' as const) : c.state,
+      })),
+    }));
+
+    // Append active empty drafting line at the end so platen displays preceding text above cursor
+    const activeLineIndex = unifiedLines.length;
+    unifiedLines.push(createEmptyLine(1, activeLineIndex));
+
+    const updatedManifest: ManuscriptManifest = {
+      ...state.manifest,
+      ...manifestOverrides,
+      pageMode: 'scroll',
+      pageSize: 999999,
+      activeApertureHeight: targetApertureHeight,
+      outboxCount: 0,
+    };
+
+    persistSettings(updatedManifest);
+    if (updatedManifest.mode === 'local') {
+      saveManuscript(updatedManifest).catch(console.error);
+      const page1: PageRecord = {
+        id: `${updatedManifest.id}-page-1`,
+        manuscriptId: updatedManifest.id,
+        pageNumber: 1,
+        lines: unifiedLines,
+        completedAt: null,
+      };
+      savePage(page1).catch(console.error);
+      pruneStalePagesForManuscript(updatedManifest.id, 1).catch(console.error);
+    }
+
+    return {
+      manifest: updatedManifest,
+      currentPageNumber: 1,
+      historicalPages: [],
+      currentPageLines: unifiedLines,
+      activeLineIndex,
+      activeColIndex: 0,
+      isHighlighting: false,
+      highlightHead: null,
+    };
+  }
+
+  // 2. Switching to 'notecard': always begin a new notecard
+  if (targetMode === 'notecard') {
+    let currentLines = [...state.currentPageLines];
+    if (state.isHighlighting && state.activeLineIndex < currentLines.length) {
+      const activeLine = currentLines[state.activeLineIndex];
+      currentLines[state.activeLineIndex] = {
+        ...activeLine,
+        cells: activeLine.cells.map((c: CharacterCell) =>
+          c.state === 'highlighted' ? { ...c, state: 'struck' as const, isStruck: true } : c
+        ),
+      };
+    }
+
+    const allContentLines: LineRecord[] = [];
+    for (const page of state.historicalPages) {
+      for (const line of page.lines) {
+        allContentLines.push(line);
+      }
+    }
+    for (const line of currentLines) {
+      if (line.cells.length > 0 || line.isCommitted) {
+        allContentLines.push({ ...line, isCommitted: true });
+      }
+    }
+
+    const historicalPages: PageRecord[] = [];
+    for (let i = 0; i < allContentLines.length; i += 10) {
+      const chunk = allContentLines.slice(i, i + 10);
+      const pageNum = historicalPages.length + 1;
+      historicalPages.push({
+        id: `${state.manifest.id}-page-${pageNum}`,
+        manuscriptId: state.manifest.id,
+        pageNumber: pageNum,
+        lines: chunk.map((l, lIdx) => ({
+          ...l,
+          id: `p${pageNum}-line-${lIdx}`,
+          lineIndex: lIdx,
+          isCommitted: true,
+        })),
+        completedAt: new Date().toISOString(),
+      });
+    }
+
+    const currentPageNumber = historicalPages.length + 1;
+    const currentPageLines = [createEmptyLine(currentPageNumber, 0)];
+    const activeLineIndex = 0;
+    const activeColIndex = 0;
+
+    const updatedManifest: ManuscriptManifest = {
+      ...state.manifest,
+      ...manifestOverrides,
+      pageMode: 'notecard',
+      pageSize: 10,
+      activeApertureHeight: 10,
+      outboxCount: historicalPages.length,
+    };
+
+    persistSettings(updatedManifest);
+    if (updatedManifest.mode === 'local') {
+      saveManuscript(updatedManifest).catch(console.error);
+      for (const hp of historicalPages) {
+        savePage(hp).catch(console.error);
+      }
+      const activePage: PageRecord = {
+        id: `${updatedManifest.id}-page-${currentPageNumber}`,
+        manuscriptId: updatedManifest.id,
+        pageNumber: currentPageNumber,
+        lines: currentPageLines,
+        completedAt: null,
+      };
+      savePage(activePage).catch(console.error);
+      pruneStalePagesForManuscript(updatedManifest.id, currentPageNumber).catch(console.error);
+    }
+
+    return {
+      manifest: updatedManifest,
+      currentPageNumber,
+      historicalPages,
+      currentPageLines,
+      activeLineIndex,
+      activeColIndex,
+      isHighlighting: false,
+      highlightHead: null,
+    };
+  }
+
+  // 3. Switching to 'paragraph' (or any other mode): doesn't change anything
+  const updatedManifest: ManuscriptManifest = {
+    ...state.manifest,
+    ...manifestOverrides,
+    pageMode: targetMode,
+    pageSize: targetPageSize,
+    activeApertureHeight: targetApertureHeight,
+  };
+
+  persistSettings(updatedManifest);
+  if (updatedManifest.mode === 'local') {
+    saveManuscript(updatedManifest).catch(console.error);
+  }
+
+  return { manifest: updatedManifest };
+}
+
 export const DEFAULT_MANIFEST: ManuscriptManifest = {
   id: 'default-manuscript',
   title: 'Untitled Project',
@@ -598,6 +794,9 @@ export const useTypingStore = create<TypingStore>((set, get) => {
 
   setManifest: (newManifest) => {
     set((state) => {
+      if (newManifest.pageMode && newManifest.pageMode !== state.manifest.pageMode) {
+        return applyPageModeTransition(newManifest.pageMode, state, newManifest);
+      }
       const updated = { ...state.manifest, ...newManifest, mode: 'local' as const };
       persistSettings(updated);
       saveManuscript(updated).catch(console.error);
@@ -657,17 +856,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
   },
 
   setPageMode: (pageMode: PageMode) => {
-    const pageSize = pageMode === 'scroll' ? 999999 : pageMode === 'notecard' ? 10 : pageMode === 'page' ? 54 : 9999;
-    set((state) => {
-      // Locking aperture size to 10 for notecard mode
-      const activeApertureHeight = pageMode === 'notecard' ? 10 : state.manifest.activeApertureHeight;
-      const updated = { ...state.manifest, pageMode, pageSize, activeApertureHeight };
-      persistSettings(updated);
-      if (updated.mode === 'local') {
-        saveManuscript(updated).catch(console.error);
-      }
-      return { manifest: updated };
-    });
+    set((state) => applyPageModeTransition(pageMode, state));
   },
 
   setTextSize: (textSize: TextSize) => {
@@ -1741,6 +1930,76 @@ export const useTypingStore = create<TypingStore>((set, get) => {
 
     const columnLimit = state.activeColumnLimit ?? MAX_COLUMNS;
     const parsed = textToManuscriptLines(cleanText, 1, columnLimit);
+    const contentLines = parsed.lines.slice(0, parsed.activeLineIndex);
+    const effectivePageMode = state.manifest.pageMode || 'scroll';
+
+    let historicalPages: PageRecord[] = [];
+    let currentPageNumber = 1;
+    let currentPageLines: LineRecord[] = [];
+    let activeLineIndex = 0;
+    let activeColIndex = 0;
+    let outboxCount = 0;
+
+    if (effectivePageMode === 'notecard' && contentLines.length > 0) {
+      // In notecard view, imported text does not display on the active card at all.
+      // Partition all imported content lines into completed 10-line historical cards.
+      for (let i = 0; i < contentLines.length; i += 10) {
+        const chunk = contentLines.slice(i, i + 10);
+        const pageNum = historicalPages.length + 1;
+        historicalPages.push({
+          id: `${newId}-page-${pageNum}`,
+          manuscriptId: newId,
+          pageNumber: pageNum,
+          lines: chunk.map((l, lIdx) => ({
+            ...l,
+            id: `p${pageNum}-line-${lIdx}`,
+            lineIndex: lIdx,
+            isCommitted: true,
+          })),
+          completedAt: importTime,
+        });
+      }
+      currentPageNumber = historicalPages.length + 1;
+      currentPageLines = [createEmptyLine(currentPageNumber, 0)];
+      activeLineIndex = 0;
+      activeColIndex = 0;
+      outboxCount = historicalPages.length;
+    } else if (effectivePageMode === 'paragraph' && contentLines.length > 0) {
+      // In paragraph view, imported text does not display on the platen at all.
+      // Partition into completed historical paragraph pages.
+      let currentGroup: LineRecord[] = [];
+      for (let i = 0; i < contentLines.length; i++) {
+        const line = contentLines[i];
+        currentGroup.push(line);
+        if (line.wrapType === 'hard' || i === contentLines.length - 1) {
+          const pageNum = historicalPages.length + 1;
+          historicalPages.push({
+            id: `${newId}-page-${pageNum}`,
+            manuscriptId: newId,
+            pageNumber: pageNum,
+            lines: currentGroup.map((l, lIdx) => ({
+              ...l,
+              id: `p${pageNum}-line-${lIdx}`,
+              lineIndex: lIdx,
+              isCommitted: true,
+            })),
+            completedAt: importTime,
+          });
+          currentGroup = [];
+        }
+      }
+      currentPageNumber = historicalPages.length + 1;
+      currentPageLines = [createEmptyLine(currentPageNumber, 0)];
+      activeLineIndex = 0;
+      activeColIndex = 0;
+    } else {
+      // Scroll mode (or empty text): all preceding text is placed in currentPageLines
+      historicalPages = [];
+      currentPageNumber = 1;
+      currentPageLines = parsed.lines;
+      activeLineIndex = parsed.activeLineIndex;
+      activeColIndex = parsed.activeColIndex;
+    }
 
     // Auto-start next active session for writing upon import
     const nextSessionNum = (parsedSessions[parsedSessions.length - 1]?.sessionNumber || 0) + 1;
@@ -1760,7 +2019,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       id: newId,
       title: cleanTitle,
       mode: 'local',
-      outboxCount: 0,
+      outboxCount,
       lastPrintedCharIndex: 0,
       printedPagesCount: 0,
       activeSessionId: activeSession.id,
@@ -1771,14 +2030,17 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     };
 
     const newPage: PageRecord = {
-      id: `${newId}-page-1`,
+      id: `${newId}-page-${currentPageNumber}`,
       manuscriptId: newId,
-      pageNumber: 1,
-      lines: parsed.lines,
+      pageNumber: currentPageNumber,
+      lines: currentPageLines,
       completedAt: null,
     };
 
     await saveManuscript(newManifest).catch(console.error);
+    for (const hp of historicalPages) {
+      await savePage(hp).catch(console.error);
+    }
     await savePage(newPage).catch(console.error);
     for (const s of allSessions) {
       await saveSession(s).catch(console.error);
@@ -1790,11 +2052,11 @@ export const useTypingStore = create<TypingStore>((set, get) => {
 
     set({
       manifest: newManifest,
-      currentPageNumber: 1,
-      historicalPages: [],
-      currentPageLines: parsed.lines,
-      activeLineIndex: parsed.activeLineIndex,
-      activeColIndex: parsed.activeColIndex,
+      currentPageNumber,
+      historicalPages,
+      currentPageLines,
+      activeLineIndex,
+      activeColIndex,
       activeSessions: allSessions,
       isHighlighting: false,
       highlightHead: null,

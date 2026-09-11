@@ -412,8 +412,8 @@ class TypewriterAudio {
   }
 
   /**
-   * Synthesizes a cardstock paper scrape sound for notecard paper feed / new card.
-   * Simulates sliding cardstock across the platen, similar to the strikeout scrape sound.
+   * Synthesizes a dull 'thwup' sound for notecard paper feed / new card.
+   * Soft, muffled aerodynamic cardstock drop without bass.
    * Ducks subsequent sounds (like carriage return) to keep the transition clean.
    */
   public playPaperFeed() {
@@ -423,41 +423,52 @@ class TypewriterAudio {
 
     try {
       const t = ctx.currentTime;
-      // Duck enter/carriage return sounds for 350ms
-      this.duckUntil = t + 0.35;
+      // Duck enter/carriage return sounds for 250ms
+      this.duckUntil = t + 0.25;
 
-      const duration = 0.15; // 150ms scraping sound
-      const bufferSize = Math.floor(ctx.sampleRate * duration);
-      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-
-      // Cardstock scraping friction texture: fast swell and textured friction decay
-      for (let i = 0; i < bufferSize; i++) {
-        const progress = i / bufferSize;
-        const env = progress < 0.12 ? progress / 0.12 : Math.exp(-(progress - 0.12) * 3.5);
-        const texture = 1 + 0.35 * Math.sin(progress * 70 * Math.PI);
-        data[i] = (Math.random() * 2 - 1) * env * texture;
+      // 1. Soft, muted aerodynamic air puff transient (35ms)
+      const puffDuration = 0.035;
+      const puffBufferSize = Math.floor(ctx.sampleRate * puffDuration);
+      const puffBuffer = ctx.createBuffer(1, puffBufferSize, ctx.sampleRate);
+      const puffData = puffBuffer.getChannelData(0);
+      for (let i = 0; i < puffBufferSize; i++) {
+        puffData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (puffBufferSize * 0.3));
       }
 
-      const noise = ctx.createBufferSource();
-      noise.buffer = buffer;
+      const puffSource = ctx.createBufferSource();
+      puffSource.buffer = puffBuffer;
 
-      // Bandpass sweeping downward to create the cardstock scraping texture
-      const filter = ctx.createBiquadFilter();
-      filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(2600, t);
-      filter.frequency.exponentialRampToValueAtTime(1100, t + duration);
-      filter.Q.setValueAtTime(2.0, t);
+      const puffFilter = ctx.createBiquadFilter();
+      puffFilter.type = 'bandpass';
+      puffFilter.frequency.setValueAtTime(550, t);
+      puffFilter.Q.setValueAtTime(1.6, t);
 
-      const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.28, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+      const puffGain = ctx.createGain();
+      puffGain.gain.setValueAtTime(0.18, t);
+      puffGain.gain.exponentialRampToValueAtTime(0.001, t + puffDuration);
 
-      noise.connect(filter);
-      filter.connect(gain);
-      gain.connect(ctx.destination);
+      puffSource.connect(puffFilter);
+      puffFilter.connect(puffGain);
+      puffGain.connect(ctx.destination);
+      puffSource.start(t);
 
-      noise.start(t);
+      // 2. Dull cardstock body pop (snappy lower-mid pitch sweep, no sub-bass)
+      const thwupDuration = 0.055;
+      const osc = ctx.createOscillator();
+      const oscGain = ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(240, t);
+      osc.frequency.exponentialRampToValueAtTime(130, t + thwupDuration);
+
+      oscGain.gain.setValueAtTime(0.15, t);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, t + thwupDuration);
+
+      osc.connect(oscGain);
+      oscGain.connect(ctx.destination);
+
+      osc.start(t);
+      osc.stop(t + thwupDuration);
     } catch {}
   }
 }

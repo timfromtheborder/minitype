@@ -455,7 +455,7 @@ html[data-aperture-height="10"],
 
 @keyframes platen-notecard-flash {
   0% {
-    opacity: 0.10;
+    opacity: 0.04;
   }
   100% {
     opacity: 0;
@@ -464,7 +464,7 @@ html[data-aperture-height="10"],
 
 @keyframes platen-darken-flash {
   0% {
-    opacity: 0.16;
+    opacity: 0.06;
   }
   100% {
     opacity: 0;
