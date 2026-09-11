@@ -54,13 +54,26 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
-                try {
-                  var raw = localStorage.getItem('minitype_global_settings');
-                  if (!raw) {
+                var raw = null;
+                try { raw = localStorage.getItem('minitype_global_settings'); } catch (e) {}
+                if (!raw) {
+                  try { raw = sessionStorage.getItem('minitype_global_settings'); } catch (e) {}
+                }
+                if (!raw) {
+                  try {
                     var match = document.cookie.match(/(?:^|; )minitype_global_settings=([^;]*)/);
                     if (match) raw = decodeURIComponent(match[1]);
-                  }
-                  if (raw) {
+                  } catch (e) {}
+                }
+                if (!raw) {
+                  try {
+                    if (window.name && window.name.indexOf('minitype_settings:') === 0) {
+                      raw = window.name.slice(18);
+                    }
+                  } catch (e) {}
+                }
+                if (raw) {
+                  try {
                     var s = JSON.parse(raw);
                     if (s && s.colorScheme) {
                       document.documentElement.setAttribute('data-theme', s.colorScheme);
@@ -68,8 +81,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                     if (s && s.textSize) {
                       document.documentElement.setAttribute('data-text-size', s.textSize);
                     }
-                  }
-                } catch (e) {}
+                  } catch (e) {}
+                }
               })();
             `,
           }}

@@ -103,72 +103,136 @@ export function extractSettings(obj: any): Partial<ManuscriptManifest> {
 export const SETTINGS_KEY = 'minitype_global_settings';
 export const ACTIVE_PROJECT_KEY = 'minitype_active_project_id';
 
+export function readSynchronousSettings(): (Partial<ManuscriptManifest> & { _updatedAt?: number }) | null {
+  if (typeof window === 'undefined') return null;
+
+  // Tier 1: localStorage
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const settings = extractSettings(parsed);
+      if (Object.keys(settings).length > 0) {
+        return { ...settings, _updatedAt: parsed._updatedAt };
+      }
+    }
+  } catch (e) {}
+
+  // Tier 2: sessionStorage (guaranteed survival across reloads in same tab on iOS)
+  try {
+    const raw = sessionStorage.getItem(SETTINGS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const settings = extractSettings(parsed);
+      if (Object.keys(settings).length > 0) {
+        return { ...settings, _updatedAt: parsed._updatedAt };
+      }
+    }
+  } catch (e) {}
+
+  // Tier 3: document.cookie
+  try {
+    if (typeof document !== 'undefined') {
+      const match = document.cookie.match(new RegExp(`(?:^|; )${SETTINGS_KEY}=([^;]*)`));
+      if (match) {
+        const raw = decodeURIComponent(match[1]);
+        const parsed = JSON.parse(raw);
+        const settings = extractSettings(parsed);
+        if (Object.keys(settings).length > 0) {
+          return { ...settings, _updatedAt: parsed._updatedAt };
+        }
+      }
+    }
+  } catch (e) {}
+
+  // Tier 4: window.name backup (immune to iOS Safari storage wiping and private browsing limits)
+  try {
+    if (typeof window !== 'undefined' && window.name && window.name.startsWith('minitype_settings:')) {
+      const raw = window.name.slice('minitype_settings:'.length);
+      const parsed = JSON.parse(raw);
+      const settings = extractSettings(parsed);
+      if (Object.keys(settings).length > 0) {
+        return { ...settings, _updatedAt: parsed._updatedAt };
+      }
+    }
+  } catch (e) {}
+
+  return null;
+}
+
 export function getInitialManifest(): ManuscriptManifest {
   const base = { ...DEFAULT_MANIFEST };
-  if (typeof window !== 'undefined') {
-    try {
-      let cached = localStorage.getItem(SETTINGS_KEY);
-      if (!cached && typeof document !== 'undefined') {
-        const match = document.cookie.match(new RegExp(`(?:^|; )${SETTINGS_KEY}=([^;]*)`));
-        if (match) cached = decodeURIComponent(match[1]);
-      }
-      if (cached) {
-        const settings = extractSettings(JSON.parse(cached));
-        return { ...base, ...settings };
-      }
-    } catch (e) {
-      console.error('Failed to parse cached settings from localStorage/cookie:', e);
-    }
+  const sync = readSynchronousSettings();
+  if (sync) {
+    return { ...base, ...extractSettings(sync) };
   }
   return base;
 }
 
 export function persistSettings(manifest: Partial<ManuscriptManifest>): void {
-  if (typeof window !== 'undefined') {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const settings = extractSettings(manifest);
+    if (Object.keys(settings).length === 0) return;
+
+    const existing = readSynchronousSettings() || {};
+    const merged = { ...existing, ...settings, _updatedAt: Date.now() };
+    const serialized = JSON.stringify(merged);
+
+    // 1. Synchronous localStorage
     try {
-      const settings = extractSettings(manifest);
-      if (Object.keys(settings).length === 0) return;
-      let existingStr: string | null = null;
-      try {
-        existingStr = localStorage.getItem(SETTINGS_KEY);
-      } catch (e) {}
-      if (!existingStr && typeof document !== 'undefined') {
-        const match = document.cookie.match(new RegExp(`(?:^|; )${SETTINGS_KEY}=([^;]*)`));
-        if (match) existingStr = decodeURIComponent(match[1]);
-      }
-      const current = existingStr ? JSON.parse(existingStr) : {};
-      const merged = { ...current, ...settings, _updatedAt: Date.now() };
-      const serialized = JSON.stringify(merged);
+      localStorage.setItem(SETTINGS_KEY, serialized);
+    } catch (e) {}
 
-      // 1. Synchronous localStorage write
-      try {
-        localStorage.setItem(SETTINGS_KEY, serialized);
-      } catch (e) {
-        console.warn('localStorage write failed:', e);
-      }
+    // 2. Synchronous sessionStorage
+    try {
+      sessionStorage.setItem(SETTINGS_KEY, serialized);
+    } catch (e) {}
 
-      // 2. Synchronous cookie backup (crucial for iOS Safari persistence!)
-      try {
-        document.cookie = `${SETTINGS_KEY}=${encodeURIComponent(serialized)}; path=/; max-age=31536000; SameSite=Lax`;
-      } catch (e) {
-        console.warn('cookie write failed:', e);
-      }
+    // 3. Synchronous window.name backup
+    try {
+      window.name = `minitype_settings:${serialized}`;
+    } catch (e) {}
 
-      // 3. Asynchronous IndexedDB write
-      saveGlobalSettingsToDb(merged).catch(console.error);
-
-      // 4. Synchronous DOM attribute updates
+    // 4. Synchronous Cookies
+    try {
       if (typeof document !== 'undefined') {
-        if (merged.colorScheme) {
-          document.documentElement.setAttribute('data-theme', merged.colorScheme);
-        }
-        if (merged.textSize) {
-          document.documentElement.setAttribute('data-text-size', merged.textSize);
+        const isSecure = window.location.protocol === 'https:';
+        const secureFlag = isSecure ? '; Secure' : '';
+        const cookieVal = encodeURIComponent(serialized);
+
+        // Write to root
+        document.cookie = `${SETTINGS_KEY}=${cookieVal}; path=/; max-age=31536000; SameSite=Lax${secureFlag}`;
+
+        // Write to current subfolder path (e.g. /minitype/ on GitHub Pages)
+        const currentPath = window.location.pathname.replace(/\/[^/]*$/, '') || '';
+        if (currentPath && currentPath !== '/') {
+          document.cookie = `${SETTINGS_KEY}=${cookieVal}; path=${currentPath}; max-age=31536000; SameSite=Lax${secureFlag}`;
+          document.cookie = `${SETTINGS_KEY}=${cookieVal}; path=${currentPath}/; max-age=31536000; SameSite=Lax${secureFlag}`;
         }
       }
-    } catch (e) {
-      console.error('Failed to save settings:', e);
+    } catch (e) {}
+
+    // 5. Asynchronous IndexedDB
+    saveGlobalSettingsToDb(merged).catch(console.error);
+
+    // 6. Request persistent storage on mobile / WebKit
+    if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist().catch(() => {});
     }
+
+    // 7. Synchronous DOM attribute updates
+    if (typeof document !== 'undefined') {
+      if (merged.colorScheme) {
+        document.documentElement.setAttribute('data-theme', merged.colorScheme);
+      }
+      if (merged.textSize) {
+        document.documentElement.setAttribute('data-text-size', merged.textSize);
+      }
+    }
+  } catch (e) {
+    console.error('Failed to save settings:', e);
   }
 }
 
@@ -1284,6 +1348,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       isLocked: false,
       lockReason: null,
       pendingWrappedCells: null,
+      saveState: 'saved',
     });
   },
 
@@ -1493,36 +1558,32 @@ export const useTypingStore = create<TypingStore>((set, get) => {
   rehydrate: async () => {
     if (typeof window === 'undefined') return;
 
-    // 1. Rehydrate global settings from localStorage, cookie, & IndexedDB
+    // 1. Rehydrate global settings from synchronous stores & IndexedDB
     let currentManifest = get().manifest;
-    let localUpdatedAt = 0;
-
-    try {
-      let cached = localStorage.getItem(SETTINGS_KEY);
-      if (!cached && typeof document !== 'undefined') {
-        const match = document.cookie.match(new RegExp(`(?:^|; )${SETTINGS_KEY}=([^;]*)`));
-        if (match) cached = decodeURIComponent(match[1]);
-      }
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        localUpdatedAt = parsed._updatedAt || 0;
-        const settings = extractSettings(parsed);
-        currentManifest = { ...currentManifest, ...settings };
-      }
-    } catch (e) {
-      console.error('Failed to parse cached settings from localStorage/cookie:', e);
+    const syncSettings = readSynchronousSettings();
+    if (syncSettings) {
+      currentManifest = { ...currentManifest, ...extractSettings(syncSettings) };
     }
 
     try {
-      const dbSettings = await getGlobalSettingsFromDb();
-      // Only override local settings if DB is strictly newer!
-      if (dbSettings && (dbSettings as any)._updatedAt && (dbSettings as any)._updatedAt > localUpdatedAt) {
-        currentManifest = { ...currentManifest, ...dbSettings };
-        const serialized = JSON.stringify(extractSettings(currentManifest));
-        localStorage.setItem(SETTINGS_KEY, serialized);
-        document.cookie = `${SETTINGS_KEY}=${encodeURIComponent(serialized)}; path=/; max-age=31536000; SameSite=Lax`;
-      } else if (Object.keys(extractSettings(currentManifest)).length > 0) {
-        saveGlobalSettingsToDb(extractSettings(currentManifest)).catch(console.error);
+      const dbRecord = await getGlobalSettingsFromDb();
+      if (dbRecord) {
+        const dbSettings = extractSettings(dbRecord);
+        const syncUpdatedAt = (syncSettings as any)?._updatedAt || 0;
+        const dbUpdatedAt = (dbRecord as any)?._updatedAt || 0;
+
+        // If DB has settings, and either sync was missing or DB is newer/equal
+        if (!syncSettings || dbUpdatedAt >= syncUpdatedAt) {
+          currentManifest = { ...currentManifest, ...dbSettings };
+          // Reseed all synchronous stores with database settings
+          persistSettings(currentManifest);
+        } else if (syncSettings) {
+          // Sync settings are newer -> update IndexedDB
+          saveGlobalSettingsToDb({ ...extractSettings(currentManifest), _updatedAt: syncUpdatedAt } as any).catch(console.error);
+        }
+      } else if (syncSettings) {
+        // No DB record yet -> save current sync settings to IndexedDB
+        saveGlobalSettingsToDb({ ...extractSettings(currentManifest), _updatedAt: (syncSettings as any)?._updatedAt || Date.now() } as any).catch(console.error);
       }
     } catch (e) {
       console.error('Failed to load settings from IndexedDB:', e);

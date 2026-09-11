@@ -29,6 +29,13 @@ export class MinitypeDatabase extends Dexie {
 
 export const db = new MinitypeDatabase();
 
+if (typeof window !== 'undefined') {
+  db.on('versionchange', () => {
+    db.close();
+    return false;
+  });
+}
+
 export type SaveStatus = 'saved' | 'saving' | 'error';
 let saveStatusHandler: ((status: SaveStatus) => void) | null = null;
 let persistenceErrorHandler: ((err: Error | null) => void) | null = null;
@@ -171,6 +178,9 @@ export async function saveGlobalSettingsToDb(settings: Partial<ManuscriptManifes
   try {
     const existing = await db.settings.get('global');
     const merged = { ...(existing?.settings || {}), ...settings };
+    if (!(merged as any)._updatedAt) {
+      (merged as any)._updatedAt = Date.now();
+    }
     await db.settings.put({ id: 'global', settings: merged });
   } catch (err) {
     console.error('Failed to save settings to IndexedDB:', err);

@@ -9,6 +9,7 @@ import {
 } from '@/types';
 import { X, Sliders, Volume2, VolumeX } from 'lucide-react';
 import { typewriterAudio } from '@/lib/sound';
+import { persistSettings } from '@/stores/typingStore';
 
 interface SettingsDrawerProps {
   isOpen: boolean;
@@ -44,12 +45,19 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   const showStats = manifest.showStats ?? true;
   const isDoubleSpace = manifest.doubleSpaceLinebreaks ?? false;
 
+  const handleClose = () => {
+    try {
+      persistSettings(manifest);
+    } catch (e) {}
+    onClose();
+  };
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-2 sm:p-4 animate-in fade-in duration-150"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         className="w-full max-w-md max-h-[calc(100dvh-1rem)] overflow-y-auto square-scrollbar p-4 sm:p-6 rounded-none border border-border bg-background text-foreground shadow-2xl flex flex-col gap-4 sm:gap-5 select-none"
@@ -65,7 +73,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="p-1 rounded-none text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
             title="Close"
           >

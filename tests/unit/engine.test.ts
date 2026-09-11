@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { useTypingStore, createEmptyLine } from '@/stores/typingStore';
+import {
+  useTypingStore,
+  createEmptyLine,
+  readSynchronousSettings,
+  persistSettings,
+} from '@/stores/typingStore';
 import { LineRecord } from '@/types';
 import { sanitizeManuscript, calculatePrintDelayMs } from '@/lib/sanitize';
 import { wrapLine, MAX_COLUMNS } from '@/lib/wrap';
@@ -1348,21 +1353,24 @@ describe('Typing Engine & State Machine Invariants', () => {
 
     it('manages visual save state machine with 0.6s delay and random saving duration', async () => {
       vi.useFakeTimers();
-      const store = useTypingStore.getState();
-      expect(store.saveState).toBe('saved');
+      try {
+        const store = useTypingStore.getState();
+        expect(store.saveState).toBe('saved');
 
-      store.insertChar('T');
-      // Initially still 'saved' due to 0.6s delay before moving to saving animation
-      expect(useTypingStore.getState().saveState).toBe('saved');
+        store.insertChar('T');
+        // Initially still 'saved' due to 0.6s delay before moving to saving animation
+        expect(useTypingStore.getState().saveState).toBe('saved');
 
-      // Fast-forward past pause debounce (400ms) or 600ms delay: transitions to 'saving'
-      vi.advanceTimersByTime(500);
-      expect(useTypingStore.getState().saveState).toBe('saving');
+        // Fast-forward past pause debounce (400ms) or 600ms delay: transitions to 'saving'
+        vi.advanceTimersByTime(500);
+        expect(useTypingStore.getState().saveState).toBe('saving');
 
-      // Fast-forward 1500ms (beyond the random 600-1400ms saving duration)
-      vi.advanceTimersByTime(1500);
-      expect(useTypingStore.getState().saveState).toBe('saved');
-      vi.useRealTimers();
+        // Fast-forward 1500ms (beyond the random 600-1400ms saving duration)
+        vi.advanceTimersByTime(1500);
+        expect(useTypingStore.getState().saveState).toBe('saved');
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it('resets session start time without creating a new session if current session is empty', async () => {
@@ -1433,6 +1441,79 @@ describe('Typing Engine & State Machine Invariants', () => {
       // Set back to M (default)
       store.setTextSize('m');
       expect(useTypingStore.getState().manifest.textSize).toBe('m');
+    });
+
+    it('persists settings across all 4 synchronous tiers including sessionStorage and window.name', () => {
+      persistSettings({ colorScheme: 'spotlight', textSize: 'xl', activeApertureHeight: 4 });
+
+      // Tier 1: localStorage
+      const local = JSON.parse(localStorage.getItem('minitype_global_settings') || '{}');
+      expect(local.colorScheme).toBe('spotlight');
+      expect(local.textSize).toBe('xl');
+
+      // Tier 2: sessionStorage
+      const session = JSON.parse(sessionStorage.getItem('minitype_global_settings') || '{}');
+      expect(session.colorScheme).toBe('spotlight');
+      expect(session.textSize).toBe('xl');
+
+      // Tier 3: cookies
+      expect(document.cookie).toContain('minitype_global_settings');
+
+      // Tier 4: window.name backup
+      expect(window.name).toContain('minitype_settings:');
+      expect(window.name).toContain('spotlight');
+    });
+
+    it('falls back to sessionStorage, cookies, and window.name when localStorage throws', () => {
+      localStorage.clear();
+      sessionStorage.clear();
+      window.name = '';
+
+      // Set in sessionStorage only
+      sessionStorage.setItem('minitype_global_settings', JSON.stringify({ colorScheme: 'phosphor', textSize: 's' }));
+
+      // Mock localStorage.getItem to throw SecurityError (as in iOS Private Browsing / blocked storage)
+      const origGetItem = localStorage.getItem;
+      localStorage.getItem = () => {
+        throw new Error('SecurityError: The operation is insecure.');
+      };
+
+      try {
+        const sync = readSynchronousSettings();
+        expect(sync).not.toBeNull();
+        expect(sync?.colorScheme).toBe('phosphor');
+        expect(sync?.textSize).toBe('s');
+      } finally {
+        localStorage.getItem = origGetItem;
+      }
+    });
+
+    it('rehydrates settings from IndexedDB when synchronous storage is cleared, and does not overwrite with defaults', async () => {
+      const { saveGlobalSettingsToDb } = await import('@/db');
+      localStorage.clear();
+      sessionStorage.clear();
+      window.name = '';
+      document.cookie = 'minitype_global_settings=; max-age=0; path=/;';
+
+      // Save custom settings directly in IndexedDB settings table
+      await saveGlobalSettingsToDb({
+        colorScheme: 'spotlight',
+        textSize: 'l',
+        activeApertureHeight: 3,
+      });
+
+      const store = useTypingStore.getState();
+      await store.rehydrate();
+
+      const stateAfter = useTypingStore.getState();
+      expect(stateAfter.manifest.colorScheme).toBe('spotlight');
+      expect(stateAfter.manifest.textSize).toBe('l');
+      expect(stateAfter.manifest.activeApertureHeight).toBe(3);
+
+      // Verify that rehydrate re-seeded synchronous storage from IndexedDB
+      const reseeded = JSON.parse(localStorage.getItem('minitype_global_settings') || '{}');
+      expect(reseeded.colorScheme).toBe('spotlight');
+      expect(reseeded.textSize).toBe('l');
     });
   });
 });

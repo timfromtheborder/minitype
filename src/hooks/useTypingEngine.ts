@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useCallback } from 'react';
-import { useTypingStore } from '@/stores/typingStore';
+import { useTypingStore, persistSettings } from '@/stores/typingStore';
 import { LineRecord } from '@/types';
 import { typewriterAudio } from '@/lib/sound';
 import { flushPendingSave } from '@/db';
@@ -144,6 +144,10 @@ export function useTypingEngine(options?: UseTypingEngineOptions) {
   // Flush any pending debounced saves immediately on tab close, hide, or refresh
   useEffect(() => {
     const handleFlush = () => {
+      try {
+        const manifest = useTypingStore.getState().manifest;
+        persistSettings(manifest);
+      } catch (e) {}
       flushPendingSave();
     };
 
