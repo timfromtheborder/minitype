@@ -122,14 +122,14 @@ export default function Home() {
           <button
             type="button"
             onClick={() => setIsPrintOpen(true)}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-none border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-none border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
               isSpotlight
                 ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground'
                 : 'border-border/70 bg-card hover:bg-muted text-card-foreground'
             }`}
             title="Project"
           >
-            <Printer className="w-3.5 h-3.5 opacity-70" />
+            <Printer className="w-3.5 h-3.5 opacity-70 shrink-0" />
             <span>Project</span>
           </button>
 
@@ -137,14 +137,14 @@ export default function Home() {
           <button
             type="button"
             onClick={() => setIsSettingsOpen(true)}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-none border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-none border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
               isSpotlight
                 ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground'
                 : 'border-border/70 bg-card hover:bg-muted text-card-foreground'
             }`}
             title="Settings"
           >
-            <Settings className="w-3.5 h-3.5 opacity-70" />
+            <Settings className="w-3.5 h-3.5 opacity-70 shrink-0" />
             <span>Settings</span>
           </button>
 
@@ -156,7 +156,7 @@ export default function Home() {
                 mode: engine.manifest.mode === 'local' ? 'temp' : 'local',
               })
             }
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-none border font-sans font-medium transition-all cursor-pointer text-[11px] sm:text-xs ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-none border font-sans font-medium transition-all cursor-pointer text-[11px] sm:text-xs whitespace-nowrap ${
               engine.manifest.mode === 'local'
                 ? isSpotlight
                   ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground shadow-xs'
@@ -167,13 +167,13 @@ export default function Home() {
           >
             {engine.manifest.mode === 'local' ? (
               <>
-                <Database className="w-3.5 h-3.5 opacity-80" />
-                <span>Mode: Local</span>
+                <Database className="w-3.5 h-3.5 opacity-80 shrink-0" />
+                <span>Local</span>
               </>
             ) : (
               <>
-                <Zap className="w-3.5 h-3.5 text-amber-500" />
-                <span>Mode: Temp</span>
+                <Zap className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                <span>Temp</span>
               </>
             )}
           </button>

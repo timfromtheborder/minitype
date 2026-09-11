@@ -47,11 +47,11 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-2 sm:p-4 animate-in fade-in duration-150"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md p-6 rounded-none border border-border bg-background text-foreground shadow-2xl flex flex-col gap-5 select-none"
+        className="w-full max-w-md max-h-[calc(100dvh-1rem)] overflow-y-auto square-scrollbar p-4 sm:p-6 rounded-none border border-border bg-background text-foreground shadow-2xl flex flex-col gap-4 sm:gap-5 select-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -123,7 +123,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
 
           {/* Color Schemes (Renamed labels) */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-muted-foreground">Palette & Aesthetic:</label>
+            <label className="text-muted-foreground">Theme:</label>
             <div className="grid grid-cols-2 gap-2">
               {[
                 {
@@ -215,7 +215,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
 
           {/* Session Mode */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-muted-foreground">Session Persistence:</label>
+            <label className="text-muted-foreground">Session:</label>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -242,11 +242,11 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
             </div>
           </div>
 
-          {/* Settings Toggles (Live Stats & Markdown Mode) */}
+          {/* Settings Toggles (Document Stats & Markdown Mode) */}
           <div className="flex flex-col gap-2 pt-2 border-t border-border/60">
-            {/* Live Drafting Stats */}
+            {/* Document Stats */}
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Live Drafting Stats:</span>
+              <span className="text-muted-foreground">Document Stats:</span>
               <button
                 type="button"
                 onClick={() => onUpdateManifest({ showStats: !showStats })}
@@ -280,7 +280,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
 
           {/* Audio Feedback Toggle */}
           <div className="flex items-center justify-between pt-2 border-t border-border/60">
-            <span className="text-muted-foreground">Mechanical Sound:</span>
+            <span className="text-muted-foreground">Sound:</span>
             <button
               type="button"
               onClick={handleToggleMute}

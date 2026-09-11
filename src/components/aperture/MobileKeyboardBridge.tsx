@@ -42,6 +42,54 @@ export const MobileKeyboardBridge = forwardRef<
     }
   }, [isPaused]);
 
+  // Handle orientation change gracefully to prevent iOS Safari auto-scroll jitter loops
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let timeoutId: NodeJS.Timeout;
+    const handleOrientationChange = () => {
+      const wasFocused = document.activeElement === inputRef.current;
+      if (wasFocused) {
+        inputRef.current?.blur();
+      }
+      window.scrollTo(0, 0);
+      document.body.scrollTop = 0;
+
+      clearTimeout(timeoutId);
+      if (wasFocused) {
+        // Re-focus cleanly after the rotation transition finishes without triggering scroll fight
+        timeoutId = setTimeout(() => {
+          window.scrollTo(0, 0);
+          document.body.scrollTop = 0;
+          if (!isPaused && !store.isLocked) {
+            inputRef.current?.focus();
+          }
+        }, 350);
+      }
+    };
+
+    window.addEventListener('orientationchange', handleOrientationChange);
+    screen.orientation?.addEventListener?.('change', handleOrientationChange);
+
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('orientationchange', handleOrientationChange);
+      screen.orientation?.removeEventListener?.('change', handleOrientationChange);
+    };
+  }, [isPaused, store.isLocked]);
+
+  // Prevent any accidental page offset drifting
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleScroll = () => {
+      if (window.scrollX !== 0 || window.scrollY !== 0) {
+        window.scrollTo(0, 0);
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const handleBeforeInput = (e: React.FormEvent<HTMLInputElement>) => {
     const nativeEvent = e.nativeEvent as InputEvent;
     if (isPaused || store.isLocked) {

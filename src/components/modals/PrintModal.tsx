@@ -70,15 +70,15 @@ export const PrintModal: React.FC<PrintModalProps> = ({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-2 sm:p-4 animate-in fade-in duration-150"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl h-[560px] p-6 rounded-none border border-border bg-background text-foreground shadow-2xl flex flex-col justify-between select-none relative"
+        className="w-full max-w-2xl h-[calc(100dvh-1rem)] sm:h-[560px] max-h-[calc(100dvh-1rem)] sm:max-h-[560px] p-3.5 sm:p-6 rounded-none border border-border bg-background text-foreground shadow-2xl flex flex-col gap-2.5 sm:gap-4 justify-between select-none relative"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border/60 pb-3 gap-3">
+        <div className="flex items-center justify-between border-b border-border/60 pb-2 sm:pb-3 gap-2 sm:gap-3 shrink-0">
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
             <span className="text-xs font-sans font-bold tracking-widest uppercase text-muted-foreground shrink-0">
               Project
@@ -110,7 +110,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
         </div>
 
         {/* Scrollable Compilation Preview Window */}
-        <div className="relative w-full h-[380px] p-6 rounded-none border border-border/80 bg-card text-card-foreground font-mono text-sm leading-[1.3] overflow-y-auto square-scrollbar whitespace-pre-wrap select-text shadow-inner">
+        <div className="relative w-full flex-1 min-h-0 p-3 sm:p-6 rounded-none border border-border/80 bg-card text-card-foreground font-mono text-xs sm:text-sm leading-[1.3] overflow-y-auto square-scrollbar whitespace-pre-wrap select-text shadow-inner">
           {sanitizedFullText.length > 0 ? (
             sanitizedFullText
           ) : (
@@ -121,7 +121,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
         </div>
 
         {/* Bottom Actions Row */}
-        <div className="relative flex items-center justify-between pt-2 border-t border-border/60 text-xs font-sans">
+        <div className="relative flex items-center justify-between pt-2 border-t border-border/60 text-xs font-sans shrink-0">
           {/* New Project Button with Pop-Over Confirmation */}
           <div className="relative">
             <button

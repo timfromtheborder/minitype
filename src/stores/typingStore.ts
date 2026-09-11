@@ -105,7 +105,8 @@ export const useTypingStore = create<TypingStore>((set, get) => ({
   activeColumnLimit: 70,
   pendingWrappedCells: null,
 
-  setActiveColumnLimit: (limit: number) => set({ activeColumnLimit: limit }),
+  setActiveColumnLimit: (limit: number) =>
+    set((state) => (state.activeColumnLimit === limit ? state : { activeColumnLimit: limit })),
 
   setManifest: (newManifest) => {
     set((state) => {
