@@ -1125,6 +1125,35 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(state.activeLineIndex).toBe(0);
       expect(state.activeColIndex).toBe(0);
     });
+
+    it('preserves user settings and does not overwrite settings with loaded document data', async () => {
+      const store = useTypingStore.getState();
+      // Configure custom user settings
+      store.setApertureHeight(5);
+      store.setManifest({ colorScheme: 'dark-amber', typeface: 'jetbrains-mono' });
+      store.toggleStats(false);
+      store.toggleDoubleSpaceLinebreaks(true);
+
+      // Create and switch to another document via import
+      await store.importTextFileAsProject('Doc B', 'Sample content for doc B');
+
+      // Check that settings are still the user's active preferences!
+      const afterImport = useTypingStore.getState().manifest;
+      expect(afterImport.activeApertureHeight).toBe(5);
+      expect(afterImport.colorScheme).toBe('dark-amber');
+      expect(afterImport.typeface).toBe('jetbrains-mono');
+      expect(afterImport.showStats).toBe(false);
+      expect(afterImport.doubleSpaceLinebreaks).toBe(true);
+
+      // Verify new document retains settings as well
+      await store.newProject();
+      const afterNew = useTypingStore.getState().manifest;
+      expect(afterNew.activeApertureHeight).toBe(5);
+      expect(afterNew.colorScheme).toBe('dark-amber');
+      expect(afterNew.typeface).toBe('jetbrains-mono');
+      expect(afterNew.showStats).toBe(false);
+      expect(afterNew.doubleSpaceLinebreaks).toBe(true);
+    });
   });
 });
 

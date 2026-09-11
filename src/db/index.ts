@@ -19,10 +19,18 @@ export const db = new MinitypeDatabase();
 export async function saveManuscript(manifest: ManuscriptManifest): Promise<void> {
   if (manifest.mode === 'temp') return;
   try {
-    await db.manuscripts.put({
-      ...manifest,
+    // Only save document metadata, NOT user settings
+    const docData: any = {
+      id: manifest.id,
+      title: manifest.title || 'Untitled Manuscript',
+      inboxCount: manifest.inboxCount ?? 0,
+      outboxCount: manifest.outboxCount ?? 0,
+      lastPrintedCharIndex: manifest.lastPrintedCharIndex ?? 0,
+      printedPagesCount: manifest.printedPagesCount ?? 0,
+      createdAt: manifest.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    });
+    };
+    await db.manuscripts.put(docData);
     notifyPersistenceError(null);
   } catch (err: any) {
     console.error('Failed to save manuscript to IndexedDB:', err);

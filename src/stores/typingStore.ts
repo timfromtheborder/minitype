@@ -64,26 +64,55 @@ export const DEFAULT_MANIFEST: ManuscriptManifest = {
   updatedAt: '2026-01-01T00:00:00.000Z',
 };
 
+export const SETTING_KEYS = [
+  'activeApertureHeight',
+  'wrapMode',
+  'pageSize',
+  'pageMode',
+  'colorScheme',
+  'typeface',
+  'showStats',
+  'doubleSpaceLinebreaks',
+  'mode',
+] as const;
+
+export function extractSettings(obj: any): Partial<ManuscriptManifest> {
+  const settings: any = {};
+  if (!obj) return settings;
+  for (const key of SETTING_KEYS) {
+    if (obj[key] !== undefined) {
+      settings[key] = obj[key];
+    }
+  }
+  return settings;
+}
+
 const SETTINGS_KEY = 'minitype_settings';
 
 export function getInitialManifest(): ManuscriptManifest {
+  const base = { ...DEFAULT_MANIFEST };
   if (typeof window !== 'undefined') {
     try {
       const cached = localStorage.getItem(SETTINGS_KEY);
       if (cached) {
-        return { ...DEFAULT_MANIFEST, ...JSON.parse(cached) };
+        const settings = extractSettings(JSON.parse(cached));
+        return { ...base, ...settings };
       }
     } catch (e) {
       console.error('Failed to parse cached settings from localStorage:', e);
     }
   }
-  return { ...DEFAULT_MANIFEST };
+  return base;
 }
 
-export function persistSettings(manifest: ManuscriptManifest): void {
+export function persistSettings(manifest: Partial<ManuscriptManifest>): void {
   if (typeof window !== 'undefined') {
     try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(manifest));
+      const settings = extractSettings(manifest);
+      if (Object.keys(settings).length === 0) return;
+      const existing = localStorage.getItem(SETTINGS_KEY);
+      const current = existing ? JSON.parse(existing) : {};
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...current, ...settings }));
     } catch (e) {
       console.error('Failed to save settings to localStorage:', e);
     }
@@ -155,10 +184,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       }
 
       const updatedManifest = { ...state.manifest, activeApertureHeight: height };
-      persistSettings(updatedManifest);
-      if (updatedManifest.mode === 'local') {
-        saveManuscript(updatedManifest).catch(console.error);
-      }
+      persistSettings({ activeApertureHeight: height });
 
       return {
         manifest: updatedManifest,
@@ -172,10 +198,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
   setPageSize: (pageSize: PageSize) => {
     set((state) => {
       const updated = { ...state.manifest, pageSize, pageMode: 'page' as const };
-      persistSettings(updated);
-      if (updated.mode === 'local') {
-        saveManuscript(updated).catch(console.error);
-      }
+      persistSettings({ pageSize, pageMode: 'page' });
       return { manifest: updated };
     });
   },
@@ -184,10 +207,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     set((state) => {
       const pageSize = pageMode === 'notecard' ? 10 : pageMode === 'page' ? 54 : 9999;
       const updated = { ...state.manifest, pageMode, pageSize };
-      persistSettings(updated);
-      if (updated.mode === 'local') {
-        saveManuscript(updated).catch(console.error);
-      }
+      persistSettings({ pageMode, pageSize });
       return { manifest: updated };
     });
   },
@@ -840,7 +860,6 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    persistSettings(updatedManifest);
     if (updatedManifest.mode === 'local') {
       await saveManuscript(updatedManifest).catch(console.error);
       await savePage({
@@ -897,8 +916,21 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     // Requirement (Option A): Parse into platen lines with a fresh empty line at the end
     const parsed = textToManuscriptLines(cleanText, 1, columnLimit);
 
+    // CRITICAL: Settings are NOT saved with documents!
+    // Preserve the user's active settings (theme, font, height, page mode, showStats, doubleSpaceLinebreaks, mode)
+    const updatedManifest: ManuscriptManifest = {
+      ...state.manifest,
+      id: loadedManifest.id,
+      title: loadedManifest.title || 'Untitled Manuscript',
+      outboxCount: loadedManifest.outboxCount ?? 0,
+      lastPrintedCharIndex: loadedManifest.lastPrintedCharIndex ?? 0,
+      printedPagesCount: loadedManifest.printedPagesCount ?? 0,
+      createdAt: loadedManifest.createdAt,
+      updatedAt: loadedManifest.updatedAt,
+    };
+
     // Save the sanitized clean manuscript back to Dexie
-    if (loadedManifest.mode === 'local') {
+    if (state.manifest.mode === 'local') {
       await deletePagesForManuscript(loadedManifest.id).catch(console.error);
       const sanitizedPage: PageRecord = {
         id: `${loadedManifest.id}-page-1`,
@@ -907,14 +939,12 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         lines: parsed.lines,
         completedAt: null,
       };
-      await saveManuscript({ ...loadedManifest, updatedAt: new Date().toISOString() }).catch(console.error);
+      await saveManuscript(updatedManifest).catch(console.error);
       await savePage(sanitizedPage).catch(console.error);
     }
 
-    persistSettings(loadedManifest);
-
     set({
-      manifest: loadedManifest,
+      manifest: updatedManifest,
       currentPageNumber: 1,
       historicalPages: [],
       currentPageLines: parsed.lines,
@@ -959,7 +989,6 @@ export const useTypingStore = create<TypingStore>((set, get) => {
 
     await saveManuscript(newManifest).catch(console.error);
     await savePage(newPage).catch(console.error);
-    persistSettings(newManifest);
 
     set({
       manifest: newManifest,
@@ -994,7 +1023,6 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      persistSettings(newManifest);
       if (newManifest.mode === 'local') {
         await saveManuscript(newManifest).catch(console.error);
         await savePage({
@@ -1036,10 +1064,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     set((state) => {
       const showStats = show !== undefined ? show : !(state.manifest.showStats ?? true);
       const updatedManifest = { ...state.manifest, showStats };
-      persistSettings(updatedManifest);
-      if (updatedManifest.mode === 'local') {
-        saveManuscript(updatedManifest).catch(console.error);
-      }
+      persistSettings({ showStats });
       return { manifest: updatedManifest };
     });
   },
@@ -1048,10 +1073,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     set((state) => {
       const doubleSpaceLinebreaks = enabled !== undefined ? enabled : !(state.manifest.doubleSpaceLinebreaks ?? false);
       const updatedManifest = { ...state.manifest, doubleSpaceLinebreaks };
-      persistSettings(updatedManifest);
-      if (updatedManifest.mode === 'local') {
-        saveManuscript(updatedManifest).catch(console.error);
-      }
+      persistSettings({ doubleSpaceLinebreaks });
       return { manifest: updatedManifest };
     });
   },
@@ -1132,13 +1154,16 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       const outboxCount = historicalPages.length;
       const updatedManifest: ManuscriptManifest = {
         ...currentManifest,
+        id: savedManifest?.id ?? currentManifest.id,
+        title: savedManifest?.title ?? currentManifest.title,
         outboxCount,
         lastPrintedCharIndex:
           savedManifest?.lastPrintedCharIndex ?? currentManifest.lastPrintedCharIndex ?? 0,
         printedPagesCount:
           savedManifest?.printedPagesCount ?? currentManifest.printedPagesCount ?? 0,
+        createdAt: savedManifest?.createdAt ?? currentManifest.createdAt,
+        updatedAt: savedManifest?.updatedAt ?? currentManifest.updatedAt,
       };
-      persistSettings(updatedManifest);
 
       set({
         manifest: updatedManifest,
