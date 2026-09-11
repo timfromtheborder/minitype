@@ -70,9 +70,6 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
             <h2 className="text-sm font-sans font-semibold tracking-wider uppercase text-foreground">
               Settings
             </h2>
-            <span className="text-[10px] font-mono tracking-wider px-1.5 py-0.5 rounded-[2px] bg-muted text-muted-foreground border border-border/60">
-              v0.9.5.2
-            </span>
           </div>
           <button
             type="button"
@@ -85,7 +82,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
         </div>
 
         <div className="flex flex-col gap-4 text-xs font-sans">
-          {/* Aperture Visible Lines Slider (1 to 8 lines) */}
+          {/* Aperture Visible Lines Slider (1 to 10 lines) */}
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <label className="text-muted-foreground">Aperture:</label>
@@ -98,7 +95,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
               <input
                 type="range"
                 min={1}
-                max={8}
+                max={10}
                 step={1}
                 value={manifest.activeApertureHeight}
                 onChange={(e) => {
@@ -114,7 +111,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 className="w-full square-slider cursor-pointer"
                 aria-label="Aperture slider"
               />
-              <span className="text-[10px] text-muted-foreground font-semibold">8</span>
+              <span className="text-[10px] text-muted-foreground font-semibold">10</span>
             </div>
           </div>
 
@@ -270,68 +267,94 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
             </div>
           </div>
 
-          {/* Settings Toggles (Document Stats & Markdown Mode) */}
-          <div className="flex flex-col gap-2 pt-2 border-t border-border/60">
-            {/* Document Stats */}
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Document Stats:</span>
-              <button
-                type="button"
-                onClick={() => onUpdateManifest({ showStats: !showStats })}
-                className={`px-3 py-1 rounded-[2px] border text-xs transition-all cursor-pointer ${
-                  showStats
-                    ? 'border-primary bg-primary text-primary-foreground font-bold shadow-xs'
-                    : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-muted-foreground'
-                }`}
-              >
-                {showStats ? 'Visible' : 'Hidden'}
-              </button>
-            </div>
-
-            {/* Markdown Mode (Double-space linebreaks) */}
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Markdown Mode:</span>
-              <button
-                type="button"
-                onClick={() => onUpdateManifest({ doubleSpaceLinebreaks: !isDoubleSpace })}
-                className={`px-3 py-1 rounded-[2px] border text-xs transition-all cursor-pointer ${
-                  isDoubleSpace
-                    ? 'border-primary bg-primary text-primary-foreground font-bold shadow-xs'
-                    : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-muted-foreground'
-                }`}
-                title="Double-space hard linebreaks for markdown formatting"
-              >
-                {isDoubleSpace ? 'Double-Spaced' : 'Single-Spaced'}
-              </button>
-            </div>
-          </div>
-
-          {/* Audio Feedback Toggle */}
-          <div className="flex items-center justify-between pt-2 border-t border-border/60">
-            <span className="text-muted-foreground">Sound:</span>
-            <button
-              type="button"
-              onClick={handleToggleMute}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] border border-border/80 bg-muted/40 hover:bg-muted text-foreground transition-all cursor-pointer"
+          {/* Settings Switches (Document Stats, Double-space paragraphs, Typing Sounds) */}
+          <div className="flex flex-col gap-3 pt-2.5 border-t border-border/60">
+            {/* Show document stats */}
+            <div
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => onUpdateManifest({ showStats: !showStats })}
             >
-              {isMuted ? (
-                <>
-                  <VolumeX className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span>Muted</span>
-                </>
-              ) : (
-                <>
-                  <Volume2 className="w-3.5 h-3.5 text-primary" />
-                  <span>Enabled</span>
-                </>
-              )}
-            </button>
+              <span className="text-muted-foreground">Show document stats</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={showStats}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUpdateManifest({ showStats: !showStats });
+                }}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[2px] border transition-colors duration-150 ease-in-out focus:outline-hidden ${
+                  showStats ? 'bg-primary border-primary' : 'bg-muted/70 border-border/80'
+                }`}
+                title="Show document stats"
+              >
+                <span
+                  className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-[1px] shadow-xs transition-transform duration-150 ease-in-out ${
+                    showStats ? 'translate-x-4 bg-primary-foreground' : 'translate-x-0.5 bg-muted-foreground/70'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Double-space paragraphs */}
+            <div
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => onUpdateManifest({ doubleSpaceLinebreaks: !isDoubleSpace })}
+            >
+              <span className="text-muted-foreground">Double-space paragraphs</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isDoubleSpace}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUpdateManifest({ doubleSpaceLinebreaks: !isDoubleSpace });
+                }}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[2px] border transition-colors duration-150 ease-in-out focus:outline-hidden ${
+                  isDoubleSpace ? 'bg-primary border-primary' : 'bg-muted/70 border-border/80'
+                }`}
+                title="Double-space paragraphs"
+              >
+                <span
+                  className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-[1px] shadow-xs transition-transform duration-150 ease-in-out ${
+                    isDoubleSpace ? 'translate-x-4 bg-primary-foreground' : 'translate-x-0.5 bg-muted-foreground/70'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Typing sounds */}
+            <div
+              className="flex items-center justify-between cursor-pointer"
+              onClick={handleToggleMute}
+            >
+              <span className="text-muted-foreground">Typing sounds</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={!isMuted}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToggleMute();
+                }}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[2px] border transition-colors duration-150 ease-in-out focus:outline-hidden ${
+                  !isMuted ? 'bg-primary border-primary' : 'bg-muted/70 border-border/80'
+                }`}
+                title="Typing sounds"
+              >
+                <span
+                  className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-[1px] shadow-xs transition-transform duration-150 ease-in-out ${
+                    !isMuted ? 'translate-x-4 bg-primary-foreground' : 'translate-x-0.5 bg-muted-foreground/70'
+                  }`}
+                />
+              </button>
+            </div>
           </div>
 
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.5.2
+              Minitype v0.9.5.3
             </span>
           </div>
         </div>

@@ -8,7 +8,7 @@ export interface PageRecord {
   completedAt: string | null;
 }
 
-export type ApertureHeight = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+export type ApertureHeight = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 export type WrapMode = 'soft';
 export type PageSize = 30 | 40 | 54 | 60 | number;
 export type PageMode = 'scroll' | 'page' | 'notecard' | 'paragraph';

@@ -273,7 +273,7 @@ html[data-text-size="xl"],
 html[data-text-size="XL"],
 [data-text-size="xl"],
 [data-text-size="XL"] {
-  font-size: 20px;
+  font-size: 24px;
 }
 
 /* Adaptive viewport clamping:
@@ -308,7 +308,7 @@ html[data-text-size="XL"],
   html[data-text-size="XL"],
   [data-text-size="xl"],
   [data-text-size="XL"] {
-    font-size: clamp(13.5px, calc((100vw - 2rem) / 23.5), 20px);
+    font-size: clamp(13.5px, calc((100vw - 2rem) / 23.5), 24px);
   }
 }
 
@@ -340,7 +340,7 @@ html[data-text-size="XL"],
   html[data-text-size="XL"],
   [data-text-size="xl"],
   [data-text-size="XL"] {
-    font-size: clamp(12.5px, calc((100vw - 3.5rem) / 46.5), 20px);
+    font-size: clamp(12.5px, calc((100vw - 3.5rem) / 46.5), 24px);
   }
 }
 

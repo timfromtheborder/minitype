@@ -1101,16 +1101,16 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(doubleSpaced).toBe('Para1\n\nPara2');
     });
 
-    it('supports 1 to 8 aperture line heights smoothly', () => {
+    it('supports 1 to 10 aperture line heights smoothly', () => {
       const store = useTypingStore.getState();
       store.setApertureHeight(1);
       expect(useTypingStore.getState().manifest.activeApertureHeight).toBe(1);
 
-      store.setApertureHeight(8);
-      expect(useTypingStore.getState().manifest.activeApertureHeight).toBe(8);
+      store.setApertureHeight(10);
+      expect(useTypingStore.getState().manifest.activeApertureHeight).toBe(10);
 
-      store.setApertureHeight(4);
-      expect(useTypingStore.getState().manifest.activeApertureHeight).toBe(4);
+      store.setApertureHeight(5);
+      expect(useTypingStore.getState().manifest.activeApertureHeight).toBe(5);
     });
 
     it('toggles live stats visibility', () => {

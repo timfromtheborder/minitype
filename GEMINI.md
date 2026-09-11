@@ -100,7 +100,7 @@ export interface ManuscriptManifest {
   outboxCount: number;
   lastPrintedCharIndex: number;
   printedPagesCount: number;
-  activeApertureHeight: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+  activeApertureHeight: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
   wrapMode: 'soft';
   pageSize: 30 | 40 | 54 | 60 | number;
   pageMode: 'scroll' | 'page' | 'notecard' | 'paragraph';
