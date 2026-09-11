@@ -99,10 +99,10 @@ export const SessionTargetTracker: React.FC = React.memo(function SessionTargetT
             style={{ width: `${boxSize}px`, height: `${boxSize}px` }}
             className={`shrink-0 rounded-[0.5px] transition-colors duration-150 ${
               isFilled
-                ? `session-box-filled bg-muted-foreground/25 border border-muted-foreground/35 ${
+                ? `session-box-filled bg-muted-foreground/15 border border-muted-foreground/25 ${
                     isFlashing ? 'session-box-flash' : ''
                   }`
-                : 'session-box-empty border border-dotted border-muted-foreground/25 bg-transparent'
+                : 'session-box-empty border border-dotted border-muted-foreground/16 bg-transparent'
             }`}
           />
         );

@@ -432,19 +432,19 @@ html[data-aperture-height="10"],
 }
 
 /* ==========================================================================
-   SESSION TARGET TRACKER ANIMATIONS & THEME CONTRAST
+   SESSION TARGET TRACKER & PLATEN NOTECARD FLASH ANIMATIONS
    ========================================================================== */
 @keyframes session-box-pulse {
   0% {
-    opacity: 0.35;
-    transform: scale(0.9);
+    opacity: 0.6;
+    transform: scale(0.95);
   }
   50% {
     opacity: 1;
-    transform: scale(1.3);
+    transform: scale(1.1);
   }
   100% {
-    opacity: 1;
+    opacity: 0.85;
     transform: scale(1);
   }
 }
@@ -453,24 +453,50 @@ html[data-aperture-height="10"],
   animation: session-box-pulse 200ms ease-out forwards;
 }
 
+@keyframes platen-notecard-flash {
+  0% {
+    opacity: 0.14;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.platen-flash-effect {
+  animation: platen-notecard-flash 350ms ease-out forwards;
+}
+
 [data-theme="spotlight"] .session-box-filled,
 [data-theme="phosphor"] .session-box-filled {
-  background-color: rgba(237, 237, 237, 0.55) !important;
-  border-color: rgba(237, 237, 237, 0.8) !important;
+  background-color: rgba(237, 237, 237, 0.28) !important;
+  border-color: rgba(237, 237, 237, 0.45) !important;
 }
 
 [data-theme="spotlight"] .session-box-empty,
 [data-theme="phosphor"] .session-box-empty {
-  border-color: rgba(237, 237, 237, 0.35) !important;
+  border-color: rgba(237, 237, 237, 0.2) !important;
 }
 
 [data-theme="spotlight"] .session-box-flash,
 [data-theme="phosphor"] .session-box-flash {
-  background-color: rgba(255, 255, 255, 0.95) !important;
-  border-color: #FFFFFF !important;
+  background-color: rgba(237, 237, 237, 0.75) !important;
+  border-color: rgba(237, 237, 237, 0.9) !important;
 }
 
 [data-theme="dark-amber"] .session-box-filled {
-  background-color: rgba(255, 176, 0, 0.45) !important;
-  border-color: rgba(255, 176, 0, 0.7) !important;
+  background-color: rgba(255, 176, 0, 0.25) !important;
+  border-color: rgba(255, 176, 0, 0.4) !important;
+}
+
+[data-theme="dark-amber"] .session-box-empty {
+  border-color: rgba(255, 176, 0, 0.18) !important;
+}
+
+[data-theme="low-contrast"] .session-box-filled {
+  background-color: rgba(28, 32, 36, 0.18) !important;
+  border-color: rgba(28, 32, 36, 0.28) !important;
+}
+
+[data-theme="low-contrast"] .session-box-empty {
+  border-color: rgba(28, 32, 36, 0.15) !important;
 }

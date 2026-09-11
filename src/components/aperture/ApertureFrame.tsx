@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { LineRecord, ApertureHeight } from '@/types';
 import { useTypingStore } from '@/stores/typingStore';
 import { HistoricalLine } from './HistoricalLine';
@@ -28,6 +28,23 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
   const activeColumnLimit = useTypingStore((state) => state.activeColumnLimit);
   const setActiveColumnLimit = useTypingStore((state) => state.setActiveColumnLimit);
   const pageMode = useTypingStore((state) => state.manifest.pageMode);
+  const currentPageNumber = useTypingStore((state) => state.currentPageNumber);
+
+  // Faint flash effect when a full notecard is cleared
+  const [isNotecardFlashing, setIsNotecardFlashing] = useState(false);
+  const prevPageNumRef = useRef(currentPageNumber);
+
+  useEffect(() => {
+    if (pageMode === 'notecard' && currentPageNumber > prevPageNumRef.current) {
+      setIsNotecardFlashing(true);
+      const timer = setTimeout(() => {
+        setIsNotecardFlashing(false);
+      }, 350);
+      prevPageNumRef.current = currentPageNumber;
+      return () => clearTimeout(timer);
+    }
+    prevPageNumRef.current = currentPageNumber;
+  }, [currentPageNumber, pageMode]);
 
   // Monitor portrait mobile viewport to switch platen column bounds dynamically
   useEffect(() => {
@@ -79,6 +96,14 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
         userSelect: 'none',
       }}
     >
+      {/* Faint flash on platen background when a full notecard is cleared */}
+      {isNotecardFlashing && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-foreground platen-flash-effect z-10"
+        />
+      )}
+
       {/* Invisible off-screen proxy bridge for summoning on-screen virtual keyboard */}
       <MobileKeyboardBridge ref={bridgeRef} isPaused={isPaused} />
 

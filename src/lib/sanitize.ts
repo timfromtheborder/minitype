@@ -51,7 +51,8 @@ export function sanitizeLine(line: LineRecord): string {
       }
 
       // 3. Space at the end of line preceded by struck cells: e.g. struck("x") + " "
-      if (prevIsStruck && !nextCell) {
+      // If the line wraps softly, this space must be preserved for separating words across lines.
+      if (prevIsStruck && !nextCell && line.wrapType !== 'soft') {
         continue;
       }
 
@@ -70,6 +71,7 @@ export function sanitizeLine(line: LineRecord): string {
 
       // 5. Space followed by struck cells that extend to the end of the line:
       // e.g. "test" + " " + struck("x") (where everything after space is struck)
+      // If line wraps softly, or if there was valid text before this space, preserve it so words don't merge across lines.
       let hasSubsequentValidText = false;
       for (let n = i + 1; n < nonPaddingCells.length; n++) {
         if (nonPaddingCells[n].state !== 'struck' && !nonPaddingCells[n].isStruck && nonPaddingCells[n].char !== ' ') {
@@ -77,7 +79,7 @@ export function sanitizeLine(line: LineRecord): string {
           break;
         }
       }
-      if (nextIsStruck && !hasSubsequentValidText) {
+      if (nextIsStruck && !hasSubsequentValidText && !hasPriorValidText && line.wrapType !== 'soft') {
         continue;
       }
     }
@@ -200,9 +202,8 @@ export function sanitizeManuscript(
     return '';
   }
 
-  if (isDoubleSpace || isParagraphMode) {
-    const nonEmpty = paragraphs.filter((p) => p !== '');
-    return nonEmpty.join('\n\n');
+  if (isDoubleSpace) {
+    return paragraphs.join('\n\n');
   }
 
   return paragraphs.join('\n');

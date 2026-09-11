@@ -6,7 +6,7 @@ import {
   persistSettings,
   pruneZeroContentSessions,
 } from '@/stores/typingStore';
-import { LineRecord } from '@/types';
+import { LineRecord, PageRecord } from '@/types';
 import { sanitizeManuscript, calculatePrintDelayMs } from '@/lib/sanitize';
 import { wrapLine, MAX_COLUMNS } from '@/lib/wrap';
 import {
@@ -582,8 +582,11 @@ describe('Typing Engine & State Machine Invariants', () => {
         },
       ];
 
-      const sanitized = sanitizeManuscript(pages, { pageMode: state.manifest.pageMode });
-      expect(sanitized).toBe('Paragraph 1\n\nParagraph 2\n\nParagraph 3');
+      const singleSpaced = sanitizeManuscript(pages, { pageMode: state.manifest.pageMode, doubleSpaceLinebreaks: false });
+      expect(singleSpaced).toBe('Paragraph 1\nParagraph 2\nParagraph 3');
+
+      const doubleSpaced = sanitizeManuscript(pages, { pageMode: state.manifest.pageMode, doubleSpaceLinebreaks: true });
+      expect(doubleSpaced).toBe('Paragraph 1\n\nParagraph 2\n\nParagraph 3');
     });
 
     it('handles intra-page linebreaks on pages past page 1 in notecard mode', () => {
@@ -819,7 +822,7 @@ describe('Typing Engine & State Machine Invariants', () => {
     });
 
     it('handles double strikeout scenarios cleanly without leaving artificial whitespace', () => {
-      // Case 1: Space before struck cell on line 0, rejoining with line 1 (e.g. "test " + struck("x"), next line "ing")
+      // Case 1: Space before struck cell on line 0 preserves word boundary space across soft-break
       const case1_l0: LineRecord = {
         id: 'c1-l0',
         lineIndex: 0,
@@ -837,7 +840,7 @@ describe('Typing Engine & State Machine Invariants', () => {
         isCommitted: false,
         cells: Array.from('ing').map((char, i) => ({ id: `c1-1-${i}`, char, state: 'standard' as const, colIndex: i, lineIndex: 1 })),
       };
-      expect(sanitizeManuscript([{ pageNumber: 1, lines: [case1_l0, case1_l1], completedAt: null }])).toBe('testing');
+      expect(sanitizeManuscript([{ pageNumber: 1, lines: [case1_l0, case1_l1], completedAt: null }])).toBe('test ing');
 
       // Case 2: Space between two struck cells on same line: "test" + struck("x") + " " + struck("y") + "ing"
       const case2_l0: LineRecord = {
@@ -1173,8 +1176,8 @@ describe('Typing Engine & State Machine Invariants', () => {
       }];
 
       const doubleSpaced = sanitizeManuscript(pages, { doubleSpaceLinebreaks: true });
-      // Should have 2 newlines (a single blank line), not 4
-      expect(doubleSpaced).toBe('A\n\nB');
+      // Preserves multi-space blank lines when double-spacing is enabled
+      expect(doubleSpaced).toBe('A\n\n\n\nB');
     });
 
     it('deleteProject on active project cleanly replaces with new project without duplicating', async () => {
@@ -2626,6 +2629,126 @@ describe('Typing Engine & State Machine Invariants', () => {
 
       // Store should now have auto-provisioned a new project
       expect(useTypingStore.getState().manifest.id).not.toBe(deleteTargetId);
+    });
+  });
+
+  describe('v0.9.6.1 Whitespace Sanitization & Paragraph Mode Invariants', () => {
+    it('preserves word boundary spaces when characters are struck out before a soft break', () => {
+      const store = useTypingStore.getState();
+      store.resetEngine({ mode: 'local', pageMode: 'scroll' });
+
+      // Type words up to near column 70
+      // 60 chars of text + space + 5-letter typo = 66 chars
+      const base = 'The quick brown fox jumps over the lazy dog and then writes ';
+      for (const c of base) store.insertChar(c);
+
+      // Type typo
+      for (const c of 'error') store.insertChar(c);
+
+      // Backspace 5 times to highlight 'error'
+      for (let i = 0; i < 5; i++) store.handleBackspace();
+      expect(useTypingStore.getState().isHighlighting).toBe(true);
+
+      // Strike out and append next word 'now'
+      // Typing 'n' strikes out 'error' and appends 'n'
+      store.insertChar('n');
+      store.insertChar('o');
+      store.insertChar('w');
+
+      // Now fill rest of line to force soft wrap on next word
+      while (useTypingStore.getState().activeLineIndex === 0) {
+        store.insertChar('a');
+      }
+      expect(useTypingStore.getState().activeLineIndex).toBe(1);
+
+      // On line 1, type continuation
+      for (const c of 'continued text') store.insertChar(c);
+
+      const state = useTypingStore.getState();
+      const pages = [{ pageNumber: 1, lines: state.currentPageLines, completedAt: null }];
+      const text = sanitizeManuscript(pages);
+
+      // 'writes' must be separated from 'now' by a space!
+      expect(text).toContain('writes now');
+    });
+
+    it('does not double-space paragraph mode unless doubleSpaceLinebreaks is explicitly true', () => {
+      const pages: PageRecord[] = [{
+        pageNumber: 1,
+        lines: [
+          {
+            id: 'l1',
+            lineIndex: 0,
+            cells: Array.from('Card 1 text').map((char, i) => ({ id: `c1-${i}`, char, state: 'standard' as const, colIndex: i, lineIndex: 0 })),
+            isCommitted: true,
+            wrapType: 'hard' as const,
+          },
+        ],
+        completedAt: new Date().toISOString(),
+      }, {
+        pageNumber: 2,
+        lines: [
+          {
+            id: 'l2',
+            lineIndex: 0,
+            cells: Array.from('Card 2 text').map((char, i) => ({ id: `c2-${i}`, char, state: 'standard' as const, colIndex: i, lineIndex: 0 })),
+            isCommitted: true,
+            wrapType: 'hard' as const,
+          },
+        ],
+        completedAt: null,
+      }];
+
+      const single = sanitizeManuscript(pages, { pageMode: 'paragraph', doubleSpaceLinebreaks: false });
+      expect(single).toBe('Card 1 text\nCard 2 text');
+
+      const double = sanitizeManuscript(pages, { pageMode: 'paragraph', doubleSpaceLinebreaks: true });
+      expect(double).toBe('Card 1 text\n\nCard 2 text');
+    });
+
+    it('preserves multi-space spaces across paragraphs when double-spacing is on', () => {
+      const pages: PageRecord[] = [{
+        pageNumber: 1,
+        lines: [
+          {
+            id: 'l1',
+            lineIndex: 0,
+            cells: Array.from('Section 1').map((char, i) => ({ id: `s1-${i}`, char, state: 'standard' as const, colIndex: i, lineIndex: 0 })),
+            isCommitted: true,
+            wrapType: 'hard' as const,
+          },
+          // Two intentional blank lines
+          {
+            id: 'l2',
+            lineIndex: 1,
+            cells: [],
+            isCommitted: true,
+            wrapType: 'hard' as const,
+          },
+          {
+            id: 'l3',
+            lineIndex: 2,
+            cells: [],
+            isCommitted: true,
+            wrapType: 'hard' as const,
+          },
+          {
+            id: 'l4',
+            lineIndex: 3,
+            cells: Array.from('Section 2').map((char, i) => ({ id: `s2-${i}`, char, state: 'standard' as const, colIndex: i, lineIndex: 3 })),
+            isCommitted: true,
+            wrapType: 'hard' as const,
+          },
+        ],
+        completedAt: null,
+      }];
+
+      const single = sanitizeManuscript(pages, { doubleSpaceLinebreaks: false });
+      expect(single).toBe('Section 1\n\n\nSection 2');
+
+      const double = sanitizeManuscript(pages, { doubleSpaceLinebreaks: true });
+      // In double space, the multi-space spacing is preserved (6 newlines)
+      expect(double).toBe('Section 1\n\n\n\n\n\nSection 2');
     });
   });
 });

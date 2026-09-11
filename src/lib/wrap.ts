@@ -126,7 +126,19 @@ export function wrapLine(
     isSoftPadding: false,
   });
 
-  const brokeOnSpace = breakIndex >= 0 && currentCells[breakIndex].char === ' ';
+  let brokeOnSpace = breakIndex >= 0 && currentCells[breakIndex].char === ' ';
+  if (!brokeOnSpace && breakIndex >= 0 && (currentCells[breakIndex].state === 'struck' || currentCells[breakIndex].isStruck)) {
+    // If the wrap broke at a struck cell sequence, check if there was a space preceding the struck sequence
+    for (let p = breakIndex - 1; p >= 0; p--) {
+      if (currentCells[p].isSoftPadding) continue;
+      if (currentCells[p].state === 'struck' || currentCells[p].isStruck) continue;
+      if (currentCells[p].char === ' ') {
+        brokeOnSpace = true;
+      }
+      break;
+    }
+  }
+
   return {
     updatedCurrentLine: {
       ...currentLine,
