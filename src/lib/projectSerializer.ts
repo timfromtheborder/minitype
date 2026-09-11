@@ -103,8 +103,10 @@ export function reconcileSessionsWithText(
     }
 
     if (isCompleted) {
-      // If the document has already run out of words for ghost sessions beyond fullText:
-      if (cumulativeWords >= totalDocWords) {
+      // If this session's text does not match in fullText (or is empty),
+      // and all words in the document are already accounted for by prior sessions,
+      // it is an invalid trailing ghost session beyond the document.
+      if (!matchedText && cumulativeWords >= totalDocWords) {
         return {
           ...s,
           text: '',
@@ -119,13 +121,12 @@ export function reconcileSessionsWithText(
           ? existingWords
           : countWords(candidate);
 
-      const clampedWords = Math.min(finalWords, Math.max(0, totalDocWords - cumulativeWords));
-      cumulativeWords += clampedWords;
+      cumulativeWords += finalWords;
 
       return {
         ...s,
-        text: matchedText || candidate,
-        wordCount: clampedWords,
+        text: matchedText || candidate || s.text || '',
+        wordCount: finalWords,
       };
     }
 

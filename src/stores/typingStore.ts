@@ -118,7 +118,16 @@ function ensureActiveSessionOnTyping(set: any, get: any): void {
     deleteSession(remId).catch(console.error);
   }
 
-  const nextSessionNum = (pruned[pruned.length - 1]?.sessionNumber || 0) + 1;
+  // Renumber prior sessions contiguously so old pruned sessions do not cause inflated numbers
+  const normalizedPruned = pruned.map((s, idx) => ({
+    ...s,
+    sessionNumber: idx + 1,
+  }));
+  for (const s of normalizedPruned) {
+    saveSession(s).catch(console.error);
+  }
+
+  const nextSessionNum = normalizedPruned.length + 1;
   const newSession: SessionRecord = {
     id: `${state.manifest.id}-session-${nextSessionNum}`,
     projectId: state.manifest.id,
@@ -129,7 +138,7 @@ function ensureActiveSessionOnTyping(set: any, get: any): void {
     wordCount: 0,
   };
 
-  const updatedSessions = [...pruned, newSession];
+  const updatedSessions = [...normalizedPruned, newSession];
   const updatedManifest: ManuscriptManifest = {
     ...state.manifest,
     activeSessionId: newSession.id,
@@ -424,6 +433,10 @@ export function triggerVisualSaveOnTyping(
   // 2. Debounce detection of typing pause (400ms after last keystroke)
   pauseDebounceTimer = setTimeout(() => {
     pauseDebounceTimer = null;
+
+    try {
+      get().syncSessionStats();
+    } catch (e) {}
 
     const runEndSavingAnimation = () => {
       // Delay the end of the saving animation for a random 0.6 - 1.4 second count (600ms to 1400ms)
@@ -1348,6 +1361,10 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     const state = get();
     // Save current active project state before switching (skip if deleted or loading itself)
     if (!skipSaveCurrent && state.manifest.id !== id) {
+      try {
+        get().syncSessionStats();
+      } catch (e) {}
+
       const { pruned: currentPruned, removedIds } = pruneZeroContentSessions(state.activeSessions);
       for (const remId of removedIds) {
         await deleteSession(remId).catch(console.error);
@@ -1423,11 +1440,16 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       await deleteSession(remId).catch(console.error);
     }
 
-    // Ensure all prior sessions are finalized so they don't say "Present"
-    const sessions = pruned.map((s) => ({
+    // Ensure all prior sessions are finalized so they don't say "Present",
+    // and renumber contiguously to eliminate gaps from any pruned sessions
+    const sessions = pruned.map((s, idx) => ({
       ...s,
+      sessionNumber: idx + 1,
       completedAt: s.completedAt || loadedManifest.updatedAt || s.startedAt,
     }));
+    for (const s of sessions) {
+      saveSession(s).catch(console.error);
+    }
 
     // CRITICAL: Global settings are preserved across document changes!
     const globalSettings = extractSettings(readSynchronousSettings() || state.manifest);
@@ -1653,7 +1675,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     }
 
     // 2. Start new session
-    const nextSessionNum = (activeSessions[activeSessions.length - 1]?.sessionNumber || 0) + 1;
+    const nextSessionNum = activeSessions.length + 1;
     const newSession: SessionRecord = {
       id: `${projectId}-session-${nextSessionNum}`,
       projectId,
@@ -1974,8 +1996,16 @@ export const useTypingStore = create<TypingStore>((set, get) => {
             text: activeText,
             wordCount: activeWords,
           };
-          saveSession(projectSessions[lastIdx]).catch(console.error);
         }
+      }
+
+      // Renumber sessions contiguously to eliminate gaps from any pruned sessions
+      const normalizedSessions = projectSessions.map((s, idx) => ({
+        ...s,
+        sessionNumber: idx + 1,
+      }));
+      for (const s of normalizedSessions) {
+        saveSession(s).catch(console.error);
       }
 
       const loadedSettings = extractSettings(loadedManifest);
@@ -2001,8 +2031,8 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         outboxCount: loadedManifest.outboxCount ?? 0,
         lastPrintedCharIndex: loadedManifest.lastPrintedCharIndex ?? 0,
         printedPagesCount: loadedManifest.printedPagesCount ?? 0,
-        activeSessionId: loadedManifest.activeSessionId || projectSessions[projectSessions.length - 1].id,
-        sessionCount: projectSessions.length,
+        activeSessionId: loadedManifest.activeSessionId || normalizedSessions[normalizedSessions.length - 1].id,
+        sessionCount: normalizedSessions.length,
         totalWordCount: countWords(cleanText),
         createdAt: loadedManifest.createdAt || new Date().toISOString(),
         updatedAt: loadedManifest.updatedAt || new Date().toISOString(),
@@ -2043,7 +2073,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         currentPageLines: parsed.lines,
         activeLineIndex: parsed.activeLineIndex,
         activeColIndex: parsed.activeColIndex,
-        activeSessions: projectSessions,
+        activeSessions: normalizedSessions,
         isHighlighting: false,
         highlightHead: null,
         isLocked: false,

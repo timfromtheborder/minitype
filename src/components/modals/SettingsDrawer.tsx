@@ -324,6 +324,13 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
               )}
             </button>
           </div>
+
+          {/* Version Footer */}
+          <div className="pt-3 pb-1 text-center border-t border-border/40">
+            <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
+              Minitype v0.9.4-beta
+            </span>
+          </div>
         </div>
       </div>
     </div>

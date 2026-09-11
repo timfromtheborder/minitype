@@ -1988,6 +1988,50 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(countWords(activeText)).toBe(2);
       expect(activeText).toContain('Hello');
     });
+
+    it('renumbers sessions contiguously when zero-content sessions are pruned', () => {
+      const sessions = [
+        {
+          id: 's1',
+          projectId: 'p1',
+          sessionNumber: 1,
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          text: 'First session here',
+          wordCount: 3,
+        },
+        {
+          id: 's2',
+          projectId: 'p1',
+          sessionNumber: 2,
+          startedAt: new Date().toISOString(),
+          completedAt: null,
+          text: '',
+          wordCount: 0,
+        },
+        {
+          id: 's3',
+          projectId: 'p1',
+          sessionNumber: 3,
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          text: 'Third session here',
+          wordCount: 3,
+        },
+      ];
+
+      const { pruned, removedIds } = pruneZeroContentSessions(sessions);
+      expect(removedIds).toEqual(['s2']);
+      expect(pruned).toHaveLength(2);
+
+      // When normalized, session numbers should be 1 and 2, not 1 and 3
+      const normalized = pruned.map((s, idx) => ({
+        ...s,
+        sessionNumber: idx + 1,
+      }));
+      expect(normalized[0].sessionNumber).toBe(1);
+      expect(normalized[1].sessionNumber).toBe(2);
+    });
   });
 });
 

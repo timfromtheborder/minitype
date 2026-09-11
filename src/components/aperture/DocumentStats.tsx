@@ -43,21 +43,24 @@ export const DocumentStats: React.FC = React.memo(function DocumentStats() {
 
     const sessions = activeSessions && activeSessions.length > 0 ? activeSessions : [];
     const lastIndex = sessions.length - 1;
-    const currentSession = lastIndex >= 0 ? sessions[lastIndex] : null;
-    const sessionNum = currentSession?.sessionNumber ?? (sessions.length || 1);
+    const lastSession = lastIndex >= 0 ? sessions[lastIndex] : null;
 
+    // Check if we currently have an uncompleted active session in progress
+    const isSessionActive = lastSession && !lastSession.completedAt;
+
+    let sessionNum = 1;
     let sessionWords = 0;
-    if (currentSession && !currentSession.completedAt) {
+
+    if (isSessionActive) {
+      sessionNum = lastSession.sessionNumber;
       const priorSessions = sessions.slice(0, lastIndex);
       const priorWords = priorSessions.reduce((acc, s) => acc + (s.wordCount || 0), 0);
       sessionWords = Math.max(0, totalWords - priorWords);
-    } else if (currentSession) {
-      sessionWords =
-        currentSession.wordCount !== undefined && currentSession.wordCount > 0
-          ? currentSession.wordCount
-          : countWords(currentSession.text || '');
     } else {
-      sessionWords = totalWords;
+      // All prior sessions were completed (e.g. freshly loaded file, or after starting a session).
+      // When a new session is going to start on the next keystroke, show its upcoming number and 0 words.
+      sessionNum = sessions.length + 1;
+      sessionWords = 0;
     }
 
     return {
