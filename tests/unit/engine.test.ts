@@ -1468,6 +1468,7 @@ describe('Typing Engine & State Machine Invariants', () => {
       localStorage.clear();
       sessionStorage.clear();
       window.name = '';
+      document.cookie = 'minitype_global_settings=; max-age=0; path=/;';
 
       // Set in sessionStorage only
       sessionStorage.setItem('minitype_global_settings', JSON.stringify({ colorScheme: 'phosphor', textSize: 's' }));
@@ -1514,6 +1515,47 @@ describe('Typing Engine & State Machine Invariants', () => {
       const reseeded = JSON.parse(localStorage.getItem('minitype_global_settings') || '{}');
       expect(reseeded.colorScheme).toBe('spotlight');
       expect(reseeded.textSize).toBe('l');
+    });
+
+    it('preserves global settings and updates DOM attributes when newProject is called', async () => {
+      persistSettings({ colorScheme: 'dark-amber', textSize: 'xl', activeApertureHeight: 5 });
+
+      const store = useTypingStore.getState();
+      await store.newProject();
+
+      const state = useTypingStore.getState();
+      expect(state.manifest.colorScheme).toBe('dark-amber');
+      expect(state.manifest.textSize).toBe('xl');
+      expect(state.manifest.activeApertureHeight).toBe(5);
+      expect(document.documentElement.getAttribute('data-theme')).toBe('dark-amber');
+      expect(document.documentElement.getAttribute('data-text-size')).toBe('xl');
+    });
+
+    it('merges multiple synchronous tiers with newest timestamps winning', () => {
+      localStorage.clear();
+      sessionStorage.clear();
+      window.name = '';
+      document.cookie = 'minitype_global_settings=; max-age=0; path=/;';
+
+      // Older settings in localStorage
+      localStorage.setItem('minitype_global_settings', JSON.stringify({
+        colorScheme: 'typewriter',
+        textSize: 'm',
+        _updatedAt: 1000,
+      }));
+
+      // Newer settings in sessionStorage
+      sessionStorage.setItem('minitype_global_settings', JSON.stringify({
+        colorScheme: 'spotlight',
+        textSize: 'l',
+        _updatedAt: 2000,
+      }));
+
+      const sync = readSynchronousSettings();
+      expect(sync).not.toBeNull();
+      expect(sync?.colorScheme).toBe('spotlight');
+      expect(sync?.textSize).toBe('l');
+      expect(sync?._updatedAt).toBe(2000);
     });
   });
 });

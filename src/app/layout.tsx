@@ -54,34 +54,41 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
-                var raw = null;
-                try { raw = localStorage.getItem('minitype_global_settings'); } catch (e) {}
-                if (!raw) {
-                  try { raw = sessionStorage.getItem('minitype_global_settings'); } catch (e) {}
-                }
-                if (!raw) {
+                var candidates = [];
+                function check(raw) {
+                  if (!raw) return;
                   try {
-                    var match = document.cookie.match(/(?:^|; )minitype_global_settings=([^;]*)/);
-                    if (match) raw = decodeURIComponent(match[1]);
-                  } catch (e) {}
-                }
-                if (!raw) {
-                  try {
-                    if (window.name && window.name.indexOf('minitype_settings:') === 0) {
-                      raw = window.name.slice(18);
+                    var parsed = JSON.parse(raw);
+                    if (parsed && (parsed.colorScheme || parsed.textSize)) {
+                      candidates.push({ s: parsed, t: typeof parsed._updatedAt === 'number' ? parsed._updatedAt : 0 });
                     }
                   } catch (e) {}
                 }
-                if (raw) {
-                  try {
-                    var s = JSON.parse(raw);
-                    if (s && s.colorScheme) {
-                      document.documentElement.setAttribute('data-theme', s.colorScheme);
-                    }
-                    if (s && s.textSize) {
-                      document.documentElement.setAttribute('data-text-size', s.textSize);
-                    }
-                  } catch (e) {}
+                try { check(localStorage.getItem('minitype_global_settings')); } catch (e) {}
+                try { check(sessionStorage.getItem('minitype_global_settings')); } catch (e) {}
+                try {
+                  var match = document.cookie.match(/(?:^|; )minitype_global_settings=([^;]*)/);
+                  if (match) check(decodeURIComponent(match[1]));
+                } catch (e) {}
+                try {
+                  if (window.name && window.name.indexOf('minitype_settings:') === 0) {
+                    check(window.name.slice(18));
+                  }
+                } catch (e) {}
+                if (candidates.length > 0) {
+                  candidates.sort(function(a, b) { return b.t - a.t; });
+                  var finalS = {};
+                  for (var i = candidates.length - 1; i >= 0; i--) {
+                    var item = candidates[i].s;
+                    if (item.colorScheme) finalS.colorScheme = item.colorScheme;
+                    if (item.textSize) finalS.textSize = item.textSize;
+                  }
+                  if (finalS.colorScheme) {
+                    document.documentElement.setAttribute('data-theme', finalS.colorScheme);
+                  }
+                  if (finalS.textSize) {
+                    document.documentElement.setAttribute('data-text-size', finalS.textSize);
+                  }
                 }
               })();
             `,

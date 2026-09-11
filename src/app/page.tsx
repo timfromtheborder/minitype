@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTypingEngine } from '@/hooks/useTypingEngine';
+import { readSynchronousSettings } from '@/stores/typingStore';
 import { ApertureFrame } from '@/components/aperture/ApertureFrame';
 import { DocumentStats } from '@/components/aperture/DocumentStats';
 import { PaperTrayStack } from '@/components/stages/PaperTrayStack';
@@ -14,10 +15,20 @@ export default function Home() {
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const engine = useTypingEngine({ isPaused: isPrintOpen || isSettingsOpen });
 
+  // Immediately synchronize store with saved synchronous settings on mount
+  useEffect(() => {
+    const syncSettings = readSynchronousSettings();
+    if (syncSettings && Object.keys(syncSettings).length > 0) {
+      engine.setManifest(syncSettings);
+    }
+  }, []);
+
   // Sync active palette data-theme and data-text-size attribute with document root
   useEffect(() => {
     if (typeof document !== 'undefined') {
-      document.documentElement.setAttribute('data-theme', engine.manifest.colorScheme);
+      if (engine.manifest.colorScheme) {
+        document.documentElement.setAttribute('data-theme', engine.manifest.colorScheme);
+      }
       if (engine.manifest.textSize) {
         document.documentElement.setAttribute('data-text-size', engine.manifest.textSize);
       }
@@ -56,8 +67,6 @@ export default function Home() {
   return (
     <main
       suppressHydrationWarning
-      data-theme={engine.manifest.colorScheme}
-      data-text-size={engine.manifest.textSize || 'm'}
       className="relative w-full h-[100dvh] max-h-[100dvh] overflow-hidden flex flex-col justify-between p-2.5 sm:p-6 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] transition-colors duration-300 bg-background text-foreground font-sans"
     >
       {/* 1. TOP STAGE: Visual Wireframe Isometric Paper Outbox Tray (hidden in endless scroll mode) */}

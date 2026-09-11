@@ -246,23 +246,31 @@
    MINITYPE TEXT SIZING ([S] [M] [L] [XL])
    ========================================================================== */
 html[data-text-size="s"],
-html[data-text-size="S"] {
+html[data-text-size="S"],
+[data-text-size="s"],
+[data-text-size="S"] {
   font-size: 14px;
 }
 
 html,
 html[data-text-size="m"],
-html[data-text-size="M"] {
+html[data-text-size="M"],
+[data-text-size="m"],
+[data-text-size="M"] {
   font-size: 16px;
 }
 
 html[data-text-size="l"],
-html[data-text-size="L"] {
+html[data-text-size="L"],
+[data-text-size="l"],
+[data-text-size="L"] {
   font-size: 18px;
 }
 
 html[data-text-size="xl"],
-html[data-text-size="XL"] {
+html[data-text-size="XL"],
+[data-text-size="xl"],
+[data-text-size="XL"] {
   font-size: 20px;
 }
 

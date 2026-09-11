@@ -106,28 +106,31 @@ export const ACTIVE_PROJECT_KEY = 'minitype_active_project_id';
 export function readSynchronousSettings(): (Partial<ManuscriptManifest> & { _updatedAt?: number }) | null {
   if (typeof window === 'undefined') return null;
 
-  // Tier 1: localStorage
-  try {
-    const raw = localStorage.getItem(SETTINGS_KEY);
-    if (raw) {
+  const candidates: Array<{ settings: Partial<ManuscriptManifest>; updatedAt: number; priority: number }> = [];
+
+  const tryParse = (raw: string | null, priority: number) => {
+    if (!raw) return;
+    try {
       const parsed = JSON.parse(raw);
       const settings = extractSettings(parsed);
       if (Object.keys(settings).length > 0) {
-        return { ...settings, _updatedAt: parsed._updatedAt };
+        candidates.push({
+          settings,
+          updatedAt: typeof parsed._updatedAt === 'number' ? parsed._updatedAt : 0,
+          priority,
+        });
       }
-    }
+    } catch (e) {}
+  };
+
+  // Tier 1: localStorage
+  try {
+    tryParse(localStorage.getItem(SETTINGS_KEY), 1);
   } catch (e) {}
 
   // Tier 2: sessionStorage (guaranteed survival across reloads in same tab on iOS)
   try {
-    const raw = sessionStorage.getItem(SETTINGS_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      const settings = extractSettings(parsed);
-      if (Object.keys(settings).length > 0) {
-        return { ...settings, _updatedAt: parsed._updatedAt };
-      }
-    }
+    tryParse(sessionStorage.getItem(SETTINGS_KEY), 2);
   } catch (e) {}
 
   // Tier 3: document.cookie
@@ -135,12 +138,7 @@ export function readSynchronousSettings(): (Partial<ManuscriptManifest> & { _upd
     if (typeof document !== 'undefined') {
       const match = document.cookie.match(new RegExp(`(?:^|; )${SETTINGS_KEY}=([^;]*)`));
       if (match) {
-        const raw = decodeURIComponent(match[1]);
-        const parsed = JSON.parse(raw);
-        const settings = extractSettings(parsed);
-        if (Object.keys(settings).length > 0) {
-          return { ...settings, _updatedAt: parsed._updatedAt };
-        }
+        tryParse(decodeURIComponent(match[1]), 3);
       }
     }
   } catch (e) {}
@@ -148,14 +146,33 @@ export function readSynchronousSettings(): (Partial<ManuscriptManifest> & { _upd
   // Tier 4: window.name backup (immune to iOS Safari storage wiping and private browsing limits)
   try {
     if (typeof window !== 'undefined' && window.name && window.name.startsWith('minitype_settings:')) {
-      const raw = window.name.slice('minitype_settings:'.length);
-      const parsed = JSON.parse(raw);
-      const settings = extractSettings(parsed);
-      if (Object.keys(settings).length > 0) {
-        return { ...settings, _updatedAt: parsed._updatedAt };
-      }
+      tryParse(window.name.slice('minitype_settings:'.length), 4);
     }
   } catch (e) {}
+
+  if (candidates.length > 0) {
+    // Sort descending by updatedAt, and if equal, by tier priority ascending (1 > 2 > 3 > 4)
+    candidates.sort((a, b) => b.updatedAt - a.updatedAt || a.priority - b.priority);
+    // Merge all candidates from lowest priority/oldest to highest priority/newest so best values win
+    let merged: any = {};
+    for (let i = candidates.length - 1; i >= 0; i--) {
+      merged = { ...merged, ...candidates[i].settings };
+    }
+    merged._updatedAt = candidates[0].updatedAt;
+    return merged;
+  }
+
+  // Tier 5: Document element fallback if set by layout script
+  if (typeof document !== 'undefined') {
+    const theme = document.documentElement.getAttribute('data-theme') as any;
+    const textSize = document.documentElement.getAttribute('data-text-size') as any;
+    if (theme || textSize) {
+      const fallback: any = {};
+      if (theme) fallback.colorScheme = theme;
+      if (textSize) fallback.textSize = textSize;
+      return fallback;
+    }
+  }
 
   return null;
 }
@@ -1117,8 +1134,10 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       title = `Untitled Project (${num})`;
     }
 
+    const globalSettings = extractSettings(readSynchronousSettings() || state.manifest);
     const updatedManifest: ManuscriptManifest = {
       ...state.manifest, // retains global settings
+      ...globalSettings,
       id: newId,
       title,
       mode: 'local',
@@ -1131,6 +1150,15 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
+    if (typeof document !== 'undefined') {
+      if (updatedManifest.colorScheme) {
+        document.documentElement.setAttribute('data-theme', updatedManifest.colorScheme);
+      }
+      if (updatedManifest.textSize) {
+        document.documentElement.setAttribute('data-text-size', updatedManifest.textSize);
+      }
+    }
 
     await saveManuscript(updatedManifest).catch(console.error);
     await saveSession(initialSession).catch(console.error);
@@ -1223,8 +1251,10 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     await saveSession(newSession).catch(console.error);
 
     // CRITICAL: Global settings are preserved across document changes!
+    const globalSettings = extractSettings(readSynchronousSettings() || state.manifest);
     const updatedManifest: ManuscriptManifest = {
       ...state.manifest,
+      ...globalSettings,
       id: loadedManifest.id,
       title: loadedManifest.title || 'Untitled Project',
       mode: 'local',
@@ -1237,6 +1267,15 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       createdAt: loadedManifest.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
+    if (typeof document !== 'undefined') {
+      if (updatedManifest.colorScheme) {
+        document.documentElement.setAttribute('data-theme', updatedManifest.colorScheme);
+      }
+      if (updatedManifest.textSize) {
+        document.documentElement.setAttribute('data-text-size', updatedManifest.textSize);
+      }
+    }
 
     // Save the sanitized clean manuscript back to Dexie
     await deletePagesForManuscript(loadedManifest.id).catch(console.error);
@@ -1572,14 +1611,14 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         const syncUpdatedAt = (syncSettings as any)?._updatedAt || 0;
         const dbUpdatedAt = (dbRecord as any)?._updatedAt || 0;
 
-        // If DB has settings, and either sync was missing or DB is newer/equal
-        if (!syncSettings || dbUpdatedAt >= syncUpdatedAt) {
+        // If DB has settings, and either sync was missing or DB is strictly newer
+        if (!syncSettings || (dbUpdatedAt > syncUpdatedAt && dbUpdatedAt > 0)) {
           currentManifest = { ...currentManifest, ...dbSettings };
           // Reseed all synchronous stores with database settings
           persistSettings(currentManifest);
         } else if (syncSettings) {
           // Sync settings are newer -> update IndexedDB
-          saveGlobalSettingsToDb({ ...extractSettings(currentManifest), _updatedAt: syncUpdatedAt } as any).catch(console.error);
+          saveGlobalSettingsToDb({ ...extractSettings(currentManifest), _updatedAt: syncUpdatedAt || Date.now() } as any).catch(console.error);
         }
       } else if (syncSettings) {
         // No DB record yet -> save current sync settings to IndexedDB
