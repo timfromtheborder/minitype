@@ -103,7 +103,7 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
       {/* Drafting lines viewport: fixed height based on aperture capacity, scrolling upward from bottom platen */}
       <div
         className={`flex flex-col justify-end ${platenWidthClass} overflow-hidden`}
-        style={{ height: `var(--aperture-height-rem, ${viewportHeightRem}rem)` }}
+        style={{ height: `${viewportHeightRem}rem` }}
       >
         {visibleLines.map((line, idx) => {
           const actualIndex = startIdx + idx;

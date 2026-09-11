@@ -422,3 +422,11 @@ html[data-aperture-height="8"],
 [data-aperture-height="8"] {
   --aperture-height-rem: 10rem;
 }
+html[data-aperture-height="9"],
+[data-aperture-height="9"] {
+  --aperture-height-rem: 11.25rem;
+}
+html[data-aperture-height="10"],
+[data-aperture-height="10"] {
+  --aperture-height-rem: 12.5rem;
+}
