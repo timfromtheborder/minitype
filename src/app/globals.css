@@ -242,6 +242,30 @@
   }
 }
 
+/* ==========================================================================
+   MINITYPE TEXT SIZING ([S] [M] [L] [XL])
+   ========================================================================== */
+html[data-text-size="s"],
+html[data-text-size="S"] {
+  font-size: 14px;
+}
+
+html,
+html[data-text-size="m"],
+html[data-text-size="M"] {
+  font-size: 16px;
+}
+
+html[data-text-size="l"],
+html[data-text-size="L"] {
+  font-size: 18px;
+}
+
+html[data-text-size="xl"],
+html[data-text-size="XL"] {
+  font-size: 20px;
+}
+
 /* Custom Square Monospace Scrollbar */
 .square-scrollbar::-webkit-scrollbar {
   width: 6px;

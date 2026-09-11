@@ -1,5 +1,5 @@
 import { CharacterCell, LineRecord } from './aperture';
-import { ManuscriptManifest, PageMode } from './manuscript';
+import { ManuscriptManifest, PageMode, TextSize } from './manuscript';
 import { SessionRecord } from './session';
 
 export interface CursorPosition {
@@ -38,6 +38,7 @@ export interface TypingEngineActions {
   setApertureHeight: (height: ManuscriptManifest['activeApertureHeight']) => void;
   setPageSize: (size: ManuscriptManifest['pageSize']) => void;
   setPageMode: (mode: PageMode) => void;
+  setTextSize: (size: TextSize) => void;
   setManifest: (manifest: Partial<ManuscriptManifest>) => void;
   setActiveColumnLimit: (limit: number) => void;
   clearText: () => Promise<void>;

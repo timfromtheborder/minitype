@@ -4,6 +4,7 @@ import {
   PageSize,
   PageMode,
   ColorScheme,
+  TextSize,
   ManuscriptManifest,
 } from '@/types';
 import { X, Sliders, Volume2, VolumeX } from 'lucide-react';
@@ -90,10 +91,47 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 step={1}
                 value={manifest.activeApertureHeight}
                 onChange={(e) => onUpdateHeight(Number(e.target.value) as ApertureHeight)}
+                onInput={(e) => onUpdateHeight(Number(e.currentTarget.value) as ApertureHeight)}
                 className="w-full square-slider cursor-pointer"
                 aria-label="Aperture slider"
               />
               <span className="text-[10px] text-muted-foreground font-semibold">8</span>
+            </div>
+          </div>
+
+          {/* Text Size ([S] [M] [L] [XL]) */}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-muted-foreground">Text Size:</label>
+              <span className="font-bold text-foreground">
+                {(manifest.textSize || 'm') === 's'
+                  ? 'Small (S)'
+                  : (manifest.textSize || 'm') === 'l'
+                  ? 'Large (L)'
+                  : (manifest.textSize || 'm') === 'xl'
+                  ? 'Extra Large (XL)'
+                  : 'Default (M)'}
+              </span>
+            </div>
+            <div className="grid grid-cols-4 gap-1.5">
+              {(['s', 'm', 'l', 'xl'] as TextSize[]).map((size) => {
+                const isSelected = (manifest.textSize || 'm') === size;
+                const label = size.toUpperCase();
+                return (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => onUpdateManifest({ textSize: size })}
+                    className={`py-1.5 rounded-none border text-center transition-all cursor-pointer font-bold ${
+                      isSelected
+                        ? 'border-primary bg-primary text-primary-foreground shadow-xs'
+                        : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

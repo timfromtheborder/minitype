@@ -1405,6 +1405,35 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(all.find((m) => m.id === p1.id)).toBeDefined();
       expect(useTypingStore.getState().manifest.id).toBe(p1.id);
     });
+
+    it('updates text size [S] [M] [L] [XL] and persists to localStorage and cookies', async () => {
+      const store = useTypingStore.getState();
+      expect(store.manifest.textSize || 'm').toBe('m');
+
+      // Set to L
+      store.setTextSize('l');
+      expect(useTypingStore.getState().manifest.textSize).toBe('l');
+
+      // Verify localStorage
+      const local = JSON.parse(localStorage.getItem('minitype_global_settings') || '{}');
+      expect(local.textSize).toBe('l');
+
+      // Verify cookie
+      expect(document.cookie).toContain('minitype_global_settings');
+      expect(document.cookie).toContain('%22textSize%22%3A%22l%22');
+
+      // Set to XL
+      store.setTextSize('xl');
+      expect(useTypingStore.getState().manifest.textSize).toBe('xl');
+
+      // Set to S
+      store.setTextSize('s');
+      expect(useTypingStore.getState().manifest.textSize).toBe('s');
+
+      // Set back to M (default)
+      store.setTextSize('m');
+      expect(useTypingStore.getState().manifest.textSize).toBe('m');
+    });
   });
 });
 

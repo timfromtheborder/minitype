@@ -55,7 +55,7 @@ export const DocumentStats: React.FC = React.memo(function DocumentStats() {
 
   return (
     <div
-      className={`flex items-center justify-center text-center ${boxWidthClass} px-3 sm:px-8 mt-1.5 text-muted-foreground text-[11px] font-mono pointer-events-none select-none`}
+      className={`flex items-center justify-center text-center ${boxWidthClass} px-3 sm:px-8 mt-1.5 text-muted-foreground text-xs font-mono pointer-events-none select-none`}
     >
       <div className="flex items-center justify-center gap-1.5 sm:gap-2 flex-wrap">
         <span>{lineStatText}</span>

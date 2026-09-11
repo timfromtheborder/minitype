@@ -56,10 +56,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               (function() {
                 try {
                   var raw = localStorage.getItem('minitype_global_settings');
+                  if (!raw) {
+                    var match = document.cookie.match(/(?:^|; )minitype_global_settings=([^;]*)/);
+                    if (match) raw = decodeURIComponent(match[1]);
+                  }
                   if (raw) {
                     var s = JSON.parse(raw);
                     if (s && s.colorScheme) {
                       document.documentElement.setAttribute('data-theme', s.colorScheme);
+                    }
+                    if (s && s.textSize) {
+                      document.documentElement.setAttribute('data-text-size', s.textSize);
                     }
                   }
                 } catch (e) {}

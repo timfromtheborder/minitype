@@ -14,12 +14,15 @@ export default function Home() {
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const engine = useTypingEngine({ isPaused: isPrintOpen || isSettingsOpen });
 
-  // Sync active palette data-theme attribute with document root
+  // Sync active palette data-theme and data-text-size attribute with document root
   useEffect(() => {
     if (typeof document !== 'undefined') {
       document.documentElement.setAttribute('data-theme', engine.manifest.colorScheme);
+      if (engine.manifest.textSize) {
+        document.documentElement.setAttribute('data-text-size', engine.manifest.textSize);
+      }
     }
-  }, [engine.manifest.colorScheme]);
+  }, [engine.manifest.colorScheme, engine.manifest.textSize]);
 
   // Compile full manuscript pages strictly on-demand when the Project dialog opens
   const manuscriptPages = useMemo(() => {
@@ -54,6 +57,7 @@ export default function Home() {
     <main
       suppressHydrationWarning
       data-theme={engine.manifest.colorScheme}
+      data-text-size={engine.manifest.textSize || 'm'}
       className="relative w-full h-[100dvh] max-h-[100dvh] overflow-hidden flex flex-col justify-between p-2.5 sm:p-6 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] transition-colors duration-300 bg-background text-foreground font-sans"
     >
       {/* 1. TOP STAGE: Visual Wireframe Isometric Paper Outbox Tray (hidden in endless scroll mode) */}

@@ -68,7 +68,7 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
       onMouseDown={handleMouseDown}
       onClick={handleFrameTap}
       onTouchEnd={handleFrameTap}
-      className="relative flex flex-col justify-start w-fit max-w-[calc(100vw-2.5rem)] px-3 sm:px-8 pt-2.5 pb-2 rounded-none border border-border/70 bg-card text-card-foreground shadow-inner shadow-black/5 overflow-hidden select-none text-[13px] sm:text-sm md:text-base cursor-pointer font-mono"
+      className="relative flex flex-col justify-start w-fit max-w-[calc(100vw-2.5rem)] px-3 sm:px-8 pt-2.5 pb-2 rounded-none border border-border/70 bg-card text-card-foreground shadow-inner shadow-black/5 overflow-hidden select-none text-sm sm:text-base cursor-pointer font-mono"
       style={{
         cursor: isLocked ? 'not-allowed' : 'text',
         userSelect: 'none',
@@ -79,24 +79,24 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
 
       {/* Column guide top ruler marker (permanently fixed at top of the platen) */}
       {isPortrait ? (
-        <div className={`flex items-center justify-between ${platenWidthClass} font-mono select-none pointer-events-none mb-1.5 shrink-0`}>
-          <span className="text-[10px] font-semibold text-muted-foreground/45">01</span>
-          <span className="flex-1 text-[10px] text-center overflow-hidden tracking-widest text-muted-foreground/25 opacity-70 px-2">
-            · · · · · · · · · · · · · · · · · · · ·
+        <div className={`flex items-center justify-between ${platenWidthClass} font-mono select-none pointer-events-none mb-1.5 shrink-0 whitespace-nowrap overflow-hidden leading-none`}>
+          <span className="text-[10px] font-semibold text-muted-foreground/45 shrink-0">01</span>
+          <span className="flex-1 text-[10px] text-center overflow-hidden whitespace-nowrap truncate tracking-widest text-muted-foreground/25 opacity-70 px-1">
+            · · · · · · · · · · · · ·
           </span>
-          <span className="text-[10px] font-semibold text-muted-foreground/45">35</span>
+          <span className="text-[10px] font-semibold text-muted-foreground/45 shrink-0">35</span>
         </div>
       ) : (
-        <div className={`flex items-center justify-between ${platenWidthClass} font-mono select-none pointer-events-none mb-1.5 shrink-0`}>
-          <span className="text-[10px] font-semibold text-muted-foreground/45">01</span>
-          <span className="flex-1 text-[10px] text-center overflow-hidden tracking-widest text-muted-foreground/25 opacity-70 px-2">
-            · · · · · · · · · · · · · · · · · · · ·
+        <div className={`flex items-center justify-between ${platenWidthClass} font-mono select-none pointer-events-none mb-1.5 shrink-0 whitespace-nowrap overflow-hidden leading-none`}>
+          <span className="text-[10px] font-semibold text-muted-foreground/45 shrink-0">01</span>
+          <span className="flex-1 text-[10px] text-center overflow-hidden whitespace-nowrap truncate tracking-widest text-muted-foreground/25 opacity-70 px-1">
+            · · · · · · · · · · · · ·
           </span>
-          <span className="text-[10px] font-semibold text-muted-foreground/60 px-1">35</span>
-          <span className="flex-1 text-[10px] text-center overflow-hidden tracking-widest text-muted-foreground/25 opacity-70 px-2">
-            · · · · · · · · · · · · · · · · · · · ·
+          <span className="text-[10px] font-semibold text-muted-foreground/60 px-1 shrink-0">35</span>
+          <span className="flex-1 text-[10px] text-center overflow-hidden whitespace-nowrap truncate tracking-widest text-muted-foreground/25 opacity-70 px-1">
+            · · · · · · · · · · · · ·
           </span>
-          <span className="text-[10px] font-semibold text-muted-foreground/45">70</span>
+          <span className="text-[10px] font-semibold text-muted-foreground/45 shrink-0">70</span>
         </div>
       )}
 

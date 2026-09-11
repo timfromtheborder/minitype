@@ -12,6 +12,7 @@ import {
   TypingEngineActions,
   SessionRecord,
   SaveState,
+  TextSize,
 } from '@/types';
 import { wrapLine, getLastPrintableCellIndex, createCellId, MAX_COLUMNS } from '@/lib/wrap';
 import { typewriterAudio } from '@/lib/sound';
@@ -67,6 +68,7 @@ export const DEFAULT_MANIFEST: ManuscriptManifest = {
   pageMode: 'scroll',
   colorScheme: 'typewriter',
   typeface: 'courier-prime',
+  textSize: 'm',
   showStats: true,
   doubleSpaceLinebreaks: false,
   sessionCount: 1,
@@ -82,6 +84,7 @@ export const SETTING_KEYS = [
   'pageMode',
   'colorScheme',
   'typeface',
+  'textSize',
   'showStats',
   'doubleSpaceLinebreaks',
 ] as const;
@@ -104,13 +107,17 @@ export function getInitialManifest(): ManuscriptManifest {
   const base = { ...DEFAULT_MANIFEST };
   if (typeof window !== 'undefined') {
     try {
-      const cached = localStorage.getItem(SETTINGS_KEY);
+      let cached = localStorage.getItem(SETTINGS_KEY);
+      if (!cached && typeof document !== 'undefined') {
+        const match = document.cookie.match(new RegExp(`(?:^|; )${SETTINGS_KEY}=([^;]*)`));
+        if (match) cached = decodeURIComponent(match[1]);
+      }
       if (cached) {
         const settings = extractSettings(JSON.parse(cached));
         return { ...base, ...settings };
       }
     } catch (e) {
-      console.error('Failed to parse cached settings from localStorage:', e);
+      console.error('Failed to parse cached settings from localStorage/cookie:', e);
     }
   }
   return base;
@@ -121,16 +128,46 @@ export function persistSettings(manifest: Partial<ManuscriptManifest>): void {
     try {
       const settings = extractSettings(manifest);
       if (Object.keys(settings).length === 0) return;
-      const existing = localStorage.getItem(SETTINGS_KEY);
-      const current = existing ? JSON.parse(existing) : {};
-      const merged = { ...current, ...settings };
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(merged));
+      let existingStr: string | null = null;
+      try {
+        existingStr = localStorage.getItem(SETTINGS_KEY);
+      } catch (e) {}
+      if (!existingStr && typeof document !== 'undefined') {
+        const match = document.cookie.match(new RegExp(`(?:^|; )${SETTINGS_KEY}=([^;]*)`));
+        if (match) existingStr = decodeURIComponent(match[1]);
+      }
+      const current = existingStr ? JSON.parse(existingStr) : {};
+      const merged = { ...current, ...settings, _updatedAt: Date.now() };
+      const serialized = JSON.stringify(merged);
+
+      // 1. Synchronous localStorage write
+      try {
+        localStorage.setItem(SETTINGS_KEY, serialized);
+      } catch (e) {
+        console.warn('localStorage write failed:', e);
+      }
+
+      // 2. Synchronous cookie backup (crucial for iOS Safari persistence!)
+      try {
+        document.cookie = `${SETTINGS_KEY}=${encodeURIComponent(serialized)}; path=/; max-age=31536000; SameSite=Lax`;
+      } catch (e) {
+        console.warn('cookie write failed:', e);
+      }
+
+      // 3. Asynchronous IndexedDB write
       saveGlobalSettingsToDb(merged).catch(console.error);
-      if (merged.colorScheme && typeof document !== 'undefined') {
-        document.documentElement.setAttribute('data-theme', merged.colorScheme);
+
+      // 4. Synchronous DOM attribute updates
+      if (typeof document !== 'undefined') {
+        if (merged.colorScheme) {
+          document.documentElement.setAttribute('data-theme', merged.colorScheme);
+        }
+        if (merged.textSize) {
+          document.documentElement.setAttribute('data-text-size', merged.textSize);
+        }
       }
     } catch (e) {
-      console.error('Failed to save settings to localStorage:', e);
+      console.error('Failed to save settings:', e);
     }
   }
 }
@@ -300,6 +337,14 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       const pageSize = pageMode === 'notecard' ? 10 : pageMode === 'page' ? 54 : 9999;
       const updated = { ...state.manifest, pageMode, pageSize };
       persistSettings({ pageMode, pageSize });
+      return { manifest: updated };
+    });
+  },
+
+  setTextSize: (textSize: TextSize) => {
+    set((state) => {
+      const updated = { ...state.manifest, textSize };
+      persistSettings({ textSize });
       return { manifest: updated };
     });
   },
@@ -1448,30 +1493,48 @@ export const useTypingStore = create<TypingStore>((set, get) => {
   rehydrate: async () => {
     if (typeof window === 'undefined') return;
 
-    // 1. Rehydrate global settings from localStorage & IndexedDB
+    // 1. Rehydrate global settings from localStorage, cookie, & IndexedDB
     let currentManifest = get().manifest;
+    let localUpdatedAt = 0;
+
     try {
-      const cached = localStorage.getItem(SETTINGS_KEY);
+      let cached = localStorage.getItem(SETTINGS_KEY);
+      if (!cached && typeof document !== 'undefined') {
+        const match = document.cookie.match(new RegExp(`(?:^|; )${SETTINGS_KEY}=([^;]*)`));
+        if (match) cached = decodeURIComponent(match[1]);
+      }
       if (cached) {
-        const parsed = extractSettings(JSON.parse(cached));
-        currentManifest = { ...currentManifest, ...parsed };
+        const parsed = JSON.parse(cached);
+        localUpdatedAt = parsed._updatedAt || 0;
+        const settings = extractSettings(parsed);
+        currentManifest = { ...currentManifest, ...settings };
       }
     } catch (e) {
-      console.error('Failed to parse cached settings from localStorage:', e);
+      console.error('Failed to parse cached settings from localStorage/cookie:', e);
     }
 
     try {
       const dbSettings = await getGlobalSettingsFromDb();
-      if (dbSettings) {
+      // Only override local settings if DB is strictly newer!
+      if (dbSettings && (dbSettings as any)._updatedAt && (dbSettings as any)._updatedAt > localUpdatedAt) {
         currentManifest = { ...currentManifest, ...dbSettings };
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify(extractSettings(currentManifest)));
+        const serialized = JSON.stringify(extractSettings(currentManifest));
+        localStorage.setItem(SETTINGS_KEY, serialized);
+        document.cookie = `${SETTINGS_KEY}=${encodeURIComponent(serialized)}; path=/; max-age=31536000; SameSite=Lax`;
+      } else if (Object.keys(extractSettings(currentManifest)).length > 0) {
+        saveGlobalSettingsToDb(extractSettings(currentManifest)).catch(console.error);
       }
     } catch (e) {
       console.error('Failed to load settings from IndexedDB:', e);
     }
 
-    if (typeof document !== 'undefined' && currentManifest.colorScheme) {
-      document.documentElement.setAttribute('data-theme', currentManifest.colorScheme);
+    if (typeof document !== 'undefined') {
+      if (currentManifest.colorScheme) {
+        document.documentElement.setAttribute('data-theme', currentManifest.colorScheme);
+      }
+      if (currentManifest.textSize) {
+        document.documentElement.setAttribute('data-text-size', currentManifest.textSize);
+      }
     }
 
     set({ manifest: currentManifest });
@@ -1531,8 +1594,13 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         updatedAt: loadedManifest.updatedAt || new Date().toISOString(),
       };
 
-      if (typeof document !== 'undefined' && updatedManifest.colorScheme) {
-        document.documentElement.setAttribute('data-theme', updatedManifest.colorScheme);
+      if (typeof document !== 'undefined') {
+        if (updatedManifest.colorScheme) {
+          document.documentElement.setAttribute('data-theme', updatedManifest.colorScheme);
+        }
+        if (updatedManifest.textSize) {
+          document.documentElement.setAttribute('data-text-size', updatedManifest.textSize);
+        }
       }
 
       set({
