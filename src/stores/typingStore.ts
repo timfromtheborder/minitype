@@ -71,7 +71,11 @@ export function pruneZeroContentSessions(sessions: SessionRecord[]): {
   for (let i = 0; i < sessions.length; i++) {
     const s = sessions[i];
     const clean = (s.text || '').trim();
-    const words = countWords(clean);
+    const isCompleted = !!s.completedAt;
+    const words =
+      isCompleted && s.wordCount !== undefined && s.wordCount > 0
+        ? s.wordCount
+        : countWords(clean);
     const isZeroContent = words === 0;
 
     if (isZeroContent && (sessions.length > 1 || pruned.length > 0)) {
@@ -84,7 +88,12 @@ export function pruneZeroContentSessions(sessions: SessionRecord[]): {
   if (pruned.length === 0 && sessions.length > 0) {
     const first = sessions[0];
     const clean = (first.text || '').trim();
-    pruned.push({ ...first, text: clean, wordCount: countWords(clean) });
+    const isCompleted = !!first.completedAt;
+    const words =
+      isCompleted && first.wordCount !== undefined && first.wordCount > 0
+        ? first.wordCount
+        : countWords(clean);
+    pruned.push({ ...first, text: clean, wordCount: words });
     const idx = removedIds.indexOf(first.id);
     if (idx >= 0) removedIds.splice(idx, 1);
   }
@@ -1396,6 +1405,15 @@ export const useTypingStore = create<TypingStore>((set, get) => {
           },
         ];
 
+    // If there is only 1 session and its text is empty, populate it with cleanText
+    if (rawSessions.length === 1 && (!rawSessions[0].text || rawSessions[0].text.trim() === '')) {
+      rawSessions[0] = {
+        ...rawSessions[0],
+        text: cleanText,
+        wordCount: rawSessions[0].wordCount || countWords(cleanText),
+      };
+    }
+
     // Reconcile existing sessions against true cleanText to fix any slice/offset corruption
     const reconciled = reconcileSessionsWithText(rawSessions, cleanText);
 
@@ -1590,8 +1608,11 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       },
     ];
     const fullText = sanitizeManuscript(allPages, { doubleSpaceLinebreaks: false });
-    const currentSessionText = getActiveSessionText(fullText, activeSessions.slice(0, -1));
-    const currentWordCount = countWords(currentSessionText);
+    const priorSessions = activeSessions.slice(0, -1);
+    const priorWords = priorSessions.reduce((acc, s) => acc + (s.wordCount || 0), 0);
+    const docTotalWords = countWords(fullText);
+    const currentWordCount = Math.max(0, docTotalWords - priorWords);
+    const currentSessionText = getActiveSessionText(fullText, priorSessions);
 
     // Requirement: If the current session is empty, reset the session time but don't start a new session
     if (currentWordCount === 0 && currentSessionText.length === 0) {
@@ -1716,8 +1737,9 @@ export const useTypingStore = create<TypingStore>((set, get) => {
 
     if (!last.completedAt) {
       const priorSessions = sessions.slice(0, lastIdx);
+      const priorWords = priorSessions.reduce((acc, s) => acc + (s.wordCount || 0), 0);
+      const activeWords = Math.max(0, docTotalWords - priorWords);
       const activeText = getActiveSessionText(text, priorSessions);
-      const activeWords = countWords(activeText);
 
       sessions[lastIdx] = {
         ...last,
@@ -1919,6 +1941,15 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         },
       ];
 
+      // If there is only 1 session and its text is empty, populate it with cleanText
+      if (rawSessions.length === 1 && (!rawSessions[0].text || rawSessions[0].text.trim() === '')) {
+        rawSessions[0] = {
+          ...rawSessions[0],
+          text: cleanText,
+          wordCount: rawSessions[0].wordCount || countWords(cleanText),
+        };
+      }
+
       // Reconcile existing sessions against true cleanText to fix any slice/offset corruption
       const reconciled = reconcileSessionsWithText(rawSessions, cleanText);
 
@@ -1934,8 +1965,10 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         const last = projectSessions[lastIdx];
         if (!last.completedAt) {
           const priorSessions = projectSessions.slice(0, lastIdx);
+          const priorWords = priorSessions.reduce((acc, s) => acc + (s.wordCount || 0), 0);
+          const docTotalWords = countWords(cleanText);
+          const activeWords = Math.max(0, docTotalWords - priorWords);
           const activeText = getActiveSessionText(cleanText, priorSessions);
-          const activeWords = countWords(activeText);
           projectSessions[lastIdx] = {
             ...last,
             text: activeText,

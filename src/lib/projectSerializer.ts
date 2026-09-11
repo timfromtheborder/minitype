@@ -12,17 +12,58 @@ export function getActiveSessionText(fullText: string, priorSessions: SessionRec
   if (!fullText) return '';
   if (!priorSessions || priorSessions.length === 0) return fullText.trim();
 
+  const totalDocWords = countWords(fullText);
+  const priorWords = priorSessions.reduce((acc, s) => acc + (s.wordCount || 0), 0);
+
+  // If prior completed sessions already account for the entirety of the document words,
+  // the active session has no text or words yet.
+  if (priorWords >= totalDocWords) {
+    return '';
+  }
+
   let searchIndex = 0;
+  let allMatched = true;
   for (const s of priorSessions) {
     const sessionText = (s.text || '').trim();
-    if (!sessionText) continue;
+    if (!sessionText) {
+      allMatched = false;
+      continue;
+    }
     const foundIdx = fullText.indexOf(sessionText, searchIndex);
     if (foundIdx !== -1) {
       searchIndex = foundIdx + sessionText.length;
+    } else {
+      allMatched = false;
     }
   }
 
-  return fullText.slice(searchIndex).trim();
+  if (allMatched && searchIndex > 0) {
+    return fullText.slice(searchIndex).trim();
+  }
+
+  // If searchIndex advanced partially and the remainder matches the word budget:
+  if (searchIndex > 0) {
+    const candidate = fullText.slice(searchIndex).trim();
+    if (countWords(candidate) === totalDocWords - priorWords) {
+      return candidate;
+    }
+  }
+
+  // Token-based fallback: extract the trailing words belonging to the active session
+  const tokens = fullText.trim().split(/\s+/);
+  const wordIndices: number[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    if (tokens[i].length > 0 && /\w/i.test(tokens[i])) {
+      wordIndices.push(i);
+    }
+  }
+
+  if (wordIndices.length > priorWords) {
+    const startTokenIdx = wordIndices[priorWords];
+    return tokens.slice(startTokenIdx).join(' ').trim();
+  }
+
+  return '';
 }
 
 export function reconcileSessionsWithText(
@@ -31,7 +72,9 @@ export function reconcileSessionsWithText(
 ): SessionRecord[] {
   if (!sessions || sessions.length === 0) return [];
   const trimmedFull = (fullText || '').trim();
-  if (trimmedFull.length === 0) {
+  const totalDocWords = countWords(trimmedFull);
+
+  if (totalDocWords === 0) {
     return sessions.map((s) => ({
       ...s,
       text: '',
@@ -39,36 +82,72 @@ export function reconcileSessionsWithText(
     }));
   }
 
+  let cumulativeWords = 0;
   let searchIndex = 0;
-  return sessions.map((s) => {
-    if (searchIndex >= fullText.length) {
-      return {
-        ...s,
-        text: '',
-        wordCount: 0,
-      };
-    }
 
+  return sessions.map((s, idx) => {
+    const isCompleted = !!s.completedAt;
+    const existingWords = s.wordCount || 0;
     const candidate = (s.text || '').trim();
-    if (!candidate) {
-      return { ...s, text: '', wordCount: 0 };
+
+    let matchedText = '';
+    let matchedWords = 0;
+
+    if (candidate) {
+      const foundIdx = fullText.indexOf(candidate, searchIndex);
+      if (foundIdx !== -1) {
+        searchIndex = foundIdx + candidate.length;
+        matchedText = candidate;
+        matchedWords = countWords(candidate);
+      }
     }
 
-    const foundIdx = fullText.indexOf(candidate, searchIndex);
-    if (foundIdx !== -1) {
-      searchIndex = foundIdx + candidate.length;
+    if (isCompleted) {
+      // If the document has already run out of words for ghost sessions beyond fullText:
+      if (cumulativeWords >= totalDocWords) {
+        return {
+          ...s,
+          text: '',
+          wordCount: 0,
+        };
+      }
+
+      const finalWords =
+        matchedWords > 0
+          ? matchedWords
+          : existingWords > 0
+          ? existingWords
+          : countWords(candidate);
+
+      const clampedWords = Math.min(finalWords, Math.max(0, totalDocWords - cumulativeWords));
+      cumulativeWords += clampedWords;
+
       return {
         ...s,
-        text: candidate,
-        wordCount: countWords(candidate),
+        text: matchedText || candidate,
+        wordCount: clampedWords,
       };
-    } else {
+    }
+
+    // Active / uncompleted session
+    if (cumulativeWords >= totalDocWords) {
       return {
         ...s,
         text: '',
         wordCount: 0,
       };
     }
+
+    const priorSessions = sessions.slice(0, idx);
+    const activeText = getActiveSessionText(fullText, priorSessions);
+    const activeWords = Math.min(countWords(activeText), Math.max(0, totalDocWords - cumulativeWords));
+    cumulativeWords += activeWords;
+
+    return {
+      ...s,
+      text: activeText,
+      wordCount: activeWords,
+    };
   });
 }
 

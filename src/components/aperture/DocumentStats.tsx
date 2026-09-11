@@ -49,10 +49,13 @@ export const DocumentStats: React.FC = React.memo(function DocumentStats() {
     let sessionWords = 0;
     if (currentSession && !currentSession.completedAt) {
       const priorSessions = sessions.slice(0, lastIndex);
-      const activeText = getActiveSessionText(fullClean, priorSessions);
-      sessionWords = countWords(activeText);
+      const priorWords = priorSessions.reduce((acc, s) => acc + (s.wordCount || 0), 0);
+      sessionWords = Math.max(0, totalWords - priorWords);
     } else if (currentSession) {
-      sessionWords = countWords(currentSession.text || '');
+      sessionWords =
+        currentSession.wordCount !== undefined && currentSession.wordCount > 0
+          ? currentSession.wordCount
+          : countWords(currentSession.text || '');
     } else {
       sessionWords = totalWords;
     }

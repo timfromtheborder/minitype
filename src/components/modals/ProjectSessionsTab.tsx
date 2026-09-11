@@ -65,8 +65,9 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
 
     if (isActive) {
       const priorSessions = effectiveSessions.slice(0, index);
+      const priorWords = priorSessions.reduce((acc, s) => acc + (s.wordCount || 0), 0);
+      const activeWords = Math.max(0, docTotalWords - priorWords);
       const activeText = getActiveSessionText(currentFullText || '', priorSessions);
-      const activeWords = countWords(activeText);
       return {
         ...session,
         text: activeText,
@@ -75,10 +76,15 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
     }
 
     const cleanText = (session.text || '').trim();
+    const finalWordCount =
+      session.wordCount !== undefined && session.wordCount > 0
+        ? session.wordCount
+        : countWords(cleanText);
+
     return {
       ...session,
       text: cleanText,
-      wordCount: countWords(cleanText),
+      wordCount: finalWordCount,
     };
   });
 

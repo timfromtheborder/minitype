@@ -1864,6 +1864,130 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(removedIds).toEqual(['s2']);
       expect(pruned).toHaveLength(1);
     });
+
+    it('preserves multiple completed sessions and their word counts on reconciliation', () => {
+      const fullText = 'The quick brown fox.\nJumps over the lazy dog.';
+      const sessions = [
+        {
+          id: 's1',
+          projectId: 'p1',
+          sessionNumber: 1,
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          text: 'The quick brown fox.',
+          wordCount: 4,
+        },
+        {
+          id: 's2',
+          projectId: 'p1',
+          sessionNumber: 2,
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          text: 'Jumps over the lazy dog.',
+          wordCount: 5,
+        },
+      ];
+
+      const reconciled = reconcileSessionsWithText(sessions, fullText);
+      expect(reconciled).toHaveLength(2);
+      expect(reconciled[0].wordCount).toBe(4);
+      expect(reconciled[1].wordCount).toBe(5);
+
+      const { pruned, removedIds } = pruneZeroContentSessions(reconciled);
+      expect(removedIds).toHaveLength(0);
+      expect(pruned).toHaveLength(2);
+      expect(pruned[0].wordCount).toBe(4);
+      expect(pruned[1].wordCount).toBe(5);
+    });
+
+    it('preserves completed sessions even if cached text was empty', () => {
+      const fullText = 'The quick brown fox jumps over the lazy dog.';
+      const sessions = [
+        {
+          id: 's1',
+          projectId: 'p1',
+          sessionNumber: 1,
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          text: '', // Empty cached text in db
+          wordCount: 4,
+        },
+        {
+          id: 's2',
+          projectId: 'p1',
+          sessionNumber: 2,
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          text: '',
+          wordCount: 5,
+        },
+      ];
+
+      const reconciled = reconcileSessionsWithText(sessions, fullText);
+      expect(reconciled).toHaveLength(2);
+      expect(reconciled[0].wordCount).toBe(4);
+      expect(reconciled[1].wordCount).toBe(5);
+
+      const { pruned, removedIds } = pruneZeroContentSessions(reconciled);
+      expect(removedIds).toHaveLength(0);
+      expect(pruned).toHaveLength(2);
+    });
+
+    it('active session starts with 0 words when all text belongs to completed sessions', () => {
+      const fullText = 'The quick brown fox jumps over the lazy dog.';
+      const priorSessions = [
+        {
+          id: 's1',
+          projectId: 'p1',
+          sessionNumber: 1,
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          text: 'The quick brown fox',
+          wordCount: 4,
+        },
+        {
+          id: 's2',
+          projectId: 'p1',
+          sessionNumber: 2,
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          text: 'jumps over the lazy dog.',
+          wordCount: 5,
+        },
+      ];
+
+      const activeText = getActiveSessionText(fullText, priorSessions);
+      expect(activeText).toBe('');
+      expect(countWords(activeText)).toBe(0);
+    });
+
+    it('active session calculates only the delta words when new words are typed', () => {
+      const fullText = 'The quick brown fox jumps over the lazy dog. Hello world!';
+      const priorSessions = [
+        {
+          id: 's1',
+          projectId: 'p1',
+          sessionNumber: 1,
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          text: 'The quick brown fox',
+          wordCount: 4,
+        },
+        {
+          id: 's2',
+          projectId: 'p1',
+          sessionNumber: 2,
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          text: 'jumps over the lazy dog.',
+          wordCount: 5,
+        },
+      ];
+
+      const activeText = getActiveSessionText(fullText, priorSessions);
+      expect(countWords(activeText)).toBe(2);
+      expect(activeText).toContain('Hello');
+    });
   });
 });
 
