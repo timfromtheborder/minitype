@@ -46,9 +46,9 @@ export const SessionTargetTracker: React.FC = React.memo(function SessionTargetT
   const prevFilledRef = useRef(filledCount);
   const [justFilledIdx, setJustFilledIdx] = useState<number | null>(null);
 
-  // Measure container width to guarantee all 100 boxes are strictly identical in size on all screens
+  // Measure container width so contiguous 100 boxes strictly maintain 1:2 height:width
   const containerRef = useRef<HTMLDivElement>(null);
-  const [boxSize, setBoxSize] = useState<number>(5);
+  const [barHeight, setBarHeight] = useState<number>(4);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -57,9 +57,10 @@ export const SessionTargetTracker: React.FC = React.memo(function SessionTargetT
     const update = () => {
       const width = el.clientWidth;
       if (width <= 0) return;
-      // Guarantee minimum 1px gap across 99 spaces while ensuring integer box size
-      const calculated = Math.max(2, Math.floor((width - 99) / 100));
-      setBoxSize(calculated);
+      // 100 boxes across width W: each box has width W/100.
+      // Height:width is 1:2, so height = (W / 100) / 2 = W / 200.
+      const calculatedHeight = Math.max(3, Math.round(width / 200));
+      setBarHeight(calculatedHeight);
     };
 
     update();
@@ -87,7 +88,8 @@ export const SessionTargetTracker: React.FC = React.memo(function SessionTargetT
   return (
     <div
       ref={containerRef}
-      className="w-full flex items-center justify-between pointer-events-none select-none"
+      style={{ height: `${barHeight}px` }}
+      className="w-full flex flex-row items-stretch gap-0 border border-border/60 rounded-t-[2px] overflow-hidden bg-background/30 pointer-events-none select-none"
     >
       {Array.from({ length: boxCount }).map((_, idx) => {
         const isFilled = idx < filledCount;
@@ -96,13 +98,10 @@ export const SessionTargetTracker: React.FC = React.memo(function SessionTargetT
         return (
           <div
             key={idx}
-            style={{ width: `${boxSize}px`, height: `${boxSize}px` }}
-            className={`shrink-0 rounded-[0.5px] transition-colors duration-150 ${
+            className={`flex-1 h-full transition-colors duration-150 ${
               isFilled
-                ? `session-box-filled bg-muted-foreground/15 border border-muted-foreground/25 ${
-                    isFlashing ? 'session-box-flash' : ''
-                  }`
-                : 'session-box-empty border border-dotted border-muted-foreground/16 bg-transparent'
+                ? `session-box-filled bg-primary/25 ${isFlashing ? 'session-box-flash' : ''}`
+                : 'bg-transparent'
             }`}
           />
         );

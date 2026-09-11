@@ -28,6 +28,7 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
   const activeColumnLimit = useTypingStore((state) => state.activeColumnLimit);
   const setActiveColumnLimit = useTypingStore((state) => state.setActiveColumnLimit);
   const pageMode = useTypingStore((state) => state.manifest.pageMode);
+  const textSize = useTypingStore((state) => state.manifest.textSize);
   const currentPageNumber = useTypingStore((state) => state.currentPageNumber);
 
   // Faint flash effect when a full notecard is cleared
@@ -46,17 +47,73 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
     prevPageNumRef.current = currentPageNumber;
   }, [currentPageNumber, pageMode]);
 
-  // Monitor portrait mobile viewport to switch platen column bounds dynamically
+  // Monitor portrait viewport and text size to switch platen column bounds dynamically
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const mediaQuery = window.matchMedia('(max-width: 640px) and (orientation: portrait)');
-    const updateLimit = () => {
-      setActiveColumnLimit(mediaQuery.matches ? 35 : 70);
+
+    const checkLimit = () => {
+      const isPortraitOrientation =
+        window.matchMedia('(orientation: portrait)').matches ||
+        window.innerHeight > window.innerWidth;
+
+      if (!isPortraitOrientation) {
+        // Landscape orientation: standard 70 columns (unless extreme phone < 560px)
+        setActiveColumnLimit(window.innerWidth <= 560 ? 35 : 70);
+        return;
+      }
+
+      // In portrait orientation:
+      // 1. Mobile portrait viewports (<= 640px) are locked to 35 columns
+      if (window.innerWidth <= 640) {
+        setActiveColumnLimit(35);
+        return;
+      }
+
+      // 2. Larger portrait devices (e.g. tablets/foldables 641px - 1024px):
+      // When text size is L or XL, 70 columns overflows the platen; switch to 35
+      const isLargeText = textSize === 'l' || textSize === 'xl';
+
+      // Also dynamically verify if 71 monospace characters fit comfortably within available width
+      let overflows = isLargeText;
+      if (!overflows) {
+        try {
+          const testSpan = document.createElement('span');
+          testSpan.style.fontFamily = 'var(--font-courier-prime), Courier, monospace';
+          testSpan.style.fontSize = getComputedStyle(document.documentElement).fontSize;
+          testSpan.style.visibility = 'hidden';
+          testSpan.style.position = 'absolute';
+          testSpan.style.whiteSpace = 'nowrap';
+          testSpan.textContent = '0'.repeat(71);
+          document.body.appendChild(testSpan);
+          const measuredWidth = testSpan.getBoundingClientRect().width;
+          document.body.removeChild(testSpan);
+
+          // Horizontal margins: platen padding + viewport safe margins + line numbers if notecard
+          const padding = pageMode === 'notecard' ? 84 : 52;
+          overflows = measuredWidth + padding > window.innerWidth;
+        } catch {
+          overflows = isLargeText;
+        }
+      }
+
+      setActiveColumnLimit(overflows ? 35 : 70);
     };
-    updateLimit();
-    mediaQuery.addEventListener('change', updateLimit);
-    return () => mediaQuery.removeEventListener('change', updateLimit);
-  }, [setActiveColumnLimit]);
+
+    checkLimit();
+
+    const portraitQuery = window.matchMedia('(orientation: portrait)');
+    const mobileQuery = window.matchMedia('(max-width: 640px)');
+
+    window.addEventListener('resize', checkLimit);
+    portraitQuery.addEventListener?.('change', checkLimit);
+    mobileQuery.addEventListener?.('change', checkLimit);
+
+    return () => {
+      window.removeEventListener('resize', checkLimit);
+      portraitQuery.removeEventListener?.('change', checkLimit);
+      mobileQuery.removeEventListener?.('change', checkLimit);
+    };
+  }, [setActiveColumnLimit, textSize, pageMode]);
 
   // Prevent mouse click highlighting on desktop, but trigger proxy bridge focus on mobile tap
   const handleMouseDown = (e: React.MouseEvent) => {

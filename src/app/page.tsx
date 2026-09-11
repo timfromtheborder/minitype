@@ -62,9 +62,9 @@ export default function Home() {
       {/* Exactly Centered Monospace Aperture */}
       <section className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
         <div className="relative flex flex-col items-center">
-          {/* Session Target Tracking Graphic (rendered directly above platen with minimal space between) */}
+          {/* Session Target Tracking Graphic (rendered directly touching top edge of platen) */}
           {engine.manifest.showSessionTargetTracker !== false && (engine.manifest.sessionWordTarget ?? 0) > 0 && (
-            <div className="absolute bottom-full mb-1 sm:mb-1.5 left-0 right-0 pointer-events-none">
+            <div className="absolute bottom-full -mb-[1px] left-0 right-0 pointer-events-none">
               <SessionTargetTracker />
             </div>
           )}

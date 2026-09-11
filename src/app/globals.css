@@ -483,34 +483,17 @@ html[data-aperture-height="10"],
 [data-theme="spotlight"] .session-box-filled,
 [data-theme="phosphor"] .session-box-filled {
   background-color: rgba(237, 237, 237, 0.28) !important;
-  border-color: rgba(237, 237, 237, 0.45) !important;
-}
-
-[data-theme="spotlight"] .session-box-empty,
-[data-theme="phosphor"] .session-box-empty {
-  border-color: rgba(237, 237, 237, 0.2) !important;
 }
 
 [data-theme="spotlight"] .session-box-flash,
 [data-theme="phosphor"] .session-box-flash {
   background-color: rgba(237, 237, 237, 0.75) !important;
-  border-color: rgba(237, 237, 237, 0.9) !important;
 }
 
 [data-theme="dark-amber"] .session-box-filled {
   background-color: rgba(255, 176, 0, 0.25) !important;
-  border-color: rgba(255, 176, 0, 0.4) !important;
-}
-
-[data-theme="dark-amber"] .session-box-empty {
-  border-color: rgba(255, 176, 0, 0.18) !important;
 }
 
 [data-theme="low-contrast"] .session-box-filled {
   background-color: rgba(28, 32, 36, 0.18) !important;
-  border-color: rgba(28, 32, 36, 0.28) !important;
-}
-
-[data-theme="low-contrast"] .session-box-empty {
-  border-color: rgba(28, 32, 36, 0.15) !important;
 }
