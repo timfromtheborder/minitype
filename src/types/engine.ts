@@ -12,7 +12,7 @@ export interface HighlightTarget {
   colIndex: number;
 }
 
-export type SaveState = 'saved' | 'saving' | 'error';
+export type SaveState = 'saved' | 'typing' | 'saving' | 'error';
 
 export interface TypingEngineState {
   manifest: ManuscriptManifest;

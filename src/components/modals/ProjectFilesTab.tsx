@@ -61,7 +61,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
 
   const handleNewFile = async () => {
     await useTypingStore.getState().newProject();
-    onSelectDocumentTab();
+    await refreshFiles();
   };
 
   const handleImportClick = () => {

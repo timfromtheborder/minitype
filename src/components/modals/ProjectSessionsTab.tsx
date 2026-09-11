@@ -76,9 +76,15 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
           sortedSessions.map((session, index) => {
             const isLatest = index === sortedSessions.length - 1;
             const isActive = isLatest && !session.completedAt;
-            const timeRange = session.completedAt
-              ? `${formatSessionDateTime(session.startedAt)} - ${formatSessionDateTime(session.completedAt)}`
-              : `${formatSessionDateTime(session.startedAt)} - Present`;
+            let timeRange: string;
+            if (session.isImported) {
+              const dt = formatSessionDateTime(session.importedAt || session.startedAt);
+              timeRange = `${dt} [imported]`;
+            } else if (session.completedAt) {
+              timeRange = `${formatSessionDateTime(session.startedAt)} - ${formatSessionDateTime(session.completedAt)}`;
+            } else {
+              timeRange = `${formatSessionDateTime(session.startedAt)} - Present`;
+            }
 
             return (
               <div

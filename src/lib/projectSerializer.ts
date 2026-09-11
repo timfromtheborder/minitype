@@ -10,7 +10,8 @@ export function countWords(text: string): number {
 
 export function formatSessionDelimiter(session: SessionRecord): string {
   const completedAttr = session.completedAt ? ` completed="${session.completedAt}"` : '';
-  return `\n\n<!-- minitype:session id="${session.id}" number="${session.sessionNumber}" started="${session.startedAt}"${completedAttr} words="${session.wordCount}" -->\n\n`;
+  const importedAttr = session.isImported ? ` imported="${session.importedAt || session.startedAt}"` : '';
+  return `\n\n<!-- minitype:session id="${session.id}" number="${session.sessionNumber}" started="${session.startedAt}"${completedAttr}${importedAttr} words="${session.wordCount}" -->\n\n`;
 }
 
 /**
@@ -95,6 +96,7 @@ export function parseProjectFile(rawText: string, projectId: string): SessionRec
 
   // Session 1: Text before the first delimiter
   const firstChunk = rawText.slice(0, matches[0].index).trim();
+  const firstImported = matches[0].attrs.imported;
   sessions.push({
     id: `${projectId}-session-1`,
     projectId,
@@ -103,6 +105,7 @@ export function parseProjectFile(rawText: string, projectId: string): SessionRec
     completedAt: matches[0].attrs.started || new Date().toISOString(),
     text: firstChunk,
     wordCount: countWords(firstChunk),
+    ...(firstImported ? { isImported: true, importedAt: firstImported } : {}),
   });
 
   // Subsequent sessions defined by delimiters
@@ -111,6 +114,7 @@ export function parseProjectFile(rawText: string, projectId: string): SessionRec
     const nextStart = i + 1 < matches.length ? matches[i + 1].index : rawText.length;
     const sessionBody = rawText.slice(current.index + current.length, nextStart).trim();
     const sessionNum = Number(current.attrs.number) || i + 2;
+    const imported = current.attrs.imported;
 
     sessions.push({
       id: current.attrs.id || `${projectId}-session-${sessionNum}`,
@@ -120,6 +124,7 @@ export function parseProjectFile(rawText: string, projectId: string): SessionRec
       completedAt: current.attrs.completed || null,
       text: sessionBody,
       wordCount: countWords(sessionBody),
+      ...(imported ? { isImported: true, importedAt: imported } : {}),
     });
   }
 

@@ -6,4 +6,6 @@ export interface SessionRecord {
   completedAt: string | null;
   text: string; // Plain text content of this session
   wordCount: number;
+  isImported?: boolean;
+  importedAt?: string | null;
 }

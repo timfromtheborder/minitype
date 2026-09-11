@@ -1334,6 +1334,33 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(fromDb?.activeApertureHeight).toBe(5);
       expect(fromDb?.colorScheme).toBe('dark-amber');
     });
+
+    it('marks imported session with isImported and formats timestamp with [imported]', async () => {
+      const store = useTypingStore.getState();
+      await store.importTextFileAsProject('Sample Novel.txt', 'This is an imported novel.');
+      const state = useTypingStore.getState();
+      expect(state.activeSessions.length).toBeGreaterThanOrEqual(1);
+      const importedSession = state.activeSessions.find((s) => s.isImported);
+      expect(importedSession).toBeDefined();
+      expect(importedSession?.isImported).toBe(true);
+      expect(importedSession?.importedAt).toBeTruthy();
+    });
+
+    it('manages visual save state machine: typing -> saving -> saved', async () => {
+      vi.useFakeTimers();
+      const store = useTypingStore.getState();
+      store.insertChar('T');
+      expect(useTypingStore.getState().saveState).toBe('typing');
+
+      // Fast-forward 1000ms pause
+      vi.advanceTimersByTime(1000);
+      expect(useTypingStore.getState().saveState).toBe('saving');
+
+      // Fast-forward 1400ms (max animation length)
+      vi.advanceTimersByTime(1500);
+      expect(useTypingStore.getState().saveState).toBe('saved');
+      vi.useRealTimers();
+    });
   });
 });
 

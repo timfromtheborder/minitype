@@ -132,6 +132,46 @@ export function persistSettings(manifest: Partial<ManuscriptManifest>): void {
   }
 }
 
+let pauseSaveTimer: ReturnType<typeof setTimeout> | null = null;
+let animSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+export function cancelVisualSaveTimers(): void {
+  if (pauseSaveTimer) {
+    clearTimeout(pauseSaveTimer);
+    pauseSaveTimer = null;
+  }
+  if (animSaveTimer) {
+    clearTimeout(animSaveTimer);
+    animSaveTimer = null;
+  }
+}
+
+export function triggerVisualSaveOnTyping(
+  set: (partial: Partial<TypingStore> | ((state: TypingStore) => Partial<TypingStore>)) => void,
+  get: () => TypingStore
+): void {
+  cancelVisualSaveTimers();
+
+  // 1. While typing: semi-opaque gray swirling loading circle
+  set({ saveState: 'typing' });
+
+  // 2. 1 second after typing stops: turn into saving animation of red swirling loading circle
+  pauseSaveTimer = setTimeout(() => {
+    pauseSaveTimer = null;
+    set({ saveState: 'saving' });
+
+    // 3. Green check after the animation plays for a random duration between 0.8s and 1.4s (800ms to 1400ms)
+    const randomDuration = 800 + Math.random() * 600;
+    animSaveTimer = setTimeout(() => {
+      animSaveTimer = null;
+      const current = get();
+      if (current.saveState === 'saving') {
+        set({ saveState: current.persistenceError ? 'error' : 'saved' });
+      }
+    }, randomDuration);
+  }, 1000);
+}
+
 export interface TypingStore extends TypingEngineState, TypingEngineActions {
   currentPageNumber: number;
   historicalPages: PageRecord[];
@@ -141,10 +181,12 @@ export interface TypingStore extends TypingEngineState, TypingEngineActions {
 export const useTypingStore = create<TypingStore>((set, get) => {
   if (typeof window !== 'undefined') {
     setPersistenceErrorHandler((err) => {
-      set({ persistenceError: err ? err.message : null, saveState: err ? 'error' : 'saved' });
-    });
-    setSaveStatusHandler((status) => {
-      set({ saveState: status });
+      if (err) {
+        cancelVisualSaveTimers();
+        set({ persistenceError: err.message, saveState: 'error' });
+      } else {
+        set({ persistenceError: null });
+      }
     });
   }
 
@@ -231,6 +273,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
   insertChar: (char: string) => {
     const state = get();
     if (state.isLocked || char.length !== 1) return;
+    triggerVisualSaveOnTyping(set, get);
 
     let lines = [...state.currentPageLines];
     let isHighlighting = state.isHighlighting;
@@ -401,6 +444,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
   handleBackspace: () => {
     const state = get();
     if (state.isLocked) return;
+    triggerVisualSaveOnTyping(set, get);
 
     const lines = [...state.currentPageLines];
     const activeLineIndex = state.activeLineIndex;
@@ -626,6 +670,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
   handleEnter: () => {
     const state = get();
     if (state.isLocked) return;
+    triggerVisualSaveOnTyping(set, get);
 
     let lines = [...state.currentPageLines];
 
@@ -868,6 +913,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       pendingWrappedCells: null,
       activeSessions: [initialSession],
       manifest: updatedManifest,
+      saveState: 'saved',
     });
   },
 
@@ -970,6 +1016,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       pendingWrappedCells: null,
       activeSessions: [initialSession],
       manifest: updatedManifest,
+      saveState: 'saved',
     });
   },
 
@@ -1075,6 +1122,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       isLocked: false,
       lockReason: null,
       pendingWrappedCells: null,
+      saveState: 'saved',
     });
   },
 
@@ -1085,7 +1133,12 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     const newId = `manuscript-${Date.now()}`;
 
     // Parse sessions if delimiter codes exist in project file
-    const parsedSessions = parseProjectFile(rawText, newId);
+    const importTime = new Date().toISOString();
+    const parsedSessions = parseProjectFile(rawText, newId).map((s) => ({
+      ...s,
+      isImported: true,
+      importedAt: s.importedAt || importTime,
+    }));
     const cleanText = stripSessionMarkers(rawText);
 
     const columnLimit = state.activeColumnLimit ?? MAX_COLUMNS;
@@ -1262,7 +1315,17 @@ export const useTypingStore = create<TypingStore>((set, get) => {
   },
 
   flushSave: async () => {
+    cancelVisualSaveTimers();
+    set({ saveState: 'saving' });
     await flushPendingSave();
+    const randomDuration = 800 + Math.random() * 600;
+    animSaveTimer = setTimeout(() => {
+      animSaveTimer = null;
+      const current = get();
+      if (current.saveState === 'saving') {
+        set({ saveState: current.persistenceError ? 'error' : 'saved' });
+      }
+    }, randomDuration);
   },
 
   toggleStats: (show?: boolean) => {

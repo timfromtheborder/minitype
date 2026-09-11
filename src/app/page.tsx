@@ -121,6 +121,8 @@ export default function Home() {
             className={`flex items-center justify-center px-2.5 py-1.5 rounded-none border font-sans transition-all cursor-pointer shadow-xs shrink-0 ${
               engine.saveState === 'saving'
                 ? 'border-red-500/80 bg-red-500/10 text-red-600 dark:text-red-400'
+                : engine.saveState === 'typing'
+                ? 'border-border/60 bg-muted/40 text-muted-foreground'
                 : engine.saveState === 'error' || engine.persistenceError
                 ? 'border-red-500 bg-red-500/10 text-red-600 dark:text-red-400 font-semibold'
                 : isSpotlight
@@ -132,14 +134,15 @@ export default function Home() {
                 ? `Save Error: ${engine.persistenceError || 'IndexedDB write error'}`
                 : engine.saveState === 'saving'
                 ? 'Saving changes...'
+                : engine.saveState === 'typing'
+                ? 'Drafting...'
                 : 'All changes saved. Click to force save now.'
             }
           >
             {engine.saveState === 'saving' ? (
-              <span className="relative flex h-3 w-3 shrink-0 items-center justify-center">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-              </span>
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-red-500 shrink-0" />
+            ) : engine.saveState === 'typing' ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground/60 opacity-60 shrink-0" />
             ) : engine.saveState === 'error' || engine.persistenceError ? (
               <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
             ) : (
