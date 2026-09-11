@@ -2,10 +2,27 @@ import { SessionRecord } from '@/types';
 
 export const SESSION_DELIMITER_REGEX = /<!--\s*minitype:session\s+([^>]+)-->/gi;
 
+/**
+ * Accurately counts words in text using publishing and word-processor standards (matching Scrivener and MS Word):
+ * - Normalizes em-dashes (—), en-dashes (–), double/multiple hyphens (--), slashes (/), and ellipses (...) into word boundaries
+ * - Counts contractions ("don't", "it's", "rock'n'roll") and hyphenated compounds ("well-known") as single words
+ * - Counts formatted numbers ("1,000", "3.14") as single words
+ * - Full Unicode support for all world writing systems and scripts (\p{L}, \p{N})
+ * - Excludes HTML/Minitype session comment blocks, lone punctuation, and symbols
+ */
 export function countWords(text: string): number {
   if (!text) return 0;
-  const tokens = text.trim().split(/\s+/);
-  return tokens.filter((t) => t.length > 0 && /\w/i.test(t)).length;
+
+  const normalized = text
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/[\u2014\u2013]/g, ' ')
+    .replace(/--+/g, ' ')
+    .replace(/[\/\\|]/g, ' ')
+    .replace(/\.{2,}/g, ' ')
+    .replace(/[“”«»"()[\]{}<>_~*#`^+=]/g, ' ');
+
+  const matches = normalized.match(/(?:[\p{L}\p{N}]+(?:['’\-][\p{L}\p{N}]+|(?<=\d)[.,](?=\d)\d+)*)/gu);
+  return matches ? matches.length : 0;
 }
 
 export function getActiveSessionText(fullText: string, priorSessions: SessionRecord[]): string {
@@ -53,7 +70,7 @@ export function getActiveSessionText(fullText: string, priorSessions: SessionRec
   const tokens = fullText.trim().split(/\s+/);
   const wordIndices: number[] = [];
   for (let i = 0; i < tokens.length; i++) {
-    if (tokens[i].length > 0 && /\w/i.test(tokens[i])) {
+    if (tokens[i].length > 0 && countWords(tokens[i]) > 0) {
       wordIndices.push(i);
     }
   }
@@ -115,10 +132,10 @@ export function reconcileSessionsWithText(
       }
 
       const finalWords =
-        matchedWords > 0
-          ? matchedWords
-          : existingWords > 0
+        existingWords > 0
           ? existingWords
+          : matchedWords > 0
+          ? matchedWords
           : countWords(candidate);
 
       cumulativeWords += finalWords;

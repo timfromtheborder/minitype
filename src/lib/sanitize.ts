@@ -1,8 +1,5 @@
-import { CharacterCell, LineRecord, PageRecord } from '@/types';
+import { CharacterCell, LineRecord, PageRecord, PageMode } from '@/types';
 
-/**
- * Sanitizes a single line by removing struck cells and trimming soft padding.
- */
 /**
  * Sanitizes a single line by removing struck cells, trimming soft padding,
  * and eliminating orphaned whitespace between or adjacent to struck cells.
@@ -93,21 +90,28 @@ export function sanitizeLine(line: LineRecord): string {
 
 export interface SanitizeOptions {
   doubleSpaceLinebreaks?: boolean;
+  pageMode?: PageMode;
 }
 
 /**
  * Sanitizes an array of pages or lines, unwrapping soft-wrapped lines into
  * continuous paragraphs so that only explicit 'Enter' keystrokes create linebreaks.
  * Also eliminates struck-out text and collapses lines created by full-line strikeouts.
+ * Soft wraps across page/card boundaries are seamlessly unwrapped without artificial linebreaks.
  */
 export function sanitizeManuscript(
   pages: PageRecord[],
   options?: SanitizeOptions
 ): string {
-  const pageTexts: string[] = [];
-  const lineDelimiter = options?.doubleSpaceLinebreaks ? '\n\n' : '\n';
+  const isParagraphMode = options?.pageMode === 'paragraph';
+  const isDoubleSpace = Boolean(options?.doubleSpaceLinebreaks);
 
-  for (const page of pages) {
+  const paragraphs: string[] = [];
+  let currentParagraph = '';
+  let previousLineRecord: LineRecord | null = null;
+
+  for (let pIdx = 0; pIdx < pages.length; pIdx++) {
+    const page = pages[pIdx];
     const pageLines = [...page.lines];
 
     // Remove unwritten empty lines at the end of the page
@@ -120,10 +124,6 @@ export function sanitizeManuscript(
     }
 
     if (pageLines.length === 0) continue;
-
-    const paragraphs: string[] = [];
-    let currentParagraph = '';
-    let previousLineRecord: LineRecord | null = null;
 
     for (let i = 0; i < pageLines.length; i++) {
       const line = pageLines[i];
@@ -179,26 +179,33 @@ export function sanitizeManuscript(
       }
     }
 
-    if (currentParagraph !== '') {
+    // In paragraph mode, each card boundary is explicitly a paragraph separation
+    if (isParagraphMode && currentParagraph !== '') {
       paragraphs.push(currentParagraph.trimEnd());
-    }
-
-    // Trim trailing blank lines within this page
-    while (paragraphs.length > 0 && paragraphs[paragraphs.length - 1] === '') {
-      paragraphs.pop();
-    }
-
-    if (paragraphs.length > 0) {
-      if (options?.doubleSpaceLinebreaks) {
-        const nonEmpty = paragraphs.filter((p) => p !== '');
-        pageTexts.push(nonEmpty.join('\n\n'));
-      } else {
-        pageTexts.push(paragraphs.join('\n'));
-      }
+      currentParagraph = '';
+      previousLineRecord = null;
     }
   }
 
-  return pageTexts.join('\n\n');
+  if (currentParagraph !== '') {
+    paragraphs.push(currentParagraph.trimEnd());
+  }
+
+  // Trim trailing blank lines
+  while (paragraphs.length > 0 && paragraphs[paragraphs.length - 1] === '') {
+    paragraphs.pop();
+  }
+
+  if (paragraphs.length === 0) {
+    return '';
+  }
+
+  if (isDoubleSpace || isParagraphMode) {
+    const nonEmpty = paragraphs.filter((p) => p !== '');
+    return nonEmpty.join('\n\n');
+  }
+
+  return paragraphs.join('\n');
 }
 
 /**

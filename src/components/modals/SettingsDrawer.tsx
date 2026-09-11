@@ -70,6 +70,9 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
             <h2 className="text-sm font-sans font-semibold tracking-wider uppercase text-foreground">
               Settings
             </h2>
+            <span className="text-[10px] font-mono tracking-wider px-1.5 py-0.5 rounded-[2px] bg-muted text-muted-foreground border border-border/60">
+              v0.9.5.2
+            </span>
           </div>
           <button
             type="button"
@@ -328,7 +331,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.4-beta
+              Minitype v0.9.5.2
             </span>
           </div>
         </div>

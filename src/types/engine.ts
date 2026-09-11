@@ -27,6 +27,7 @@ export interface TypingEngineState {
   persistenceError: string | null;
   saveState: SaveState;
   activeSessions: SessionRecord[];
+  isProjectDirty: boolean;
 }
 
 export interface TypingEngineActions {

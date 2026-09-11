@@ -48,6 +48,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
       setTitle(manifest.title || 'Untitled Manuscript');
       const fullClean = sanitizeManuscript(pages, {
         doubleSpaceLinebreaks: manifest.doubleSpaceLinebreaks,
+        pageMode: manifest.pageMode,
       });
       setSanitizedFullText(fullClean);
       const computedTotalWords = countWords(fullClean);

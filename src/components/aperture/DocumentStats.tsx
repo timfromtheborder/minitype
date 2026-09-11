@@ -38,7 +38,7 @@ export const DocumentStats: React.FC = React.memo(function DocumentStats() {
         completedAt: null,
       },
     ];
-    const fullClean = sanitizeManuscript(allPages, { doubleSpaceLinebreaks: false });
+    const fullClean = sanitizeManuscript(allPages, { doubleSpaceLinebreaks: false, pageMode });
     const totalWords = countWords(fullClean);
 
     const sessions = activeSessions && activeSessions.length > 0 ? activeSessions : [];

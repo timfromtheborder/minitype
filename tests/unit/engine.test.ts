@@ -578,7 +578,7 @@ describe('Typing Engine & State Machine Invariants', () => {
         },
       ];
 
-      const sanitized = sanitizeManuscript(pages);
+      const sanitized = sanitizeManuscript(pages, { pageMode: state.manifest.pageMode });
       expect(sanitized).toBe('Paragraph 1\n\nParagraph 2\n\nParagraph 3');
     });
 
@@ -2031,6 +2031,164 @@ describe('Typing Engine & State Machine Invariants', () => {
       }));
       expect(normalized[0].sessionNumber).toBe(1);
       expect(normalized[1].sessionNumber).toBe(2);
+    });
+
+    it('preserves separate sessions when switching projects, writing in new sessions, and reloading', async () => {
+      const store = useTypingStore.getState();
+
+      // 1. Start new project (Project 1)
+      await store.newProject();
+      const proj1Id = useTypingStore.getState().manifest.id;
+      expect(proj1Id).toBeTruthy();
+
+      // Write text for Session 1
+      const words1 = 'one two three four five ';
+      for (const char of words1) {
+        useTypingStore.getState().insertChar(char);
+      }
+      useTypingStore.getState().syncSessionStats();
+      expect(useTypingStore.getState().activeSessions).toHaveLength(1);
+      expect(useTypingStore.getState().activeSessions[0].wordCount).toBe(5);
+
+      // 2. Create another project (Project 2)
+      await store.newProject();
+      const proj2Id = useTypingStore.getState().manifest.id;
+      expect(proj2Id).not.toBe(proj1Id);
+
+      // 3. Reload Project 1
+      await store.loadProject(proj1Id);
+      const s1 = useTypingStore.getState();
+      expect(s1.manifest.id).toBe(proj1Id);
+      expect(s1.activeSessions).toHaveLength(1);
+      expect(s1.activeSessions[0].wordCount).toBe(5);
+      expect(s1.activeSessions[0].completedAt).toBeTruthy();
+
+      // 4. Begin writing in a new session (Session 2)
+      const words2 = 'six seven eight nine ten ';
+      for (const char of words2) {
+        useTypingStore.getState().insertChar(char);
+      }
+      useTypingStore.getState().syncSessionStats();
+
+      const s2 = useTypingStore.getState();
+      expect(s2.activeSessions).toHaveLength(2);
+      expect(s2.activeSessions[0].sessionNumber).toBe(1);
+      expect(s2.activeSessions[0].wordCount).toBe(5);
+      expect(s2.activeSessions[1].sessionNumber).toBe(2);
+      expect(s2.activeSessions[1].wordCount).toBe(5);
+      expect(s2.manifest.totalWordCount).toBe(10);
+
+      // 5. Load Project 2 again
+      await store.loadProject(proj2Id);
+
+      // 6. Reload Project 1
+      await store.loadProject(proj1Id);
+
+      const s3 = useTypingStore.getState();
+      expect(s3.manifest.id).toBe(proj1Id);
+      expect(s3.activeSessions).toHaveLength(2);
+      expect(s3.activeSessions[0].sessionNumber).toBe(1);
+      expect(s3.activeSessions[0].wordCount).toBe(5);
+      expect(s3.activeSessions[1].sessionNumber).toBe(2);
+      expect(s3.activeSessions[1].wordCount).toBe(5);
+      expect(s3.manifest.totalWordCount).toBe(10);
+    });
+
+    it('does not insert linebreaks when soft-wrapping across card/page breaks', () => {
+      const store = useTypingStore.getState();
+      store.resetEngine({ mode: 'local', pageMode: 'notecard' }); // 10 lines per card
+
+      // Fill lines 0 to 8 with content + Enter so line 9 is reached
+      for (let i = 0; i < 9; i++) {
+        for (const c of 'line content ') store.insertChar(c);
+        store.handleEnter();
+      }
+
+      expect(useTypingStore.getState().activeLineIndex).toBe(9);
+      expect(useTypingStore.getState().currentPageNumber).toBe(1);
+
+      // On line 9: write characters, then a word that triggers soft wrap to Card 2 line 0
+      for (let i = 0; i < 65; i++) store.insertChar('x');
+      for (const c of ' continuous') store.insertChar(c);
+
+      const stateAfterWrap = useTypingStore.getState();
+      expect(stateAfterWrap.currentPageNumber).toBe(2);
+      expect(stateAfterWrap.activeLineIndex).toBe(0);
+
+      const pages = [
+        ...stateAfterWrap.historicalPages,
+        {
+          pageNumber: stateAfterWrap.currentPageNumber,
+          lines: stateAfterWrap.currentPageLines,
+          completedAt: null,
+        },
+      ];
+
+      const sanitized = sanitizeManuscript(pages, { pageMode: 'notecard' });
+      // The word 'continuous' wrapped from card 1 to card 2: there must NOT be any newline separating it!
+      expect(sanitized).toContain('xxxxxxxxxx continuous');
+      expect(sanitized.includes('xxxxxxxxxx\ncontinuous')).toBe(false);
+      expect(sanitized.includes('xxxxxxxxxx\n\ncontinuous')).toBe(false);
+    });
+
+    it('does not save or update timestamp of an unchanged project when switching or closing', async () => {
+      const { db } = await import('@/db');
+      const store = useTypingStore.getState();
+
+      // 1. Create a project and type content into it
+      await store.newProject();
+      const projId1 = useTypingStore.getState().manifest.id;
+      for (const c of 'Initial project content') store.insertChar(c);
+
+      // 2. Create second project to finalize and persist project 1
+      await store.newProject();
+      const projId2 = useTypingStore.getState().manifest.id;
+
+      // 3. Load Project 1
+      await store.loadProject(projId1);
+      const m1 = await db.manuscripts.get(projId1);
+      expect(m1).toBeDefined();
+      const originalUpdatedAt = m1!.updatedAt;
+
+      // Wait 15ms to ensure any new timestamp would differ
+      await new Promise((resolve) => setTimeout(resolve, 15));
+
+      // 4. Switch to Project 2 WITHOUT making any changes to Project 1
+      await store.loadProject(projId2);
+
+      // 5. Verify Project 1 was NOT modified or re-saved in Dexie
+      const m1AfterClose = await db.manuscripts.get(projId1);
+      expect(m1AfterClose!.updatedAt).toBe(originalUpdatedAt);
+
+      // 6. Now reload Project 1 and type something
+      await store.loadProject(projId1);
+      store.insertChar('!');
+      await new Promise((resolve) => setTimeout(resolve, 15));
+
+      // 7. Switch to Project 2 (Project 1 IS dirty)
+      await store.loadProject(projId2);
+
+      // 8. Verify Project 1 was now updated with a new timestamp
+      const m1AfterEdit = await db.manuscripts.get(projId1);
+      expect(m1AfterEdit!.updatedAt).not.toBe(originalUpdatedAt);
+    });
+
+    it('accurately counts words with contractions, hyphens, em-dashes, numbers, and Unicode', () => {
+      expect(countWords('Hello world')).toBe(2);
+      expect(countWords("Don't worry, it's fine.")).toBe(4);
+      expect(countWords('well-known author')).toBe(2);
+      expect(countWords('writer--author')).toBe(2);
+      expect(countWords('em—dash')).toBe(2);
+      expect(countWords('one...two')).toBe(2);
+      expect(countWords('and/or')).toBe(2);
+      expect(countWords('café au lait')).toBe(3);
+      expect(countWords('Привет мир')).toBe(2);
+      expect(countWords('  -- ... ---  ')).toBe(0);
+      expect(countWords('1,000 dollars or 42')).toBe(4);
+      expect(countWords('pi is approximately 3.14')).toBe(4);
+      expect(countWords('rock\'n\'roll')).toBe(1);
+      expect(countWords('“Quoted words!”')).toBe(2);
+      expect(countWords('<!-- minitype:session id="1" -->Hello world')).toBe(2);
     });
   });
 });

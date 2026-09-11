@@ -132,6 +132,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
       } else {
         content = sanitizeManuscript(data.pages, {
           doubleSpaceLinebreaks: m.doubleSpaceLinebreaks,
+          pageMode: m.pageMode,
         });
       }
 
