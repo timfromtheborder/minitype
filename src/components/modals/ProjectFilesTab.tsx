@@ -210,7 +210,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
           <button
             type="button"
             onClick={handleImportClick}
-            className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-none border border-border/80 bg-muted/40 hover:bg-muted text-foreground transition-colors cursor-pointer"
+            className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-[2px] border border-border/80 bg-muted/40 hover:bg-muted text-foreground transition-colors cursor-pointer"
             title="Import .txt or .md from computer"
           >
             <Upload className="w-3.5 h-3.5" />
@@ -219,7 +219,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
           <button
             type="button"
             onClick={handleNewFile}
-            className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-none border border-primary bg-primary text-primary-foreground font-semibold shadow-xs hover:opacity-90 transition-opacity cursor-pointer"
+            className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-[2px] border border-primary bg-primary text-primary-foreground font-semibold shadow-xs hover:opacity-90 transition-opacity cursor-pointer"
             title="Create a new project"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -229,7 +229,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
       </div>
 
       {/* Sorting Controls Bar */}
-      <div className="flex items-center justify-between gap-2 shrink-0 px-1 py-1 text-[11px] bg-muted/20 border border-border/40">
+      <div className="flex items-center justify-between gap-2 shrink-0 px-1 py-1 text-[11px] bg-muted/20 border border-border/40 rounded-[2px]">
         <div className="flex items-center gap-1 text-muted-foreground">
           <ArrowUpDown className="w-3 h-3 opacity-70" />
           <span className="uppercase tracking-wider font-semibold text-[10px]">Sort:</span>
@@ -242,7 +242,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                 key={field}
                 type="button"
                 onClick={() => toggleSort(field)}
-                className={`flex items-center gap-1 px-2 py-0.5 rounded-none border transition-colors cursor-pointer capitalize ${
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-[2px] border transition-colors cursor-pointer capitalize ${
                   isSelected
                     ? 'border-primary bg-primary/15 text-primary font-bold shadow-xs'
                     : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40'
@@ -309,7 +309,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                               if (e.key === 'Escape') setEditingId(null);
                             }}
                             onClick={(e) => e.stopPropagation()}
-                            className="font-mono text-xs sm:text-sm font-semibold text-foreground bg-muted/60 border border-primary px-1.5 py-0.5 rounded-none w-full max-w-[240px] focus:outline-none"
+                            className="font-mono text-xs sm:text-sm font-semibold text-foreground bg-muted/60 border border-primary px-1.5 py-0.5 rounded-[2px] w-full max-w-[240px] focus:outline-none"
                           />
                         ) : (
                           <div className="flex items-center gap-1.5 min-w-0 group/title">
@@ -339,7 +339,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                           </div>
                         )}
                         {isActive && (
-                          <span className="shrink-0 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-primary text-primary-foreground shadow-xs rounded-none">
+                          <span className="shrink-0 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-primary text-primary-foreground shadow-xs rounded-[2px]">
                             Active
                           </span>
                         )}
@@ -367,7 +367,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                       <button
                         type="button"
                         onClick={() => handleOpenProject(file.id)}
-                        className="flex items-center gap-1 px-2 py-1 text-xs rounded-none border border-border/80 bg-muted/30 hover:bg-muted text-foreground transition-colors cursor-pointer"
+                        className="flex items-center gap-1 px-2 py-1 text-xs rounded-[2px] border border-border/80 bg-muted/30 hover:bg-muted text-foreground transition-colors cursor-pointer"
                         title="Open this project"
                       >
                         <FolderOpen className="w-3.5 h-3.5" />
@@ -375,7 +375,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                       </button>
                     ) : (
                       <span
-                        className="flex items-center gap-1 px-2 py-1 text-xs rounded-none border border-primary/50 bg-primary/20 text-primary font-bold shadow-xs select-none"
+                        className="flex items-center gap-1 px-2 py-1 text-xs rounded-[2px] border border-primary/50 bg-primary/20 text-primary font-bold shadow-xs select-none"
                         title="Currently active project"
                       >
                         <Check className="w-3.5 h-3.5" />
@@ -387,7 +387,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                     <button
                       type="button"
                       onClick={() => handleDownloadProject(file)}
-                      className="p-1 rounded-none text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                      className="p-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                       title="Download project text"
                     >
                       <Download className="w-3.5 h-3.5" />
@@ -395,18 +395,18 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
 
                     {/* Delete with Confirmation */}
                     {isConfirmingDelete ? (
-                      <div className="flex items-center gap-1 bg-destructive/10 p-0.5 border border-destructive/30">
+                      <div className="flex items-center gap-1 bg-destructive/10 p-0.5 border border-destructive/30 rounded-[2px]">
                         <button
                           type="button"
                           onClick={() => handleDeleteProject(file.id)}
-                          className="px-2 py-0.5 text-xs rounded-none border border-destructive bg-destructive text-destructive-foreground font-bold hover:opacity-90 cursor-pointer"
+                          className="px-2 py-0.5 text-xs rounded-[2px] border border-destructive bg-destructive text-destructive-foreground font-bold hover:opacity-90 cursor-pointer"
                         >
                           Confirm
                         </button>
                         <button
                           type="button"
                           onClick={() => setDeletingId(null)}
-                          className="px-1.5 py-0.5 text-xs rounded-none text-muted-foreground hover:text-foreground cursor-pointer"
+                          className="px-1.5 py-0.5 text-xs rounded-[2px] text-muted-foreground hover:text-foreground cursor-pointer"
                         >
                           Cancel
                         </button>
@@ -415,7 +415,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                       <button
                         type="button"
                         onClick={() => setDeletingId(file.id)}
-                        className="p-1 rounded-none text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                        className="p-1 rounded-[2px] text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
                         title="Delete project"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

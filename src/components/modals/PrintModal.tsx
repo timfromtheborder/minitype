@@ -101,11 +101,11 @@ export const PrintModal: React.FC<PrintModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-3xl h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] landscape:h-[calc(100dvh-3.5rem)] landscape:max-h-[calc(100dvh-3.5rem)] sm:h-[560px] sm:max-h-[560px] my-auto rounded-none border border-border bg-background text-foreground shadow-2xl flex flex-row select-none relative overflow-hidden"
+        className="w-full max-w-3xl h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] landscape:h-[calc(100dvh-3.5rem)] landscape:max-h-[calc(100dvh-3.5rem)] sm:h-[560px] sm:max-h-[560px] my-auto rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-row select-none relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Tall and Skinny 3-Tab Rail with Sideways Vertical Text on Left Side */}
-        <div className="w-8 sm:w-10 shrink-0 flex flex-col border-r border-border/60 bg-muted/25 h-full select-none divide-y divide-border/40">
+        {/* Tall and Skinny 3-Tab Rail with Sideways Vertical Text on Left Side (Widened by 10%) */}
+        <div className="w-[35px] sm:w-[44px] shrink-0 flex flex-col border-r border-border/60 bg-muted/25 h-full select-none divide-y divide-border/40">
           {/* Tab 1: Document */}
           <button
             type="button"
@@ -188,7 +188,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex items-center gap-1 px-2 py-1 rounded-none text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent hover:border-border/60 transition-colors cursor-pointer text-xs"
+                className="flex items-center gap-1 px-2 py-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent hover:border-border/60 transition-colors cursor-pointer text-xs"
                 title="Return to writing in aperture"
               >
                 <CornerUpLeft className="w-4 h-4 shrink-0" />
@@ -202,7 +202,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
               onScroll={(e) => {
                 documentScrollPositions.set(manifest.id, e.currentTarget.scrollTop);
               }}
-              className="relative w-full flex-1 min-h-0 p-3 sm:p-5 rounded-none border border-border/80 bg-card text-card-foreground font-mono text-xs sm:text-sm leading-[1.3] overflow-y-auto square-scrollbar whitespace-pre-wrap select-text shadow-inner"
+              className="relative w-full flex-1 min-h-0 p-3 sm:p-5 rounded-[2px] border border-border/80 bg-card text-card-foreground font-mono text-xs sm:text-sm leading-[1.3] overflow-y-auto square-scrollbar whitespace-pre-wrap select-text shadow-inner"
             >
               {sanitizedFullText.length > 0 ? (
                 sanitizedFullText
@@ -219,7 +219,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
               <button
                 type="button"
                 onClick={handleStartNewSession}
-                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-none border border-primary bg-primary text-primary-foreground font-semibold shadow-xs hover:opacity-90 transition-opacity cursor-pointer text-xs"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-[2px] border border-primary bg-primary text-primary-foreground font-semibold shadow-xs hover:opacity-90 transition-opacity cursor-pointer text-xs"
                 title="Start a new drafting session on a fresh linebreak"
               >
                 <Sparkles className="w-3.5 h-3.5" />
@@ -237,7 +237,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
                     type="button"
                     onClick={handleDownloadTxt}
                     disabled={sanitizedFullText.length === 0}
-                    className="flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1 rounded-none border border-border/80 bg-muted/40 hover:bg-muted text-foreground transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-xs"
+                    className="flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1 rounded-[2px] border border-border/80 bg-muted/40 hover:bg-muted text-foreground transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-xs"
                     title="Export clean .txt file"
                     aria-label="Export clean .txt"
                   >
@@ -249,7 +249,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
                     type="button"
                     onClick={handleBrowserPrint}
                     disabled={sanitizedFullText.length === 0}
-                    className="p-1.5 rounded-none border border-border/80 bg-muted/40 hover:bg-muted text-foreground transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="p-1.5 rounded-[2px] border border-border/80 bg-muted/40 hover:bg-muted text-foreground transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     title="Print document"
                     aria-label="Print document"
                   >
@@ -276,7 +276,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex items-center gap-1 px-2 py-1 rounded-none text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent hover:border-border/60 transition-colors cursor-pointer text-xs"
+                className="flex items-center gap-1 px-2 py-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent hover:border-border/60 transition-colors cursor-pointer text-xs"
                 title="Return to writing in aperture"
               >
                 <CornerUpLeft className="w-4 h-4 shrink-0" />
@@ -308,7 +308,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex items-center gap-1 px-2 py-1 rounded-none text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent hover:border-border/60 transition-colors cursor-pointer text-xs"
+                className="flex items-center gap-1 px-2 py-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent hover:border-border/60 transition-colors cursor-pointer text-xs"
                 title="Return to writing in aperture"
               >
                 <CornerUpLeft className="w-4 h-4 shrink-0" />

@@ -20,6 +20,7 @@ import {
   saveManuscript,
   savePage,
   saveSession,
+  deleteSession,
   getSessionsForProject,
   clearManuscriptData,
   getManuscript,
@@ -52,6 +53,82 @@ export function createEmptyLine(pageNumber: number, lineIndex: number): LineReco
     cells: [],
     isCommitted: false,
   };
+}
+
+export function pruneZeroContentSessions(sessions: SessionRecord[]): {
+  pruned: SessionRecord[];
+  removedIds: string[];
+} {
+  const removedIds: string[] = [];
+  const pruned: SessionRecord[] = [];
+
+  for (let i = 0; i < sessions.length; i++) {
+    const s = sessions[i];
+    const words = s.wordCount ?? countWords(s.text || '');
+    const hasText = Boolean(s.text && s.text.trim().length > 0);
+    const isZeroContent = words === 0 && !hasText;
+
+    if (isZeroContent && (sessions.length > 1 || pruned.length > 0)) {
+      removedIds.push(s.id);
+    } else {
+      pruned.push({ ...s, wordCount: words });
+    }
+  }
+
+  if (pruned.length === 0 && sessions.length > 0) {
+    pruned.push(sessions[0]);
+    const idx = removedIds.indexOf(sessions[0].id);
+    if (idx >= 0) removedIds.splice(idx, 1);
+  }
+
+  return { pruned, removedIds };
+}
+
+function ensureActiveSessionOnTyping(set: any, get: any): void {
+  const state = get();
+  const sessions = [...state.activeSessions];
+  const lastSession = sessions.length > 0 ? sessions[sessions.length - 1] : null;
+
+  // If there is an active uncompleted session, we are already in an active session
+  if (lastSession && !lastSession.completedAt) {
+    return;
+  }
+
+  // All prior sessions were completed (e.g. freshly loaded file).
+  // First prune any remaining zero-content sessions:
+  const { pruned, removedIds } = pruneZeroContentSessions(sessions);
+  for (const remId of removedIds) {
+    deleteSession(remId).catch(console.error);
+  }
+
+  const nextSessionNum = (pruned[pruned.length - 1]?.sessionNumber || 0) + 1;
+  const newSession: SessionRecord = {
+    id: `${state.manifest.id}-session-${nextSessionNum}`,
+    projectId: state.manifest.id,
+    sessionNumber: nextSessionNum,
+    startedAt: new Date().toISOString(),
+    completedAt: null,
+    text: '',
+    wordCount: 0,
+  };
+
+  const updatedSessions = [...pruned, newSession];
+  const updatedManifest: ManuscriptManifest = {
+    ...state.manifest,
+    activeSessionId: newSession.id,
+    sessionCount: updatedSessions.length,
+    updatedAt: new Date().toISOString(),
+  };
+
+  saveSession(newSession).catch(console.error);
+  if (updatedManifest.mode === 'local') {
+    saveManuscript(updatedManifest).catch(console.error);
+  }
+
+  set({
+    activeSessions: updatedSessions,
+    manifest: updatedManifest,
+  });
 }
 
 export const DEFAULT_MANIFEST: ManuscriptManifest = {
@@ -477,6 +554,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     const state = get();
     if (state.isLocked || char.length !== 1) return;
     triggerVisualSaveOnTyping(set, get);
+    ensureActiveSessionOnTyping(set, get);
 
     let lines = [...state.currentPageLines];
     let isHighlighting = state.isHighlighting;
@@ -874,6 +952,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     const state = get();
     if (state.isLocked) return;
     triggerVisualSaveOnTyping(set, get);
+    ensureActiveSessionOnTyping(set, get);
 
     let lines = [...state.currentPageLines];
 
@@ -1123,13 +1202,23 @@ export const useTypingStore = create<TypingStore>((set, get) => {
   newProject: async () => {
     await flushPendingSave();
     const state = get();
+    const { pruned: currentPruned, removedIds } = pruneZeroContentSessions(state.activeSessions);
+    for (const remId of removedIds) {
+      await deleteSession(remId).catch(console.error);
+    }
+
     const hasContent =
       state.historicalPages.length > 0 ||
       state.currentPageLines.some((l) => l.cells.length > 0) ||
-      state.activeSessions.some((s) => s.text.trim().length > 0);
+      currentPruned.some((s) => s.text.trim().length > 0);
 
     if (state.manifest.id !== 'default-manuscript' || hasContent) {
-      await saveManuscript(state.manifest).catch(console.error);
+      const curManifest = {
+        ...state.manifest,
+        sessionCount: currentPruned.length,
+        activeSessionId: currentPruned[currentPruned.length - 1]?.id || state.manifest.activeSessionId,
+      };
+      await saveManuscript(curManifest).catch(console.error);
       const curPage: PageRecord = {
         id: `${state.manifest.id}-page-${state.currentPageNumber}`,
         manuscriptId: state.manifest.id,
@@ -1242,15 +1331,32 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     const state = get();
     // Save current active project state before switching (skip if deleted or loading itself)
     if (!skipSaveCurrent && state.manifest.id !== id) {
-      await saveManuscript(state.manifest).catch(console.error);
-      const curPage: PageRecord = {
-        id: `${state.manifest.id}-page-${state.currentPageNumber}`,
-        manuscriptId: state.manifest.id,
-        pageNumber: state.currentPageNumber,
-        lines: state.currentPageLines,
-        completedAt: null,
-      };
-      await savePage(curPage).catch(console.error);
+      const { pruned: currentPruned, removedIds } = pruneZeroContentSessions(state.activeSessions);
+      for (const remId of removedIds) {
+        await deleteSession(remId).catch(console.error);
+      }
+
+      const hasContent =
+        state.historicalPages.length > 0 ||
+        state.currentPageLines.some((l) => l.cells.length > 0) ||
+        currentPruned.some((s) => s.text.trim().length > 0);
+
+      if (state.manifest.id !== 'default-manuscript' || hasContent) {
+        const curManifest = {
+          ...state.manifest,
+          sessionCount: currentPruned.length,
+          activeSessionId: currentPruned[currentPruned.length - 1]?.id || state.manifest.activeSessionId,
+        };
+        await saveManuscript(curManifest).catch(console.error);
+        const curPage: PageRecord = {
+          id: `${state.manifest.id}-page-${state.currentPageNumber}`,
+          manuscriptId: state.manifest.id,
+          pageNumber: state.currentPageNumber,
+          lines: state.currentPageLines,
+          completedAt: null,
+        };
+        await savePage(curPage).catch(console.error);
+      }
     }
 
     const data = await loadManuscriptProject(id);
@@ -1264,11 +1370,11 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     });
 
     const columnLimit = state.activeColumnLimit ?? MAX_COLUMNS;
-    // Option A: Parse into platen lines with a fresh empty line at the end
+    // Parse into platen lines with a fresh empty line at the end
     const parsed = textToManuscriptLines(cleanText, 1, columnLimit);
 
     // Prepare sessions: if none exist in db, generate Session 1 from cleanText
-    let sessions: SessionRecord[] = existingSessions && existingSessions.length > 0
+    let rawSessions: SessionRecord[] = existingSessions && existingSessions.length > 0
       ? [...existingSessions]
       : [
           {
@@ -1282,19 +1388,17 @@ export const useTypingStore = create<TypingStore>((set, get) => {
           },
         ];
 
-    // Requirement: When a project is loaded, a new session starts automatically!
-    const nextSessionNum = (sessions[sessions.length - 1]?.sessionNumber || 0) + 1;
-    const newSession: SessionRecord = {
-      id: `${id}-session-${nextSessionNum}`,
-      projectId: id,
-      sessionNumber: nextSessionNum,
-      startedAt: new Date().toISOString(),
-      completedAt: null,
-      text: '',
-      wordCount: 0,
-    };
-    sessions.push(newSession);
-    await saveSession(newSession).catch(console.error);
+    // Prune any 0-content sessions on load
+    const { pruned, removedIds } = pruneZeroContentSessions(rawSessions);
+    for (const remId of removedIds) {
+      await deleteSession(remId).catch(console.error);
+    }
+
+    // Ensure all prior sessions are finalized so they don't say "Present"
+    const sessions = pruned.map((s) => ({
+      ...s,
+      completedAt: s.completedAt || loadedManifest.updatedAt || s.startedAt,
+    }));
 
     // CRITICAL: Global settings are preserved across document changes!
     const globalSettings = extractSettings(readSynchronousSettings() || state.manifest);
@@ -1304,14 +1408,14 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       id: loadedManifest.id,
       title: loadedManifest.title || 'Untitled Project',
       mode: 'local',
-      outboxCount: loadedManifest.outboxCount ?? 0,
+      outboxCount: 0, // Reset page-count graphic for clean session
       lastPrintedCharIndex: loadedManifest.lastPrintedCharIndex ?? 0,
       printedPagesCount: loadedManifest.printedPagesCount ?? 0,
-      activeSessionId: newSession.id,
+      activeSessionId: sessions[sessions.length - 1]?.id || '',
       sessionCount: sessions.length,
       totalWordCount: countWords(cleanText),
       createdAt: loadedManifest.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      updatedAt: loadedManifest.updatedAt || new Date().toISOString(), // PRESERVE existing timestamp!
     };
 
     if (typeof document !== 'undefined') {
@@ -1326,17 +1430,8 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       }
     }
 
-    // Save the sanitized clean manuscript back to Dexie
-    await deletePagesForManuscript(loadedManifest.id).catch(console.error);
-    const sanitizedPage: PageRecord = {
-      id: `${loadedManifest.id}-page-1`,
-      manuscriptId: loadedManifest.id,
-      pageNumber: 1,
-      lines: parsed.lines,
-      completedAt: null,
-    };
-    await saveManuscript(updatedManifest).catch(console.error);
-    await savePage(sanitizedPage).catch(console.error);
+    // Read-only project load: Do NOT write to Dexie database on load.
+    // Preserves original updatedAt and eliminates unnecessary write churn.
 
     if (typeof window !== 'undefined') {
       localStorage.setItem(ACTIVE_PROJECT_KEY, id);
@@ -1508,7 +1603,14 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         };
         activeSessions[activeSessions.length - 1] = updatedSession;
         await saveSession(updatedSession).catch(console.error);
-        set({ activeSessions });
+        const updatedManifest = {
+          ...state.manifest,
+          outboxCount: 0,
+        };
+        if (state.manifest.mode === 'local') {
+          await saveManuscript(updatedManifest).catch(console.error);
+        }
+        set({ activeSessions, manifest: updatedManifest });
       }
       return;
     }
@@ -1550,6 +1652,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
 
       const updatedManifest: ManuscriptManifest = {
         ...state.manifest,
+        outboxCount: 0,
         activeSessionId: newSession.id,
         sessionCount: activeSessions.length,
         totalWordCount: countWords(fullText),
@@ -1573,6 +1676,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     } else {
       const updatedManifest: ManuscriptManifest = {
         ...state.manifest,
+        outboxCount: 0,
         activeSessionId: newSession.id,
         sessionCount: activeSessions.length,
         totalWordCount: countWords(fullText),
@@ -1801,7 +1905,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       const columnLimit = get().activeColumnLimit ?? MAX_COLUMNS;
       const parsed = textToManuscriptLines(cleanText, 1, columnLimit);
 
-      let projectSessions = sessions && sessions.length > 0 ? sessions : [
+      let rawSessions = sessions && sessions.length > 0 ? sessions : [
         {
           id: `${loadedManifest.id}-session-1`,
           projectId: loadedManifest.id,
@@ -1812,6 +1916,12 @@ export const useTypingStore = create<TypingStore>((set, get) => {
           wordCount: countWords(cleanText),
         },
       ];
+
+      // Prune any 0-content sessions left from previous runs
+      const { pruned: projectSessions, removedIds } = pruneZeroContentSessions(rawSessions);
+      for (const remId of removedIds) {
+        deleteSession(remId).catch(console.error);
+      }
 
       // Sync active session with current cleanText and wordCount
       if (projectSessions.length > 0) {

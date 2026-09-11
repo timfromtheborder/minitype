@@ -4,6 +4,7 @@ import {
   createEmptyLine,
   readSynchronousSettings,
   persistSettings,
+  pruneZeroContentSessions,
 } from '@/stores/typingStore';
 import { LineRecord } from '@/types';
 import { sanitizeManuscript, calculatePrintDelayMs } from '@/lib/sanitize';
@@ -1669,6 +1670,80 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(state.activeSessions).toHaveLength(2);
       expect(state.activeSessions[0].wordCount).toBe(4);
       expect(state.activeSessions[1].wordCount).toBe(5);
+    });
+
+    it('prunes zero-content sessions when multiple sessions exist', () => {
+      const mockSessions = [
+        {
+          id: 's1',
+          projectId: 'p1',
+          sessionNumber: 1,
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          text: 'Hello world',
+          wordCount: 2,
+        },
+        {
+          id: 's2',
+          projectId: 'p1',
+          sessionNumber: 2,
+          startedAt: new Date().toISOString(),
+          completedAt: null,
+          text: '',
+          wordCount: 0,
+        },
+      ];
+
+      const { pruned, removedIds } = pruneZeroContentSessions(mockSessions);
+      expect(removedIds).toEqual(['s2']);
+      expect(pruned).toHaveLength(1);
+      expect(pruned[0].id).toBe('s1');
+    });
+
+    it('resets outboxCount to 0 when starting a new session', async () => {
+      const store = useTypingStore.getState();
+      // Set an initial outboxCount > 0
+      useTypingStore.setState({
+        manifest: { ...useTypingStore.getState().manifest, outboxCount: 5 },
+      });
+      expect(useTypingStore.getState().manifest.outboxCount).toBe(5);
+
+      // Type some content and start a new session
+      "Some content".split('').forEach((c) => store.insertChar(c));
+      await store.startNewSession();
+
+      expect(useTypingStore.getState().manifest.outboxCount).toBe(0);
+    });
+
+    it('lazily creates a new session on first typed character when last session was completed', () => {
+      const completedSession = {
+        id: 'p1-session-1',
+        projectId: 'p1',
+        sessionNumber: 1,
+        startedAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+        text: 'Initial words',
+        wordCount: 2,
+      };
+
+      useTypingStore.setState({
+        activeSessions: [completedSession],
+        manifest: {
+          ...useTypingStore.getState().manifest,
+          activeSessionId: completedSession.id,
+          sessionCount: 1,
+        },
+      });
+
+      expect(useTypingStore.getState().activeSessions).toHaveLength(1);
+
+      // Typing a character should lazily start Session 2
+      useTypingStore.getState().insertChar('A');
+
+      const state = useTypingStore.getState();
+      expect(state.activeSessions).toHaveLength(2);
+      expect(state.activeSessions[1].sessionNumber).toBe(2);
+      expect(state.activeSessions[1].completedAt).toBeNull();
     });
   });
 });

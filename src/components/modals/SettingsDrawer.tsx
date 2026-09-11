@@ -60,7 +60,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
       onClick={handleClose}
     >
       <div
-        className="w-full max-w-md max-h-[calc(100dvh-1rem)] overflow-y-auto square-scrollbar p-4 sm:p-6 rounded-none border border-border bg-background text-foreground shadow-2xl flex flex-col gap-4 sm:gap-5 select-none"
+        className="w-full max-w-md max-h-[calc(100dvh-1rem)] overflow-y-auto square-scrollbar p-4 sm:p-6 rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-col gap-4 sm:gap-5 select-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -74,7 +74,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           <button
             type="button"
             onClick={handleClose}
-            className="p-1 rounded-none text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            className="p-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
             title="Close"
           >
             <X className="w-4 h-4" />
@@ -113,29 +113,6 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
               />
               <span className="text-[10px] text-muted-foreground font-semibold">8</span>
             </div>
-            {/* Discrete quick-tap line buttons [1] - [8] for reliable touch interaction on iOS */}
-            <div className="grid grid-cols-8 gap-1 pt-1">
-              {([1, 2, 3, 4, 5, 6, 7, 8] as ApertureHeight[]).map((num) => {
-                const isSelected = manifest.activeApertureHeight === num;
-                return (
-                  <button
-                    key={num}
-                    type="button"
-                    onClick={() => {
-                      onUpdateHeight(num);
-                      onUpdateManifest({ activeApertureHeight: num });
-                    }}
-                    className={`py-1.5 rounded-none border text-center transition-all cursor-pointer font-bold text-xs ${
-                      isSelected
-                        ? 'border-primary bg-primary text-primary-foreground shadow-xs'
-                        : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground'
-                    }`}
-                  >
-                    {num}
-                  </button>
-                );
-              })}
-            </div>
           </div>
 
           {/* Text Size ([S] [M] [L] [XL]) */}
@@ -161,7 +138,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                     key={size}
                     type="button"
                     onClick={() => onUpdateManifest({ textSize: size })}
-                    className={`py-1.5 rounded-none border text-center transition-all cursor-pointer font-bold text-xs sm:text-sm ${
+                    className={`py-1.5 rounded-[2px] border text-center transition-all cursor-pointer font-bold text-xs sm:text-sm ${
                       isSelected
                         ? 'border-primary bg-primary text-primary-foreground shadow-xs'
                         : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground'
@@ -186,7 +163,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                     const pageSize = mode === 'scroll' ? 999999 : mode === 'notecard' ? 10 : mode === 'page' ? 54 : 9999;
                     onUpdateManifest({ pageMode: mode, pageSize });
                   }}
-                  className={`py-1.5 px-0.5 rounded-none border text-center transition-all cursor-pointer capitalize text-[10px] sm:text-xs truncate ${
+                  className={`py-1.5 px-0.5 rounded-[2px] border text-center transition-all cursor-pointer capitalize text-[10px] sm:text-xs truncate ${
                     (manifest.pageMode || 'scroll') === mode
                       ? 'border-primary bg-primary text-primary-foreground font-bold shadow-xs'
                       : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground'
@@ -252,7 +229,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                     key={scheme.id}
                     type="button"
                     onClick={() => onUpdateManifest({ colorScheme: scheme.id as ColorScheme })}
-                    className={`py-2 px-3 rounded-none border text-left flex items-center justify-between transition-all cursor-pointer ${
+                    className={`py-2 px-3 rounded-[2px] border text-left flex items-center justify-between transition-all cursor-pointer ${
                       isSelected
                         ? 'border-primary ring-1 ring-primary bg-primary/10 text-foreground font-semibold shadow-xs'
                         : 'border-border/80 hover:bg-muted/60 text-muted-foreground hover:text-foreground'
@@ -260,7 +237,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   >
                     <div className="flex items-center gap-2">
                       <span
-                        className="w-4 h-4 rounded-none border shadow-xs flex items-center justify-center text-[8px] font-mono font-bold shrink-0"
+                        className="w-4 h-4 rounded-[2px] border shadow-xs flex items-center justify-center text-[8px] font-mono font-bold shrink-0"
                         style={{
                           backgroundColor: scheme.bg,
                           color: scheme.fg,
@@ -274,14 +251,14 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
 
                     {/* Functional Square Radio Button Indicator */}
                     <div
-                      className={`w-3.5 h-3.5 rounded-none border flex items-center justify-center transition-all shrink-0 ml-1.5 ${
+                      className={`w-3.5 h-3.5 rounded-[2px] border flex items-center justify-center transition-all shrink-0 ml-1.5 ${
                         isSelected
                           ? 'border-primary bg-primary'
                           : 'border-muted-foreground/40 bg-transparent'
                       }`}
                     >
                       {isSelected && (
-                        <div className="w-1.5 h-1.5 rounded-none bg-background" />
+                        <div className="w-1.5 h-1.5 rounded-[2px] bg-background" />
                       )}
                     </div>
                   </button>
@@ -298,7 +275,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
               <button
                 type="button"
                 onClick={() => onUpdateManifest({ showStats: !showStats })}
-                className={`px-3 py-1 rounded-none border text-xs transition-all cursor-pointer ${
+                className={`px-3 py-1 rounded-[2px] border text-xs transition-all cursor-pointer ${
                   showStats
                     ? 'border-primary bg-primary text-primary-foreground font-bold shadow-xs'
                     : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-muted-foreground'
@@ -314,7 +291,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
               <button
                 type="button"
                 onClick={() => onUpdateManifest({ doubleSpaceLinebreaks: !isDoubleSpace })}
-                className={`px-3 py-1 rounded-none border text-xs transition-all cursor-pointer ${
+                className={`px-3 py-1 rounded-[2px] border text-xs transition-all cursor-pointer ${
                   isDoubleSpace
                     ? 'border-primary bg-primary text-primary-foreground font-bold shadow-xs'
                     : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-muted-foreground'
@@ -332,7 +309,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
             <button
               type="button"
               onClick={handleToggleMute}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-none border border-border/80 bg-muted/40 hover:bg-muted text-foreground transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] border border-border/80 bg-muted/40 hover:bg-muted text-foreground transition-all cursor-pointer"
             >
               {isMuted ? (
                 <>

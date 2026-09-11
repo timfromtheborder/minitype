@@ -128,6 +128,14 @@ export async function getSessionsForProject(projectId: string): Promise<SessionR
   }
 }
 
+export async function deleteSession(sessionId: string): Promise<void> {
+  try {
+    await db.sessions.delete(sessionId);
+  } catch (err) {
+    console.error('Failed to delete session:', err);
+  }
+}
+
 export async function deleteSessionsForProject(projectId: string): Promise<void> {
   try {
     await db.sessions.where('projectId').equals(projectId).delete();

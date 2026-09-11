@@ -85,10 +85,18 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
     resolvedSessions.reduce((acc, s) => acc + (s.wordCount || 0), 0)
   );
 
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+    }
+  }, [resolvedSessions.length]);
+
   return (
     <div className="flex-1 min-h-0 flex flex-col gap-2.5 sm:gap-3 overflow-hidden font-sans">
       {/* Overview Banner */}
-      <div className="flex items-center justify-between p-2.5 sm:p-3 border border-border/70 bg-muted/25 shrink-0">
+      <div className="flex items-center justify-between p-2.5 sm:p-3 border border-border/70 bg-muted/25 rounded-[2px] shrink-0">
         <div className="flex flex-col gap-0.5 min-w-0">
           <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">
             Project Overview
@@ -117,8 +125,11 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
         </div>
       </div>
 
-      {/* Sessions Scrollable List */}
-      <div className="flex-1 min-h-0 overflow-y-auto square-scrollbar border border-border/80 bg-background text-foreground p-2 sm:p-3 space-y-2">
+      {/* Sessions Scrollable List (defaults to bottom/newest) */}
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 min-h-0 overflow-y-auto square-scrollbar border border-border/80 bg-background text-foreground p-2 sm:p-3 space-y-2 rounded-[2px]"
+      >
         {resolvedSessions.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 p-4 text-center gap-2 text-muted-foreground">
             <Clock className="w-8 h-8 opacity-40" />
@@ -135,16 +146,18 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
             if (session.isImported) {
               const dt = formatSessionDateTime(session.importedAt || session.startedAt);
               timeRange = `${dt} [imported]`;
+            } else if (isActive) {
+              timeRange = `${formatSessionDateTime(session.startedAt)} - Present`;
             } else if (session.completedAt) {
               timeRange = `${formatSessionDateTime(session.startedAt)} - ${formatSessionDateTime(session.completedAt)}`;
             } else {
-              timeRange = `${formatSessionDateTime(session.startedAt)} - Present`;
+              timeRange = formatSessionDateTime(session.startedAt);
             }
 
             return (
               <div
                 key={session.id}
-                className="flex items-center justify-between p-2.5 sm:p-3 border border-border/60 bg-muted/30 text-foreground select-none gap-3 font-mono text-[11px] sm:text-xs"
+                className="flex items-center justify-between p-2.5 sm:p-3 border border-border/60 bg-muted/30 text-foreground select-none gap-3 font-mono text-[11px] sm:text-xs rounded-[2px]"
               >
                 <div className="flex items-center justify-between gap-3 min-w-0 flex-1">
                   <span className="font-semibold text-foreground truncate">
@@ -156,7 +169,7 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
                 </div>
 
                 {isActive && (
-                  <span className="flex items-center gap-1 text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-none shrink-0 font-sans ml-2">
+                  <span className="flex items-center gap-1 text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-[2px] shrink-0 font-sans ml-2">
                     <Sparkles className="w-2.5 h-2.5" />
                     <span>Active</span>
                   </span>

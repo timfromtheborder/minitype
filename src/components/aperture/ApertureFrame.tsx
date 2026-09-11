@@ -68,7 +68,7 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
       onMouseDown={handleMouseDown}
       onClick={handleFrameTap}
       onTouchEnd={handleFrameTap}
-      className="relative flex flex-col justify-start w-fit max-w-[calc(100vw-1.5rem)] sm:max-w-[calc(100vw-2.5rem)] px-2.5 sm:px-6 md:px-8 pt-2.5 pb-2 rounded-none border border-border/70 bg-card text-card-foreground shadow-inner shadow-black/5 overflow-hidden select-none text-sm sm:text-base cursor-pointer font-mono"
+      className="relative flex flex-col justify-start w-fit max-w-[calc(100vw-1.5rem)] sm:max-w-[calc(100vw-2.5rem)] px-2.5 sm:px-6 md:px-8 pt-2.5 pb-2 rounded-[2px] border border-border/70 bg-card text-card-foreground shadow-inner shadow-black/5 overflow-hidden select-none text-sm sm:text-base cursor-pointer font-mono"
       style={{
         cursor: isLocked ? 'not-allowed' : 'text',
         userSelect: 'none',
@@ -103,7 +103,7 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
       {/* Drafting lines viewport: fixed height based on aperture capacity, scrolling upward from bottom platen */}
       <div
         className={`flex flex-col justify-end ${platenWidthClass} overflow-hidden`}
-        style={{ height: `${viewportHeightRem}rem` }}
+        style={{ height: `var(--aperture-height-rem, ${viewportHeightRem}rem)` }}
       >
         {visibleLines.map((line, idx) => {
           const actualIndex = startIdx + idx;

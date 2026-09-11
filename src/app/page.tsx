@@ -95,7 +95,7 @@ export default function Home() {
           <button
             type="button"
             onClick={() => setIsPrintOpen(true)}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-none border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
               isSpotlight
                 ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground'
                 : 'border-border/70 bg-card hover:bg-muted text-card-foreground'
@@ -110,7 +110,7 @@ export default function Home() {
           <button
             type="button"
             onClick={() => setIsSettingsOpen(true)}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-none border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
               isSpotlight
                 ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground'
                 : 'border-border/70 bg-card hover:bg-muted text-card-foreground'
@@ -125,7 +125,7 @@ export default function Home() {
           <button
             type="button"
             onClick={() => engine.flushSave?.()}
-            className={`flex items-center justify-center px-2.5 py-1.5 rounded-none border font-sans transition-all cursor-pointer shadow-xs shrink-0 ${
+            className={`flex items-center justify-center px-2.5 py-1.5 rounded-[2px] border font-sans transition-all cursor-pointer shadow-xs shrink-0 ${
               engine.saveState === 'error' || engine.persistenceError
                 ? 'border-red-500 bg-red-500/10 text-red-600 dark:text-red-400 font-semibold'
                 : engine.saveState === 'saving' || engine.saveState === 'typing'

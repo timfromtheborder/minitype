@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react';
 import { useTypingStore } from '@/stores/typingStore';
+import { sanitizeManuscript } from '@/lib/sanitize';
+import { countWords } from '@/lib/projectSerializer';
 
 export const DocumentStats: React.FC = React.memo(function DocumentStats() {
   const showStats = useTypingStore((state) => state.manifest.showStats ?? true);
@@ -8,6 +10,9 @@ export const DocumentStats: React.FC = React.memo(function DocumentStats() {
   const activeLineIndex = useTypingStore((state) => state.activeLineIndex);
   const activeColumnLimit = useTypingStore((state) => state.activeColumnLimit);
   const currentPageLines = useTypingStore((state) => state.currentPageLines);
+  const historicalPages = useTypingStore((state) => state.historicalPages);
+  const currentPageNumber = useTypingStore((state) => state.currentPageNumber);
+  const activeSessions = useTypingStore((state) => state.activeSessions);
   const title = useTypingStore((state) => state.manifest.title || 'Untitled Project');
 
   const isPortrait = (activeColumnLimit ?? 70) === 35;
@@ -24,32 +29,39 @@ export const DocumentStats: React.FC = React.memo(function DocumentStats() {
       ? `line: ${activeLineIndex + 1}`
       : `line: ${activeLineIndex + 1}/${pageSize || 54}`;
 
-  // Zero-allocation character and word count calculation
-  const { totalCharsOnPage, wordCount } = useMemo(() => {
-    let totalChars = 0;
-    let blankSpaces = 0;
+  const { totalProjectWords, currentSessionNumber, currentSessionWords } = useMemo(() => {
+    const allPages = [
+      ...historicalPages,
+      {
+        pageNumber: currentPageNumber,
+        lines: currentPageLines,
+        completedAt: null,
+      },
+    ];
+    const fullClean = sanitizeManuscript(allPages, { doubleSpaceLinebreaks: false });
+    const totalWords = countWords(fullClean);
 
-    for (let i = 0; i < currentPageLines.length; i++) {
-      const cells = currentPageLines[i].cells;
-      for (let j = 0; j < cells.length; j++) {
-        const c = cells[j];
-        if (c.state !== 'struck' && !c.isSoftPadding) {
-          totalChars++;
-          if (c.char === ' ') {
-            blankSpaces++;
-          }
-        }
-      }
+    const sessions = activeSessions && activeSessions.length > 0 ? activeSessions : [];
+    const lastIndex = sessions.length - 1;
+    const currentSession = lastIndex >= 0 ? sessions[lastIndex] : null;
+    const sessionNum = currentSession?.sessionNumber ?? (sessions.length || 1);
+
+    let sessionWords = 0;
+    if (currentSession && !currentSession.completedAt) {
+      const priorWords = sessions.slice(0, lastIndex).reduce((acc, s) => acc + (s.wordCount || 0), 0);
+      sessionWords = Math.max(0, totalWords - priorWords);
+    } else if (currentSession) {
+      sessionWords = currentSession.wordCount || 0;
+    } else {
+      sessionWords = totalWords;
     }
 
-    const nonSpaceChars = totalChars - blankSpaces;
-    const words = Math.max(0, Math.round(nonSpaceChars / 5));
-
     return {
-      totalCharsOnPage: totalChars,
-      wordCount: words,
+      totalProjectWords: totalWords,
+      currentSessionNumber: sessionNum,
+      currentSessionWords: sessionWords,
     };
-  }, [currentPageLines]);
+  }, [historicalPages, currentPageLines, currentPageNumber, activeSessions]);
 
   if (showStats === false) return null;
 
@@ -59,12 +71,12 @@ export const DocumentStats: React.FC = React.memo(function DocumentStats() {
     >
       <div className="flex items-center justify-center gap-1.5 sm:gap-2 flex-wrap">
         <span>{lineStatText}</span>
-        <span>-</span>
-        <span className="text-foreground/90 font-medium">{wordCount} words</span>
-        <span>-</span>
-        <span>{totalCharsOnPage} chars</span>
-        <span>-</span>
-        <span className="truncate max-w-[200px] sm:max-w-[300px]">{title.toLowerCase()}</span>
+        <span>·</span>
+        <span>[ session: {currentSessionNumber} · {currentSessionWords} words ]</span>
+        <span>·</span>
+        <span className="truncate max-w-[150px] sm:max-w-[250px]">{title.toLowerCase()}</span>
+        <span>·</span>
+        <span className="text-foreground/90 font-medium">{totalProjectWords} words</span>
       </div>
     </div>
   );

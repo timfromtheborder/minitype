@@ -40,13 +40,13 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: 0rem;
-  --radius-md: 0rem;
-  --radius-lg: 0rem;
-  --radius-xl: 0rem;
-  --radius-2xl: 0rem;
-  --radius-3xl: 0rem;
-  --radius-4xl: 0rem;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 2px;
+  --radius-2xl: 2px;
+  --radius-3xl: 2px;
+  --radius-4xl: 2px;
 }
 
 /* ==========================================================================
@@ -74,7 +74,7 @@
   --border: #DCD1BE;
   --input: #DCD1BE;
   --ring: #887E6E;
-  --radius: 0rem;
+  --radius: 2px;
   --highlight-bg: rgba(220, 206, 178, 0.9);
   --highlight-text: #1E1E1E;
   --struck-color: #C0392B;
@@ -365,7 +365,7 @@ input[type="range"].square-slider {
   appearance: none;
   background: var(--muted);
   height: 6px;
-  border-radius: 0;
+  border-radius: 2px;
   outline: none;
 }
 input[type="range"].square-slider::-webkit-slider-thumb {
@@ -374,14 +374,51 @@ input[type="range"].square-slider::-webkit-slider-thumb {
   width: 14px;
   height: 14px;
   background: var(--primary);
-  border-radius: 0;
+  border-radius: 2px;
   cursor: pointer;
 }
 input[type="range"].square-slider::-moz-range-thumb {
   width: 14px;
   height: 14px;
   background: var(--primary);
-  border-radius: 0;
+  border-radius: 2px;
   cursor: pointer;
   border: none;
+}
+
+/* ==========================================================================
+   MINITYPE STATIC APERTURE HEIGHT MAPPINGS
+   ========================================================================== */
+:root,
+html[data-aperture-height="1"],
+[data-aperture-height="1"] {
+  --aperture-height-rem: 1.25rem;
+}
+html[data-aperture-height="2"],
+[data-aperture-height="2"] {
+  --aperture-height-rem: 2.5rem;
+}
+html[data-aperture-height="3"],
+[data-aperture-height="3"] {
+  --aperture-height-rem: 3.75rem;
+}
+html[data-aperture-height="4"],
+[data-aperture-height="4"] {
+  --aperture-height-rem: 5rem;
+}
+html[data-aperture-height="5"],
+[data-aperture-height="5"] {
+  --aperture-height-rem: 6.25rem;
+}
+html[data-aperture-height="6"],
+[data-aperture-height="6"] {
+  --aperture-height-rem: 7.5rem;
+}
+html[data-aperture-height="7"],
+[data-aperture-height="7"] {
+  --aperture-height-rem: 8.75rem;
+}
+html[data-aperture-height="8"],
+[data-aperture-height="8"] {
+  --aperture-height-rem: 10rem;
 }
