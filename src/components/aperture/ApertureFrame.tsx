@@ -85,23 +85,23 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
       {/* Column guide top ruler marker (permanently fixed at top of the platen) */}
       {isPortrait ? (
         <div className={`flex items-center justify-between ${platenWidthClass} font-mono select-none pointer-events-none mb-1.5 shrink-0 whitespace-nowrap overflow-hidden leading-none`}>
-          <span className="text-[10px] font-semibold text-muted-foreground/45 shrink-0">01</span>
-          <span className="flex-1 text-[10px] text-center overflow-hidden whitespace-nowrap truncate tracking-widest text-muted-foreground/25 opacity-70 px-1">
+          <span className="text-[0.625rem] font-semibold text-muted-foreground/45 shrink-0">01</span>
+          <span className="flex-1 text-[0.625rem] text-center overflow-hidden whitespace-nowrap truncate tracking-widest text-muted-foreground/25 opacity-70 px-1">
             · · · · · · · · · · · · ·
           </span>
-          <span className="text-[10px] font-semibold text-muted-foreground/45 shrink-0">35</span>
+          <span className="text-[0.625rem] font-semibold text-muted-foreground/45 shrink-0">35</span>
         </div>
       ) : (
         <div className={`flex items-center justify-between ${platenWidthClass} font-mono select-none pointer-events-none mb-1.5 shrink-0 whitespace-nowrap overflow-hidden leading-none`}>
-          <span className="text-[10px] font-semibold text-muted-foreground/45 shrink-0">01</span>
-          <span className="flex-1 text-[10px] text-center overflow-hidden whitespace-nowrap truncate tracking-widest text-muted-foreground/25 opacity-70 px-1">
+          <span className="text-[0.625rem] font-semibold text-muted-foreground/45 shrink-0">01</span>
+          <span className="flex-1 text-[0.625rem] text-center overflow-hidden whitespace-nowrap truncate tracking-widest text-muted-foreground/25 opacity-70 px-1">
             · · · · · · · · · · · · ·
           </span>
-          <span className="text-[10px] font-semibold text-muted-foreground/60 px-1 shrink-0">35</span>
-          <span className="flex-1 text-[10px] text-center overflow-hidden whitespace-nowrap truncate tracking-widest text-muted-foreground/25 opacity-70 px-1">
+          <span className="text-[0.625rem] font-semibold text-muted-foreground/60 px-1 shrink-0">35</span>
+          <span className="flex-1 text-[0.625rem] text-center overflow-hidden whitespace-nowrap truncate tracking-widest text-muted-foreground/25 opacity-70 px-1">
             · · · · · · · · · · · · ·
           </span>
-          <span className="text-[10px] font-semibold text-muted-foreground/45 shrink-0">70</span>
+          <span className="text-[0.625rem] font-semibold text-muted-foreground/45 shrink-0">70</span>
         </div>
       )}
 
@@ -111,7 +111,7 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
         {isNotecard && (
           <div
             aria-hidden="true"
-            className="absolute right-[calc(100%+0.35rem)] sm:right-[calc(100%+0.65rem)] top-0 bottom-0 flex flex-col justify-end select-none pointer-events-none"
+            className="absolute right-[calc(100%+0.75rem)] sm:right-[calc(100%+1.25rem)] top-0 bottom-0 flex flex-col justify-end select-none pointer-events-none"
             style={{ height: `${viewportHeightRem}rem` }}
           >
             {visibleLines.map((line, idx) => {
@@ -119,7 +119,7 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
               return (
                 <div
                   key={line.id}
-                  className="h-[1.25rem] flex items-center justify-end text-[10px] font-semibold text-muted-foreground/45 font-mono leading-none tabular-nums"
+                  className="h-[1.25rem] flex items-center justify-end text-[0.625rem] font-semibold text-muted-foreground/45 font-mono leading-none tabular-nums"
                 >
                   {actualIndex + 1}
                 </div>
@@ -144,13 +144,6 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
 
             return (
               <div key={line.id} className="relative w-full">
-                {/* Faint horizontal rule above each existing line of text in notecard mode */}
-                {isNotecard && (
-                  <div
-                    aria-hidden="true"
-                    className="absolute top-0 left-0 right-0 border-t border-muted-foreground/15 pointer-events-none"
-                  />
-                )}
                 {isActive ? (
                   <ActiveLine
                     line={line}

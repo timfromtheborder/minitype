@@ -20,12 +20,14 @@ export const metadata: Metadata = {
   description: "Distraction-free, forward-momentum writing web application modeled on mechanical typewriter constraints.",
   icons: {
     icon: [
-      { url: `${basePath}/favicon.svg`, type: "image/svg+xml" },
+      { url: `${basePath}/favicon-32x32.png`, sizes: "32x32", type: "image/png" },
       { url: `${basePath}/favicon.png`, type: "image/png" },
-      { url: `${basePath}/favicon.ico` },
+      { url: `${basePath}/android-chrome-512x512.png`, sizes: "512x512", type: "image/png" },
     ],
-    shortcut: `${basePath}/favicon.ico`,
-    apple: `${basePath}/apple-touch-icon.png`,
+    shortcut: `${basePath}/favicon-32x32.png`,
+    apple: [
+      { url: `${basePath}/apple-touch-icon.png`, sizes: "180x180", type: "image/png" },
+    ],
   },
   appleWebApp: {
     capable: true,

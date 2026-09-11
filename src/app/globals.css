@@ -453,9 +453,21 @@ html[data-aperture-height="10"],
   animation: session-box-pulse 200ms ease-out forwards;
 }
 
-[data-theme="spotlight"] .session-box-filled {
-  background-color: rgba(20, 20, 22, 0.45) !important;
-  border-color: rgba(20, 20, 22, 0.65) !important;
+[data-theme="spotlight"] .session-box-filled,
+[data-theme="phosphor"] .session-box-filled {
+  background-color: rgba(237, 237, 237, 0.55) !important;
+  border-color: rgba(237, 237, 237, 0.8) !important;
+}
+
+[data-theme="spotlight"] .session-box-empty,
+[data-theme="phosphor"] .session-box-empty {
+  border-color: rgba(237, 237, 237, 0.35) !important;
+}
+
+[data-theme="spotlight"] .session-box-flash,
+[data-theme="phosphor"] .session-box-flash {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border-color: #FFFFFF !important;
 }
 
 [data-theme="dark-amber"] .session-box-filled {

@@ -46,6 +46,28 @@ export const SessionTargetTracker: React.FC = React.memo(function SessionTargetT
   const prevFilledRef = useRef(filledCount);
   const [justFilledIdx, setJustFilledIdx] = useState<number | null>(null);
 
+  // Measure container width to guarantee all 100 boxes are strictly identical in size on all screens
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [boxSize, setBoxSize] = useState<number>(5);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const width = el.clientWidth;
+      if (width <= 0) return;
+      // Guarantee minimum 1px gap across 99 spaces while ensuring integer box size
+      const calculated = Math.max(2, Math.floor((width - 99) / 100));
+      setBoxSize(calculated);
+    };
+
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   useEffect(() => {
     if (filledCount > prevFilledRef.current) {
       setJustFilledIdx(filledCount - 1);
@@ -63,7 +85,10 @@ export const SessionTargetTracker: React.FC = React.memo(function SessionTargetT
   if (!showTracker || !target || target <= 0) return null;
 
   return (
-    <div className="w-full flex items-center justify-between gap-[1px] sm:gap-[1.5px] pointer-events-none select-none">
+    <div
+      ref={containerRef}
+      className="w-full flex items-center justify-between pointer-events-none select-none"
+    >
       {Array.from({ length: boxCount }).map((_, idx) => {
         const isFilled = idx < filledCount;
         const isFlashing = idx === justFilledIdx;
@@ -71,12 +96,13 @@ export const SessionTargetTracker: React.FC = React.memo(function SessionTargetT
         return (
           <div
             key={idx}
-            className={`flex-1 min-w-0 aspect-square rounded-[0.5px] transition-colors duration-150 ${
+            style={{ width: `${boxSize}px`, height: `${boxSize}px` }}
+            className={`shrink-0 rounded-[0.5px] transition-colors duration-150 ${
               isFilled
                 ? `session-box-filled bg-muted-foreground/25 border border-muted-foreground/35 ${
                     isFlashing ? 'session-box-flash' : ''
                   }`
-                : 'border border-dotted border-muted-foreground/25 bg-transparent'
+                : 'session-box-empty border border-dotted border-muted-foreground/25 bg-transparent'
             }`}
           />
         );
