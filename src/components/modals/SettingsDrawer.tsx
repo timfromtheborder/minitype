@@ -213,35 +213,6 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
             </div>
           </div>
 
-          {/* Session Mode */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-muted-foreground">Session:</label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => onUpdateManifest({ mode: 'local' })}
-                className={`py-1.5 px-3 rounded-none border text-center transition-all cursor-pointer ${
-                  manifest.mode === 'local'
-                    ? 'border-primary bg-primary text-primary-foreground font-bold shadow-xs'
-                    : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground'
-                }`}
-              >
-                Local (IndexedDB)
-              </button>
-              <button
-                type="button"
-                onClick={() => onUpdateManifest({ mode: 'temp' })}
-                className={`py-1.5 px-3 rounded-none border text-center transition-all cursor-pointer ${
-                  manifest.mode === 'temp'
-                    ? 'border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold'
-                    : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground'
-                }`}
-              >
-                Temp (Volatile RAM)
-              </button>
-            </div>
-          </div>
-
           {/* Settings Toggles (Document Stats & Markdown Mode) */}
           <div className="flex flex-col gap-2 pt-2 border-t border-border/60">
             {/* Document Stats */}

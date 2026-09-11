@@ -3,13 +3,30 @@ import { ManuscriptManifest } from '@/types';
 import { getAllManuscripts, loadManuscriptProject } from '@/db';
 import { useTypingStore } from '@/stores/typingStore';
 import { sanitizeManuscript } from '@/lib/sanitize';
-import { FolderOpen, Plus, Upload, Trash2, Download, Check, FileText, Loader2, Edit2 } from 'lucide-react';
+import { serializeProjectFile } from '@/lib/projectSerializer';
+import {
+  FolderOpen,
+  Plus,
+  Upload,
+  Trash2,
+  Download,
+  Check,
+  FileText,
+  Loader2,
+  Edit2,
+  ArrowUpDown,
+  ArrowDown,
+  ArrowUp,
+} from 'lucide-react';
 
 interface ProjectFilesTabProps {
   activeManuscriptId: string;
   onCloseModal: () => void;
   onSelectDocumentTab: () => void;
 }
+
+type SortField = 'modified' | 'created' | 'name';
+type SortDirection = 'asc' | 'desc';
 
 export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
   activeManuscriptId,
@@ -21,6 +38,8 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState<string>('');
+  const [sortField, setSortField] = useState<SortField>('modified');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastTapRef = useRef<{ id: string; time: number }>({ id: '', time: 0 });
 
@@ -59,7 +78,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
       await useTypingStore.getState().importTextFileAsProject(fileName, text);
       onSelectDocumentTab();
     } catch (err) {
-      console.error('Failed to import file:', err);
+      console.error('Failed to import project file:', err);
     } finally {
       e.target.value = '';
     }
@@ -106,11 +125,18 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
     try {
       const data = await loadManuscriptProject(m.id);
       if (!data) return;
-      const clean = sanitizeManuscript(data.pages, {
-        doubleSpaceLinebreaks: m.doubleSpaceLinebreaks,
-      });
+
+      let content = '';
+      if (data.sessions && data.sessions.length > 1) {
+        content = serializeProjectFile(data.sessions);
+      } else {
+        content = sanitizeManuscript(data.pages, {
+          doubleSpaceLinebreaks: m.doubleSpaceLinebreaks,
+        });
+      }
+
       const safeTitle = (m.title.trim() || 'manuscript').replace(/[/\\?%*:|"<>]/g, '-');
-      const blob = new Blob([clean], { type: 'text/plain;charset=utf-8' });
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -138,8 +164,34 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
     }
   };
 
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDirection(field === 'name' ? 'asc' : 'desc');
+    }
+  };
+
+  const sortedFiles = [...files].sort((a, b) => {
+    if (sortField === 'name') {
+      const nameA = (a.title || 'Untitled Manuscript').toLowerCase();
+      const nameB = (b.title || 'Untitled Manuscript').toLowerCase();
+      return sortDirection === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+    }
+    if (sortField === 'created') {
+      const timeA = new Date(a.createdAt || 0).getTime();
+      const timeB = new Date(b.createdAt || 0).getTime();
+      return sortDirection === 'asc' ? timeA - timeB : timeB - timeA;
+    }
+    // 'modified'
+    const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+    const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+    return sortDirection === 'asc' ? timeA - timeB : timeB - timeA;
+  });
+
   return (
-    <div className="flex flex-col w-full h-full min-h-0 gap-3 font-sans">
+    <div className="flex flex-col w-full h-full min-h-0 gap-2.5 sm:gap-3 font-sans">
       {/* Hidden file picker */}
       <input
         ref={fileInputRef}
@@ -150,9 +202,9 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
       />
 
       {/* Top Action Bar */}
-      <div className="flex items-center justify-between gap-2 shrink-0 pb-2 border-b border-border/60">
+      <div className="flex flex-wrap items-center justify-between gap-2 shrink-0 pb-2 border-b border-border/60">
         <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Filesystem ({files.length})
+          Projects ({files.length})
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -168,11 +220,41 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
             type="button"
             onClick={handleNewFile}
             className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-none border border-primary bg-primary text-primary-foreground font-semibold shadow-xs hover:opacity-90 transition-opacity cursor-pointer"
-            title="Create a new document"
+            title="Create a new project"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>New Document</span>
+            <span>New Project</span>
           </button>
+        </div>
+      </div>
+
+      {/* Sorting Controls Bar */}
+      <div className="flex items-center justify-between gap-2 shrink-0 px-1 py-1 text-[11px] bg-muted/20 border border-border/40">
+        <div className="flex items-center gap-1 text-muted-foreground">
+          <ArrowUpDown className="w-3 h-3 opacity-70" />
+          <span className="uppercase tracking-wider font-semibold text-[10px]">Sort:</span>
+        </div>
+        <div className="flex items-center gap-1">
+          {(['modified', 'created', 'name'] as SortField[]).map((field) => {
+            const isSelected = sortField === field;
+            return (
+              <button
+                key={field}
+                type="button"
+                onClick={() => toggleSort(field)}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-none border transition-colors cursor-pointer capitalize ${
+                  isSelected
+                    ? 'border-primary bg-primary/15 text-primary font-bold shadow-xs'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40'
+                }`}
+              >
+                <span>{field}</span>
+                {isSelected && (
+                  sortDirection === 'asc' ? <ArrowUp className="w-2.5 h-2.5" /> : <ArrowDown className="w-2.5 h-2.5" />
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -183,17 +265,17 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
             <Loader2 className="w-4 h-4 animate-spin" />
             <span>Loading filesystem...</span>
           </div>
-        ) : files.length === 0 ? (
+        ) : sortedFiles.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 p-4 text-center gap-2 text-muted-foreground">
             <FileText className="w-8 h-8 opacity-40" />
-            <p className="text-xs font-medium">No saved files found in local storage.</p>
+            <p className="text-xs font-medium">No saved projects found in local storage.</p>
             <p className="text-[11px] opacity-70">
-              Create a new document or import a text file to get started.
+              Create a new project or import a text file to get started.
             </p>
           </div>
         ) : (
           <div className="divide-y divide-border/50">
-            {files.map((file) => {
+            {sortedFiles.map((file) => {
               const isActive = file.id === activeManuscriptId;
               const isConfirmingDelete = deletingId === file.id;
               const isEditing = editingId === file.id;
@@ -246,7 +328,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                                 handleStartRename(file);
                               }}
                               className="opacity-0 group-hover/title:opacity-100 p-0.5 text-muted-foreground hover:text-foreground transition-opacity cursor-pointer"
-                              title="Rename document"
+                              title="Rename project"
                             >
                               <Edit2 className="w-3 h-3" />
                             </button>
@@ -258,8 +340,18 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                           </span>
                         )}
                       </div>
-                      <div className="text-[10px] text-muted-foreground truncate">
-                        {formatDate(file.updatedAt || file.createdAt)}
+                      <div className="flex items-center gap-2.5 text-[10px] text-muted-foreground truncate mt-0.5">
+                        <span>{formatDate(file.updatedAt || file.createdAt)}</span>
+                        <span>•</span>
+                        <span>
+                          {file.sessionCount || 1} {(file.sessionCount || 1) === 1 ? 'session' : 'sessions'}
+                        </span>
+                        {file.totalWordCount !== undefined && file.totalWordCount > 0 && (
+                          <>
+                            <span>•</span>
+                            <span>{file.totalWordCount.toLocaleString()} words</span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -272,7 +364,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                         type="button"
                         onClick={() => handleOpenProject(file.id)}
                         className="flex items-center gap-1 px-2 py-1 text-xs rounded-none border border-border/80 bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
-                        title="Open this file into the aperture"
+                        title="Open this project"
                       >
                         <FolderOpen className="w-3.5 h-3.5" />
                         <span className="hidden sm:inline">Open</span>
@@ -280,12 +372,12 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                     ) : (
                       <button
                         type="button"
-                        onClick={() => onSelectDocumentTab()}
-                        className="flex items-center gap-1 px-2 py-1 text-xs rounded-none border border-border/80 bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
-                        title="View active document preview"
+                        onClick={onSelectDocumentTab}
+                        className="flex items-center gap-1 px-2 py-1 text-xs rounded-none border border-primary/40 bg-primary/10 text-primary font-medium transition-colors cursor-pointer"
+                        title="Currently open in aperture"
                       >
-                        <Check className="w-3 h-3 text-primary" />
-                        <span className="hidden sm:inline">Current</span>
+                        <Check className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Viewing</span>
                       </button>
                     )}
 
@@ -293,26 +385,26 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                     <button
                       type="button"
                       onClick={() => handleDownloadProject(file)}
-                      className="p-1.5 rounded-none border border-border/60 hover:border-foreground/40 bg-background text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                      title="Download clean .txt"
+                      className="p-1 rounded-none text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                      title="Download project text"
                     >
                       <Download className="w-3.5 h-3.5" />
                     </button>
 
-                    {/* Delete / Confirm Delete Button */}
+                    {/* Delete with Confirmation */}
                     {isConfirmingDelete ? (
-                      <div className="flex items-center gap-1 animate-in fade-in">
+                      <div className="flex items-center gap-1 bg-destructive/10 p-0.5 border border-destructive/30">
                         <button
                           type="button"
                           onClick={() => handleDeleteProject(file.id)}
-                          className="px-2 py-1 text-xs rounded-none border border-destructive bg-destructive text-destructive-foreground font-bold hover:opacity-90 cursor-pointer"
+                          className="px-2 py-0.5 text-xs rounded-none border border-destructive bg-destructive text-destructive-foreground font-bold hover:opacity-90 cursor-pointer"
                         >
                           Confirm
                         </button>
                         <button
                           type="button"
                           onClick={() => setDeletingId(null)}
-                          className="px-2 py-1 text-xs rounded-none border border-border bg-background text-muted-foreground hover:text-foreground cursor-pointer"
+                          className="px-1.5 py-0.5 text-xs rounded-none text-muted-foreground hover:text-foreground cursor-pointer"
                         >
                           Cancel
                         </button>
@@ -321,8 +413,8 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                       <button
                         type="button"
                         onClick={() => setDeletingId(file.id)}
-                        className="p-1.5 rounded-none border border-transparent text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors cursor-pointer"
-                        title="Delete this file"
+                        className="p-1 rounded-none text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                        title="Delete project"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>

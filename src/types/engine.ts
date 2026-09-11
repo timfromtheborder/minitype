@@ -1,5 +1,6 @@
 import { CharacterCell, LineRecord } from './aperture';
 import { ManuscriptManifest, PageMode } from './manuscript';
+import { SessionRecord } from './session';
 
 export interface CursorPosition {
   lineIndex: number;
@@ -10,6 +11,8 @@ export interface HighlightTarget {
   lineIndex: number;
   colIndex: number;
 }
+
+export type SaveState = 'saved' | 'saving' | 'error';
 
 export interface TypingEngineState {
   manifest: ManuscriptManifest;
@@ -22,6 +25,8 @@ export interface TypingEngineState {
   lockReason: 'page_exhaustion' | null;
   activeColumnLimit: number; // 70 for desktop/landscape, 35 for mobile portrait
   persistenceError: string | null;
+  saveState: SaveState;
+  activeSessions: SessionRecord[];
 }
 
 export interface TypingEngineActions {
@@ -41,6 +46,8 @@ export interface TypingEngineActions {
   importTextFileAsProject: (title: string, rawText: string) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
   renameProject: (id: string, newTitle: string) => Promise<void>;
+  startNewSession: () => Promise<void>;
+  flushSave: () => Promise<void>;
   toggleStats: (show?: boolean) => void;
   toggleDoubleSpaceLinebreaks: (enabled?: boolean) => void;
   resetEngine: (newManifest?: Partial<ManuscriptManifest>) => void;

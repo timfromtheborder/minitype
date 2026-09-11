@@ -163,28 +163,6 @@ export function useTypingEngine(options?: UseTypingEngineOptions) {
     };
   }, []);
 
-  // BeforeUnload hook for temp mode with unprinted content
-  useEffect(() => {
-    if (store.manifest.mode !== 'temp') return;
-
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      // Check if there is any unprinted text in current page or historical pages
-      const hasContent =
-        store.currentPageLines.some((l) => l.cells.length > 0) ||
-        store.historicalPages.length > 0;
-
-      if (hasContent) {
-        e.preventDefault();
-        e.returnValue = 'Draft is running in Temp Mode. Exiting will permanently erase all unprinted text.';
-        return e.returnValue;
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [store.manifest.mode, store.currentPageLines, store.historicalPages]);
 
   // Compute visible lines for the typing aperture based on activeApertureHeight
   const height = store.manifest.activeApertureHeight;

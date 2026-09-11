@@ -14,7 +14,7 @@ export type PageSize = 30 | 40 | 54 | 60 | number;
 export type PageMode = 'scroll' | 'page' | 'notecard' | 'paragraph';
 export type ColorScheme = 'typewriter' | 'dark-amber' | 'spotlight' | 'high-contrast' | 'dark-mode' | 'low-contrast' | 'phosphor';
 export type Typeface = 'courier-prime' | 'jetbrains-mono' | 'ibm-plex-mono';
-export type ManuscriptMode = 'local' | 'temp';
+export type ManuscriptMode = 'local';
 
 export interface ManuscriptManifest {
   id: string;
@@ -32,6 +32,9 @@ export interface ManuscriptManifest {
   typeface: Typeface;
   showStats?: boolean;
   doubleSpaceLinebreaks?: boolean;
+  activeSessionId?: string;
+  sessionCount?: number;
+  totalWordCount?: number;
   createdAt?: string;
   updatedAt?: string;
 }

@@ -3,11 +3,12 @@ import { useTypingStore, createEmptyLine } from '@/stores/typingStore';
 import { LineRecord } from '@/types';
 import { sanitizeManuscript, calculatePrintDelayMs } from '@/lib/sanitize';
 import { wrapLine, MAX_COLUMNS } from '@/lib/wrap';
+import { serializeProjectFile, parseProjectFile, stripSessionMarkers } from '@/lib/projectSerializer';
 
 describe('Typing Engine & State Machine Invariants', () => {
   beforeEach(() => {
     useTypingStore.getState().resetEngine({
-      mode: 'temp',
+      mode: 'local',
       inboxCount: 2,
       outboxCount: 0,
       activeApertureHeight: 3,
@@ -433,7 +434,7 @@ describe('Typing Engine & State Machine Invariants', () => {
 
     it('unwraps soft-wrapped lines into continuous paragraphs, creating linebreaks only on Enter', () => {
       const store = useTypingStore.getState();
-      store.resetEngine({ mode: 'temp', wrapMode: 'soft' });
+      store.resetEngine({ mode: 'local', wrapMode: 'soft' });
 
       // 1. Soft-wrapped lines should unwrap into a single continuous paragraph without newlines
       for (let i = 0; i < 60; i++) store.insertChar('a');
@@ -449,7 +450,7 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(sanitized.includes('\n')).toBe(false);
 
       // 2. Hard Enter should create linebreaks
-      store.resetEngine({ mode: 'temp', wrapMode: 'soft' });
+      store.resetEngine({ mode: 'local', wrapMode: 'soft' });
       for (const c of 'First line') store.insertChar(c);
       store.handleEnter();
       for (const c of 'Second line') store.insertChar(c);
@@ -459,7 +460,7 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(sanitized).toBe('First line\nSecond line');
 
       // 3. Double Enter should create paragraph breaks with an empty line
-      store.resetEngine({ mode: 'temp', wrapMode: 'soft' });
+      store.resetEngine({ mode: 'local', wrapMode: 'soft' });
       for (const c of 'Paragraph 1') store.insertChar(c);
       store.handleEnter();
       store.handleEnter();
@@ -472,7 +473,7 @@ describe('Typing Engine & State Machine Invariants', () => {
 
     it('preserves space when space is typed at the end of the line (character 71) and drafting continues on the next line', () => {
       const store = useTypingStore.getState();
-      store.resetEngine({ mode: 'temp', wrapMode: 'soft' });
+      store.resetEngine({ mode: 'local', wrapMode: 'soft' });
 
       // Type 70 characters on Line 0 (filling columns 0 to 69)
       for (let i = 0; i < 70; i++) store.insertChar('a');
@@ -494,7 +495,7 @@ describe('Typing Engine & State Machine Invariants', () => {
 
     it('connects hyphenated wrap directly without introducing a space', () => {
       const store = useTypingStore.getState();
-      store.resetEngine({ mode: 'temp', wrapMode: 'soft' });
+      store.resetEngine({ mode: 'local', wrapMode: 'soft' });
       for (let i = 0; i < 64; i++) store.insertChar('a');
       for (const c of 'life-like') store.insertChar(c);
 
@@ -530,7 +531,7 @@ describe('Typing Engine & State Machine Invariants', () => {
 
     it('preserves linebreaks and page boundaries across multiple pages during sanitization', () => {
       const store = useTypingStore.getState();
-      store.resetEngine({ mode: 'temp', pageMode: 'paragraph' });
+      store.resetEngine({ mode: 'local', pageMode: 'paragraph' });
 
       for (const c of 'Paragraph 1') store.insertChar(c);
       store.handleEnter(); // makes new page: Page 2!
@@ -554,7 +555,7 @@ describe('Typing Engine & State Machine Invariants', () => {
 
     it('handles intra-page linebreaks on pages past page 1 in notecard mode', () => {
       const store = useTypingStore.getState();
-      store.resetEngine({ mode: 'temp', pageMode: 'notecard' }); // 10 lines per card
+      store.resetEngine({ mode: 'local', pageMode: 'notecard' }); // 10 lines per card
 
       // Fill Page 1 (10 lines)
       for (let i = 0; i < 10; i++) {
@@ -587,7 +588,7 @@ describe('Typing Engine & State Machine Invariants', () => {
 
     it('collapses full-line strikeouts without inserting unwanted blank lines, and preserves hard breaks', () => {
       const store = useTypingStore.getState();
-      store.resetEngine({ mode: 'temp', pageMode: 'notecard' });
+      store.resetEngine({ mode: 'local', pageMode: 'notecard' });
 
       // Line 0: "First line"
       for (const c of 'First line') store.insertChar(c);
@@ -613,7 +614,7 @@ describe('Typing Engine & State Machine Invariants', () => {
 
     it('preserves paragraph break when hard Enter is pressed after soft-wrap and strikeout', () => {
       const store = useTypingStore.getState();
-      store.resetEngine({ mode: 'temp', pageMode: 'notecard', wrapMode: 'soft' });
+      store.resetEngine({ mode: 'local', pageMode: 'notecard', wrapMode: 'soft' });
 
       // Line 0: Type 60 chars and wrap into Line 1
       for (let i = 0; i < 60; i++) store.insertChar('A');
@@ -640,7 +641,7 @@ describe('Typing Engine & State Machine Invariants', () => {
 
     it('rejoins lines when backspacing to previous lines across soft-wrap boundaries without manual linebreaks', () => {
       const store = useTypingStore.getState();
-      store.resetEngine({ mode: 'temp', activeApertureHeight: 3, wrapMode: 'soft' });
+      store.resetEngine({ mode: 'local', activeApertureHeight: 3, wrapMode: 'soft' });
 
       // Fill line 0 with 65 chars, then space, then 'WRAPPED' which wraps to line 1
       for (let i = 0; i < 65; i++) store.insertChar('A');
@@ -676,7 +677,7 @@ describe('Typing Engine & State Machine Invariants', () => {
 
     it('strikes out carriage return when backspacing immediately after Enter', () => {
       const store = useTypingStore.getState();
-      store.resetEngine({ mode: 'temp', pageMode: 'notecard' });
+      store.resetEngine({ mode: 'local', pageMode: 'notecard' });
 
       // Type "Hello" on line 0
       for (const c of 'Hello') store.insertChar(c);
@@ -711,7 +712,7 @@ describe('Typing Engine & State Machine Invariants', () => {
 
     it('strikes out carriage return in paragraph mode restoring the completed paragraph', () => {
       const store = useTypingStore.getState();
-      store.resetEngine({ mode: 'temp', pageMode: 'paragraph' });
+      store.resetEngine({ mode: 'local', pageMode: 'paragraph' });
 
       for (const c of 'Paragraph 1') store.insertChar(c);
 
@@ -877,14 +878,21 @@ describe('Typing Engine & State Machine Invariants', () => {
         activeApertureHeight: 4,
       });
 
-      const stored = JSON.parse(localStorage.getItem('minitype_settings') || '{}');
+      const stored = JSON.parse(localStorage.getItem('minitype_global_settings') || '{}');
       expect(stored.colorScheme).toBe('dark-amber');
       expect(stored.typeface).toBe('jetbrains-mono');
       expect(stored.activeApertureHeight).toBe(4);
     });
 
     it('rehydrates saved draft pages from IndexedDB in local mode', async () => {
+      const { db, flushPendingSave } = await import('@/db');
+      await db.manuscripts.clear();
+      await db.pages.clear();
+      await db.sessions.clear();
+      localStorage.clear();
+
       const store = useTypingStore.getState();
+      await store.newProject();
       store.setManifest({ mode: 'local' });
 
       // Type some characters on active page
@@ -893,8 +901,7 @@ describe('Typing Engine & State Machine Invariants', () => {
       }
 
       // Force flush any debounced save
-      const { flushPendingSave } = await import('@/db');
-      flushPendingSave();
+      await flushPendingSave();
 
       // Simulate a browser refresh by wiping in-memory state
       store.resetEngine({ mode: 'local' });
@@ -905,16 +912,23 @@ describe('Typing Engine & State Machine Invariants', () => {
 
       const rehydratedState = useTypingStore.getState();
       expect(rehydratedState.currentPageLines[0].cells.map((c) => c.char).join('')).toBe('Saved locally');
-      expect(rehydratedState.activeColIndex).toBe(13);
+      // Under Option A, loading a manuscript automatically opens a fresh resumed line at Col 0
+      expect(rehydratedState.activeLineIndex).toBe(1);
+      expect(rehydratedState.activeColIndex).toBe(0);
     });
 
-    it('preserves sterile RAM invariant in temp mode (does not load IndexedDB)', async () => {
+    it('persists settings globally to localStorage under minitype_global_settings', () => {
       const store = useTypingStore.getState();
-      store.setManifest({ mode: 'temp' });
+      store.setApertureHeight(4);
+      store.setManifest({ colorScheme: 'phosphor' });
+      store.setPageMode('notecard');
 
-      // In temp mode, rehydrate should not restore anything into RAM
-      await store.rehydrate();
-      expect(useTypingStore.getState().manifest.mode).toBe('temp');
+      const savedJson = localStorage.getItem('minitype_global_settings');
+      expect(savedJson).toBeTruthy();
+      const parsed = JSON.parse(savedJson!);
+      expect(parsed.activeApertureHeight).toBe(4);
+      expect(parsed.colorScheme).toBe('phosphor');
+      expect(parsed.pageMode).toBe('notecard');
     });
 
     it('defaults audio to muted and persists sound toggle to localStorage', async () => {
@@ -937,7 +951,7 @@ describe('Typing Engine & State Machine Invariants', () => {
       const { typewriterAudio } = await import('@/lib/sound');
       const spy = vi.spyOn(typewriterAudio, 'playPaperFeed');
       const store = useTypingStore.getState();
-      store.resetEngine({ mode: 'temp', pageMode: 'notecard' }); // 10 lines per card
+      store.resetEngine({ mode: 'local', pageMode: 'notecard' }); // 10 lines per card
       for (let i = 0; i < 10; i++) {
         store.handleEnter();
       }
@@ -1205,6 +1219,80 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(sixLines[0].actualIndex).toBe(1);
       expect(sixLines[0].isTopmost).toBe(true);
       expect(sixLines[1].isTopmost).toBe(false);
+    });
+  });
+
+  describe('Project File Serialization & Session Management', () => {
+    it('serializes sessions into a single text file with markdown-safe comments and parses them back', () => {
+      const sessions = [
+        {
+          id: 'sess-1',
+          projectId: 'proj-1',
+          sessionNumber: 1,
+          startedAt: '2026-09-10T10:00:00.000Z',
+          completedAt: '2026-09-10T11:00:00.000Z',
+          wordCount: 5,
+          text: 'This is the first session.',
+        },
+        {
+          id: 'sess-2',
+          projectId: 'proj-1',
+          sessionNumber: 2,
+          startedAt: '2026-09-10T12:00:00.000Z',
+          completedAt: null,
+          wordCount: 5,
+          text: 'This is the second session.',
+        },
+      ];
+
+      const serialized = serializeProjectFile(sessions);
+      expect(serialized).toContain('This is the first session.');
+      expect(serialized).toContain('<!-- minitype:session id="sess-2" number="2"');
+      expect(serialized).toContain('This is the second session.');
+
+      // Parse back
+      const parsed = parseProjectFile(serialized, 'proj-1');
+      expect(parsed).toHaveLength(2);
+      expect(parsed[0].sessionNumber).toBe(1);
+      expect(parsed[0].text).toBe('This is the first session.');
+      expect(parsed[1].sessionNumber).toBe(2);
+      expect(parsed[1].text).toBe('This is the second session.');
+
+      // Strip session markers for clean reader export
+      const stripped = stripSessionMarkers(serialized);
+      expect(stripped).not.toContain('<!-- minitype:session');
+      expect(stripped).toContain('This is the first session.');
+      expect(stripped).toContain('This is the second session.');
+    });
+
+    it('falls back to a single session when parsing standard non-minitype text files', () => {
+      const rawText = 'Standard plain text without minitype markers.\nAnother line.';
+      const parsed = parseProjectFile(rawText, 'proj-legacy');
+      expect(parsed).toHaveLength(1);
+      expect(parsed[0].sessionNumber).toBe(1);
+      expect(parsed[0].text).toBe(rawText);
+    });
+
+    it('starts a new session and increments session count', async () => {
+      const store = useTypingStore.getState();
+      await store.newProject();
+
+      const initialSessionId = useTypingStore.getState().manifest.activeSessionId;
+      expect(initialSessionId).toBeTruthy();
+      expect(useTypingStore.getState().activeSessions).toHaveLength(1);
+
+      // Type some text in session 1
+      for (const c of 'Hello session 1') store.insertChar(c);
+
+      // Start new session
+      await store.startNewSession();
+
+      const stateAfterNewSession = useTypingStore.getState();
+      expect(stateAfterNewSession.manifest.activeSessionId).not.toBe(initialSessionId);
+      expect(stateAfterNewSession.activeSessions).toHaveLength(2);
+      expect(stateAfterNewSession.activeSessions[0].sessionNumber).toBe(1);
+      expect(stateAfterNewSession.activeSessions[1].sessionNumber).toBe(2);
+      expect(stateAfterNewSession.manifest.sessionCount).toBe(2);
     });
   });
 });

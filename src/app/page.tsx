@@ -7,7 +7,7 @@ import { DocumentStats } from '@/components/aperture/DocumentStats';
 import { PaperTrayStack } from '@/components/stages/PaperTrayStack';
 import { SettingsDrawer } from '@/components/modals/SettingsDrawer';
 import { PrintModal } from '@/components/modals/PrintModal';
-import { Settings, FileText, Database, Zap, AlertTriangle } from 'lucide-react';
+import { Settings, FileText, Check, Loader2, AlertTriangle } from 'lucide-react';
 
 export default function Home() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -114,42 +114,41 @@ export default function Home() {
             <span>Settings</span>
           </button>
 
-          {/* Persistence Mode Toggle Indicator */}
+          {/* Live Save State Indicator */}
           <button
             type="button"
-            onClick={() =>
-              engine.setManifest({
-                mode: engine.manifest.mode === 'local' ? 'temp' : 'local',
-              })
-            }
+            onClick={() => engine.flushSave?.()}
             className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-none border font-sans font-medium transition-all cursor-pointer text-[11px] sm:text-xs whitespace-nowrap ${
-              engine.manifest.mode === 'local'
-                ? engine.persistenceError
-                  ? 'border-red-500 bg-red-500/10 text-red-600 dark:text-red-400 font-semibold shadow-xs'
-                  : isSpotlight
-                  ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground shadow-xs'
-                  : 'border-border/70 bg-card text-card-foreground shadow-xs'
-                : 'border-amber-500/80 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold shadow-xs hover:bg-amber-500/20'
+              engine.saveState === 'saving'
+                ? 'border-amber-500/80 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold shadow-xs'
+                : engine.saveState === 'error' || engine.persistenceError
+                ? 'border-red-500 bg-red-500/10 text-red-600 dark:text-red-400 font-semibold shadow-xs'
+                : isSpotlight
+                ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground shadow-xs'
+                : 'border-border/70 bg-card text-card-foreground shadow-xs'
             }`}
             title={
-              engine.persistenceError
-                ? `IndexedDB Warning: ${engine.persistenceError}`
-                : 'Click to toggle between IndexedDB persistence and volatile RAM'
+              engine.saveState === 'error' || engine.persistenceError
+                ? `Save Error: ${engine.persistenceError || 'IndexedDB write error'}`
+                : engine.saveState === 'saving'
+                ? 'Saving changes...'
+                : 'All changes saved to project. Click to force save now.'
             }
           >
-            {engine.manifest.mode === 'local' ? (
+            {engine.saveState === 'saving' ? (
               <>
-                {engine.persistenceError ? (
-                  <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                ) : (
-                  <Database className="w-3.5 h-3.5 opacity-80 shrink-0" />
-                )}
-                <span>Local</span>
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-500 shrink-0" />
+                <span>Saving...</span>
+              </>
+            ) : engine.saveState === 'error' || engine.persistenceError ? (
+              <>
+                <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                <span>Save Error</span>
               </>
             ) : (
               <>
-                <Zap className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                <span>Temp</span>
+                <Check className="w-3.5 h-3.5 opacity-80 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                <span>Saved</span>
               </>
             )}
           </button>
