@@ -64,12 +64,16 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
   const isPortrait = activeColumnLimit === 35;
   const platenWidthClass = isPortrait ? 'w-[36ch]' : 'w-[71ch]';
 
+  const isNotecard = pageMode === 'notecard';
+
   return (
     <div
       onMouseDown={handleMouseDown}
       onClick={handleFrameTap}
       onTouchEnd={handleFrameTap}
-      className="relative flex flex-col justify-start w-fit max-w-[calc(100vw-1.5rem)] sm:max-w-[calc(100vw-2.5rem)] px-2.5 sm:px-6 md:px-8 pt-2.5 pb-2 rounded-[2px] border border-border/70 bg-card text-card-foreground shadow-inner shadow-black/5 overflow-hidden select-none text-sm sm:text-base cursor-pointer font-mono"
+      className={`relative flex flex-col justify-start w-fit max-w-[calc(100vw-1.5rem)] sm:max-w-[calc(100vw-2.5rem)] ${
+        isNotecard ? 'pl-4 sm:pl-7 pr-2.5 sm:pr-6 md:px-8' : 'px-2.5 sm:px-6 md:px-8'
+      } pt-2.5 pb-2 rounded-[2px] border border-border/70 bg-card text-card-foreground shadow-inner shadow-black/5 overflow-hidden select-none text-sm sm:text-base cursor-pointer font-mono`}
       style={{
         cursor: isLocked ? 'not-allowed' : 'text',
         userSelect: 'none',
@@ -102,42 +106,70 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
       )}
 
       {/* Drafting lines viewport: fixed height based on aperture capacity, scrolling upward from bottom platen */}
-      <div
-        className={`flex flex-col justify-end ${platenWidthClass} overflow-hidden`}
-        style={{ height: `${viewportHeightRem}rem` }}
-      >
-        {visibleLines.map((line, idx) => {
-          const actualIndex = startIdx + idx;
-          const isActive = actualIndex === activeLineIndex;
+      <div className="relative flex flex-row justify-center">
+        {/* Line numbers column in notecard mode */}
+        {isNotecard && (
+          <div
+            aria-hidden="true"
+            className="absolute right-[calc(100%+0.35rem)] sm:right-[calc(100%+0.65rem)] top-0 bottom-0 flex flex-col justify-end select-none pointer-events-none"
+            style={{ height: `${viewportHeightRem}rem` }}
+          >
+            {visibleLines.map((line, idx) => {
+              const actualIndex = startIdx + idx;
+              return (
+                <div
+                  key={line.id}
+                  className="h-[1.25rem] flex items-center justify-end text-[10px] font-semibold text-muted-foreground/45 font-mono leading-none tabular-nums"
+                >
+                  {actualIndex + 1}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
-          if (isActive) {
+        <div
+          className={`flex flex-col justify-end ${platenWidthClass} overflow-hidden`}
+          style={{ height: `${viewportHeightRem}rem` }}
+        >
+          {visibleLines.map((line, idx) => {
+            const actualIndex = startIdx + idx;
+            const isActive = actualIndex === activeLineIndex;
+
+            // A line is at the topmost spot of the aperture window ONLY when the aperture is completely
+            // full to capacity (visibleLines.length === height) and this line occupies the 0th (topmost) slot.
+            // Fading effect is strictly enabled only in endless scroll mode.
+            const isOldestInAperture =
+              pageMode === 'scroll' && visibleLines.length === height && height > 1 && idx === 0;
+
             return (
-              <ActiveLine
-                key={line.id}
-                line={line}
-                lineIndex={actualIndex}
-                activeColIndex={activeColIndex}
-                isLocked={isLocked}
-                isHighlighting={isHighlighting}
-              />
+              <div key={line.id} className="relative w-full">
+                {/* Faint horizontal rule above each existing line of text in notecard mode */}
+                {isNotecard && (
+                  <div
+                    aria-hidden="true"
+                    className="absolute top-0 left-0 right-0 border-t border-muted-foreground/15 pointer-events-none"
+                  />
+                )}
+                {isActive ? (
+                  <ActiveLine
+                    line={line}
+                    lineIndex={actualIndex}
+                    activeColIndex={activeColIndex}
+                    isLocked={isLocked}
+                    isHighlighting={isHighlighting}
+                  />
+                ) : (
+                  <HistoricalLine
+                    line={line}
+                    lineIndex={actualIndex}
+                    isTopmost={isOldestInAperture}
+                  />
+                )}
+              </div>
             );
-          }
-
-          // A line is at the topmost spot of the aperture window ONLY when the aperture is completely
-          // full to capacity (visibleLines.length === height) and this line occupies the 0th (topmost) slot.
-          // Fading effect is strictly enabled only in endless scroll mode.
-          const isOldestInAperture =
-            pageMode === 'scroll' && visibleLines.length === height && height > 1 && idx === 0;
-
-          return (
-            <HistoricalLine
-              key={line.id}
-              line={line}
-              lineIndex={actualIndex}
-              isTopmost={isOldestInAperture}
-            />
-          );
-        })}
+          })}
+        </div>
       </div>
 
       {/* Mechanical Platen Roller Line Bar Indicator */}

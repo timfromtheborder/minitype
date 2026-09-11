@@ -153,7 +153,7 @@ class TypewriterAudio {
   }
 
   /**
-   * Synthesizes a deeper thud for spacebar.
+   * Synthesizes a crisp, filtered mechanical noise click for spacebar matching key clicks.
    */
   public playSpace() {
     if (this.isMuted) return;
@@ -162,27 +162,34 @@ class TypewriterAudio {
 
     try {
       const t = ctx.currentTime;
-      const osc = ctx.createOscillator();
+      const buffer =
+        this.keyClickBuffers[Math.floor(Math.random() * this.keyClickBuffers.length)];
+      if (!buffer) return;
+
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      // Resonant bandpass filter tuned slightly lower than regular key strikes
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(1100 + Math.random() * 200, t);
+      filter.Q.setValueAtTime(2.8, t);
+
       const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.38, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.032);
 
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(180, t);
-      osc.frequency.exponentialRampToValueAtTime(40, t + 0.05);
-
-      gain.gain.setValueAtTime(0.4, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
-
-      osc.connect(gain);
+      noise.connect(filter);
+      filter.connect(gain);
       gain.connect(ctx.destination);
 
-      osc.start(t);
-      osc.stop(t + 0.05);
+      noise.start(t);
     } catch {}
   }
 
   /**
    * Synthesizes a mechanical pawl/escapement click for Backspace.
-   * Lighter, sharper, and more of a distinct latch click than the main key strike.
+   * Lighter, sharper, clicky latch click without synthetic oscillator tones.
    */
   public playBackspace() {
     if (this.isMuted) return;
@@ -200,33 +207,18 @@ class TypewriterAudio {
 
       const filter = ctx.createBiquadFilter();
       filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(3200, t);
-      filter.Q.setValueAtTime(4.0, t);
+      filter.frequency.setValueAtTime(3400, t);
+      filter.Q.setValueAtTime(4.5, t);
 
       const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.3, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.018);
+      gain.gain.setValueAtTime(0.35, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.02);
 
       noise.connect(filter);
       filter.connect(gain);
       gain.connect(ctx.destination);
 
       noise.start(t);
-
-      // Subtle metallic body pitch notch
-      const osc = ctx.createOscillator();
-      const oscGain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(920, t);
-      osc.frequency.exponentialRampToValueAtTime(540, t + 0.02);
-
-      oscGain.gain.setValueAtTime(0.12, t);
-      oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.02);
-
-      osc.connect(oscGain);
-      oscGain.connect(ctx.destination);
-      osc.start(t);
-      osc.stop(t + 0.02);
     } catch {}
   }
 

@@ -33,8 +33,9 @@ export interface TypingEngineState {
 export interface TypingEngineActions {
   handleKeyDown: (e: KeyboardEvent | React.KeyboardEvent) => void;
   insertChar: (char: string) => void;
-  handleBackspace: () => void;
+  handleBackspace: (options?: { byWord?: boolean }) => void;
   handleEnter: () => void;
+  startNewNotecard: () => void;
   feedPaper: (amount?: number) => void;
   setApertureHeight: (height: ManuscriptManifest['activeApertureHeight']) => void;
   setPageSize: (size: ManuscriptManifest['pageSize']) => void;
@@ -43,7 +44,7 @@ export interface TypingEngineActions {
   setManifest: (manifest: Partial<ManuscriptManifest>) => void;
   setActiveColumnLimit: (limit: number) => void;
   clearText: () => Promise<void>;
-  newProject: () => Promise<void>;
+  newProject: (skipSaveCurrent?: boolean) => Promise<void>;
   loadProject: (id: string, skipSaveCurrent?: boolean) => Promise<void>;
   importTextFileAsProject: (title: string, rawText: string) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;

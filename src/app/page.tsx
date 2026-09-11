@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTypingEngine } from '@/hooks/useTypingEngine';
-import { readSynchronousSettings } from '@/stores/typingStore';
+import { useTypingStore, readSynchronousSettings } from '@/stores/typingStore';
 import { ApertureFrame } from '@/components/aperture/ApertureFrame';
 import { DocumentStats } from '@/components/aperture/DocumentStats';
 import { SessionTargetTracker } from '@/components/stages/SessionTargetTracker';
 import { SettingsDrawer } from '@/components/modals/SettingsDrawer';
 import { PrintModal } from '@/components/modals/PrintModal';
-import { Settings, FileText } from 'lucide-react';
+import { Settings, FileText, Check, Loader2 } from 'lucide-react';
 
 export default function Home() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -86,7 +86,7 @@ export default function Home() {
 
       {/* UTILITY DECK: Viewport Base, centered */}
       <footer className="absolute bottom-0 left-0 right-0 flex justify-center items-center pb-[max(0.75rem,env(safe-area-inset-bottom))] px-2.5 sm:px-6 select-none text-xs">
-        <div className="flex items-center justify-center gap-2 sm:gap-3">
+        <div className="relative flex items-center justify-center gap-2 sm:gap-3">
           {/* Project Button */}
           <button
             type="button"
@@ -118,6 +118,20 @@ export default function Home() {
             <Settings className="w-3.5 h-3.5 opacity-70 shrink-0" />
             <span>Settings</span>
           </button>
+
+          {/* Save Status Icon: positioned to the right of Settings with matching gap, vertically centered, while buttons stay dead-center */}
+          <div
+            className="absolute left-[calc(100%+0.5rem)] sm:left-[calc(100%+0.75rem)] top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none select-none text-muted-foreground"
+            aria-hidden="true"
+          >
+            {engine.persistenceError || engine.saveState === 'error' ? (
+              <span className="text-destructive font-bold leading-none text-xs">!</span>
+            ) : engine.saveState === 'saving' || engine.saveState === 'typing' ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+            )}
+          </div>
         </div>
       </footer>
 

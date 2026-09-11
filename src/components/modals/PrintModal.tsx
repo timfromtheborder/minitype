@@ -119,7 +119,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
             title="Document: Full Compiled Manuscript"
           >
             <FileText className="w-3.5 h-3.5 mb-2 shrink-0" />
-            <span className="[writing-mode:vertical-rl] rotate-180 text-[10px] sm:text-[11px] font-sans tracking-widest uppercase font-semibold">
+            <span className="[writing-mode:vertical-rl] rotate-180 text-[clamp(10px,0.85em,13px)] font-sans tracking-widest uppercase font-semibold">
               Document
             </span>
           </button>
@@ -136,7 +136,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
             title="Sessions: Chronological Drafting Sessions"
           >
             <Layers className="w-3.5 h-3.5 mb-2 shrink-0" />
-            <span className="[writing-mode:vertical-rl] rotate-180 text-[10px] sm:text-[11px] font-sans tracking-widest uppercase font-semibold">
+            <span className="[writing-mode:vertical-rl] rotate-180 text-[clamp(10px,0.85em,13px)] font-sans tracking-widest uppercase font-semibold">
               Sessions
             </span>
           </button>
@@ -153,7 +153,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
             title="Projects: Saved Projects Explorer"
           >
             <FolderOpen className="w-3.5 h-3.5 mb-2 shrink-0" />
-            <span className="[writing-mode:vertical-rl] rotate-180 text-[10px] sm:text-[11px] font-sans tracking-widest uppercase font-semibold">
+            <span className="[writing-mode:vertical-rl] rotate-180 text-[clamp(10px,0.85em,13px)] font-sans tracking-widest uppercase font-semibold">
               Projects
             </span>
           </button>
@@ -182,7 +182,6 @@ export const PrintModal: React.FC<PrintModalProps> = ({
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       window.getSelection()?.removeAllRanges();
-                      e.currentTarget.blur();
                     }
                   }}
                   placeholder="Untitled Manuscript"
@@ -195,11 +194,11 @@ export const PrintModal: React.FC<PrintModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex items-center gap-1 px-2 py-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent hover:border-border/60 transition-colors cursor-pointer text-xs"
+                className="flex items-center gap-1 px-2 py-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent hover:border-border/60 transition-colors cursor-pointer text-[clamp(11px,0.85em,14px)]"
                 title="Return to writing in aperture"
               >
                 <CornerUpLeft className="w-4 h-4 shrink-0" />
-                <span className="hidden sm:inline font-sans text-[11px] font-semibold">Return</span>
+                <span className="hidden sm:inline font-sans font-semibold">Return</span>
               </button>
             </div>
 
@@ -234,12 +233,34 @@ export const PrintModal: React.FC<PrintModalProps> = ({
               </button>
 
               {/* Stats & Icon Actions */}
-              <div className="flex items-center gap-3">
-                <span className="text-[11px] text-muted-foreground font-mono">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <span className="text-[clamp(11px,0.85em,13px)] text-muted-foreground font-mono">
                   {totalWords.toLocaleString()} words
                 </span>
 
                 <div className="flex items-center gap-1.5">
+                  {/* Double-space paragraphs toggle */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const isDouble = manifest.doubleSpaceLinebreaks ?? false;
+                      useTypingStore.getState().setManifest({ doubleSpaceLinebreaks: !isDouble });
+                    }}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded-[2px] border transition-colors cursor-pointer text-[clamp(10px,0.8em,12px)] font-sans ${
+                      manifest.doubleSpaceLinebreaks
+                        ? 'bg-primary/10 border-primary text-foreground font-medium'
+                        : 'border-border/80 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground'
+                    }`}
+                    title="Double-space paragraphs in preview and export"
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-[0.5px] ${
+                        manifest.doubleSpaceLinebreaks ? 'bg-primary' : 'bg-muted-foreground/50'
+                      }`}
+                    />
+                    <span>Double-space</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={handleDownloadTxt}

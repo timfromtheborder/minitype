@@ -282,7 +282,6 @@ export const SETTING_KEYS = [
   'textSize',
   'showStats',
   'showSessionTargetTracker',
-  'sessionWordTarget',
   'doubleSpaceLinebreaks',
 ] as const;
 
@@ -790,7 +789,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     const pageLineLimit = getPageLineLimit(state.manifest.pageMode, state.manifest.pageSize);
     const newSessionCommitted = (state.sessionCommittedLines || 0) + 1;
     const newOutbox = isScrollMode ? 0 : Math.floor(newSessionCommitted / 10);
-    if (!isScrollMode && newOutbox > state.manifest.outboxCount) {
+    if (state.manifest.pageMode === 'notecard' && newOutbox > state.manifest.outboxCount) {
       typewriterAudio.playPaperFeed();
     }
 
@@ -873,7 +872,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     });
   },
 
-  handleBackspace: () => {
+  handleBackspace: (options?: { byWord?: boolean }) => {
     const state = get();
     if (state.isLocked) return;
     triggerVisualSaveOnTyping(set, get);
@@ -883,15 +882,16 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     const activeLineIndex = state.activeLineIndex;
     const minVisibleLine = Math.max(0, activeLineIndex - state.manifest.activeApertureHeight + 1);
 
-    if (!state.isHighlighting) {
+    let isHighlighting = state.isHighlighting;
+    let head = state.highlightHead;
+
+    if (!isHighlighting) {
       // Enter Highlight Mode: traverse backward from the active typing head
       const currentLine = lines[activeLineIndex];
       const printableIndex = currentLine ? getLastPrintableCellIndex(currentLine.cells) : -1;
 
       // If active line has printable characters, highlight the last one
       if (printableIndex >= 0) {
-        // Highlight the last cell on the active line
-        const targetCell = currentLine.cells[printableIndex];
         lines[activeLineIndex] = {
           ...currentLine,
           cells: currentLine.cells.map((cell, idx) =>
@@ -901,31 +901,14 @@ export const useTypingStore = create<TypingStore>((set, get) => {
           ),
         };
 
-        if (state.manifest.mode === 'local') {
-          debounceSavePage({
-            id: `${state.manifest.id}-page-${state.currentPageNumber}`,
-            manuscriptId: state.manifest.id,
-            pageNumber: state.currentPageNumber,
-            lines,
-            completedAt: null,
-          });
-        }
-
-        set({
-          currentPageLines: lines,
-          isHighlighting: true,
-          highlightHead: { lineIndex: activeLineIndex, colIndex: printableIndex },
-        });
-        return;
-      }
-
-      // If active line is empty and was created by Enter (prevLine has wrapType === 'hard'):
-      // Backspace strikes out the carriage return!
-      if (activeLineIndex > 0) {
+        isHighlighting = true;
+        head = { lineIndex: activeLineIndex, colIndex: printableIndex };
+      } else if (activeLineIndex > 0) {
+        // If active line is empty and was created by Enter (prevLine has wrapType === 'hard'):
+        // Backspace strikes out the carriage return!
         const prevLineIndex = activeLineIndex - 1;
         const prevLine = lines[prevLineIndex];
         if (prevLine && prevLine.wrapType === 'hard') {
-          // Strike out the carriage return: cancel the hard break and pop empty line
           prevLine.wrapType = 'soft';
           prevLine.isCommitted = false;
           lines.pop();
@@ -952,7 +935,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
           return;
         }
 
-        // If prevLine was soft-wrapped (not a manual carriage return), traverse back to highlight its last printable char
+        // If prevLine was soft-wrapped, traverse back to highlight its last printable char
         if (prevLine) {
           const prevPrintableIndex = getLastPrintableCellIndex(prevLine.cells);
           if (prevPrintableIndex >= 0) {
@@ -965,29 +948,13 @@ export const useTypingStore = create<TypingStore>((set, get) => {
               ),
             };
 
-            if (state.manifest.mode === 'local') {
-              debounceSavePage({
-                id: `${state.manifest.id}-page-${state.currentPageNumber}`,
-                manuscriptId: state.manifest.id,
-                pageNumber: state.currentPageNumber,
-                lines,
-                completedAt: null,
-              });
-            }
-
-            set({
-              currentPageLines: lines,
-              isHighlighting: true,
-              highlightHead: { lineIndex: prevLineIndex, colIndex: prevPrintableIndex },
-            });
-            return;
+            isHighlighting = true;
+            head = { lineIndex: prevLineIndex, colIndex: prevPrintableIndex };
           }
         }
-      }
-
-      // If active line is at index 0, empty, and a previous completed page exists (e.g. paragraph mode):
-      // Strike out the paragraph carriage return and restore previous page
-      if (activeLineIndex === 0 && (!currentLine || currentLine.cells.length === 0) && state.historicalPages.length > 0) {
+      } else if (activeLineIndex === 0 && (!currentLine || currentLine.cells.length === 0) && state.historicalPages.length > 0) {
+        // If active line is at index 0, empty, and a previous completed page exists:
+        // Strike out paragraph carriage return and restore previous page
         const historical = [...state.historicalPages];
         const prevPage = historical.pop()!;
         const restoredLines = [...prevPage.lines];
@@ -1034,89 +1001,179 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         });
         return;
       }
+    }
 
-      // Cannot highlight further backward
+    if (!head || !isHighlighting) {
       return;
     }
 
-    // Already in Highlight Mode: expand highlight backward by one cell
-    const head = state.highlightHead;
-    if (!head) return;
+    // Helper: step backward 1 cell in highlight mode
+    const stepOneCell = (): { char: string } | null => {
+      if (!head) return null;
+      const curLine = lines[head.lineIndex];
+      if (!curLine) return null;
 
-    const currentHeadLine = lines[head.lineIndex];
-    if (!currentHeadLine) return;
-
-    // Scan backward on the same line, skipping any soft-wrap padding cells
-    let nextCol = head.colIndex - 1;
-    while (nextCol >= 0 && currentHeadLine.cells[nextCol]?.isSoftPadding) {
-      nextCol--;
-    }
-
-    if (nextCol >= 0) {
-      lines[head.lineIndex] = {
-        ...currentHeadLine,
-        cells: currentHeadLine.cells.map((cell, idx) =>
-          idx === nextCol
-            ? { ...cell, state: 'highlighted' as const, isStruck: cell.isStruck || cell.state === 'struck' }
-            : cell
-        ),
-      };
-
-      if (state.manifest.mode === 'local') {
-        debounceSavePage({
-          id: `${state.manifest.id}-page-${state.currentPageNumber}`,
-          manuscriptId: state.manifest.id,
-          pageNumber: state.currentPageNumber,
-          lines,
-          completedAt: null,
-        });
+      let nextCol = head.colIndex - 1;
+      while (nextCol >= 0 && curLine.cells[nextCol]?.isSoftPadding) {
+        nextCol--;
       }
 
-      set({
-        currentPageLines: lines,
-        highlightHead: { lineIndex: head.lineIndex, colIndex: nextCol },
-      });
-      return;
-    }
+      if (nextCol >= 0) {
+        const cell = curLine.cells[nextCol];
+        lines[head.lineIndex] = {
+          ...curLine,
+          cells: curLine.cells.map((c, idx) =>
+            idx === nextCol
+              ? { ...c, state: 'highlighted' as const, isStruck: c.isStruck || c.state === 'struck' }
+              : c
+          ),
+        };
+        head = { lineIndex: head.lineIndex, colIndex: nextCol };
+        return { char: cell?.char || ' ' };
+      }
 
-    // At col 0 of head.lineIndex: try to traverse up to previous line
-    if (head.lineIndex > minVisibleLine) {
-      const prevLineIndex = head.lineIndex - 1;
-      const prevLine = lines[prevLineIndex];
-      if (prevLine) {
-        // Skip soft padding on the previous line and lock onto last printable char
-        const prevPrintableIndex = getLastPrintableCellIndex(prevLine.cells);
-        if (prevPrintableIndex >= 0) {
-          lines[prevLineIndex] = {
-            ...prevLine,
-            cells: prevLine.cells.map((cell, idx) =>
-              idx === prevPrintableIndex
-                ? { ...cell, state: 'highlighted' as const, isStruck: cell.isStruck || cell.state === 'struck' }
-                : cell
-            ),
-          };
-
-          if (state.manifest.mode === 'local') {
-            debounceSavePage({
-              id: `${state.manifest.id}-page-${state.currentPageNumber}`,
-              manuscriptId: state.manifest.id,
-              pageNumber: state.currentPageNumber,
-              lines,
-              completedAt: null,
-            });
+      if (head.lineIndex > minVisibleLine) {
+        const prevLineIndex = head.lineIndex - 1;
+        const prevLine = lines[prevLineIndex];
+        if (prevLine) {
+          const prevPrintableIndex = getLastPrintableCellIndex(prevLine.cells);
+          if (prevPrintableIndex >= 0) {
+            const cell = prevLine.cells[prevPrintableIndex];
+            lines[prevLineIndex] = {
+              ...prevLine,
+              cells: prevLine.cells.map((c, idx) =>
+                idx === prevPrintableIndex
+                  ? { ...c, state: 'highlighted' as const, isStruck: c.isStruck || c.state === 'struck' }
+                  : c
+              ),
+            };
+            head = { lineIndex: prevLineIndex, colIndex: prevPrintableIndex };
+            return { char: cell?.char || ' ' };
           }
-
-          set({
-            currentPageLines: lines,
-            highlightHead: { lineIndex: prevLineIndex, colIndex: prevPrintableIndex },
-          });
-          return;
         }
       }
+
+      return null;
+    };
+
+    if (!state.isHighlighting) {
+      // Just entered highlight mode: head is on the first highlighted cell
+      if (options?.byWord) {
+        const firstChar = lines[head.lineIndex]?.cells[head.colIndex]?.char || '';
+        let onSpace = /\s/.test(firstChar);
+        while (onSpace) {
+          const stepped = stepOneCell();
+          if (!stepped) break;
+          if (!/\s/.test(stepped.char)) {
+            onSpace = false;
+          }
+        }
+        while (true) {
+          const curLine = lines[head.lineIndex];
+          let peekCol = head.colIndex - 1;
+          while (peekCol >= 0 && curLine?.cells[peekCol]?.isSoftPadding) peekCol--;
+          if (peekCol < 0 && head.lineIndex <= minVisibleLine) break;
+          const nextChar = peekCol >= 0 ? curLine?.cells[peekCol]?.char : null;
+          if (nextChar && /\s/.test(nextChar)) break;
+
+          const stepped = stepOneCell();
+          if (!stepped) break;
+          if (/\s/.test(stepped.char)) break;
+        }
+      }
+    } else {
+      // Already in highlight mode: expand backward
+      if (options?.byWord) {
+        const first = stepOneCell();
+        if (first) {
+          let onSpace = /\s/.test(first.char);
+          while (onSpace) {
+            const stepped = stepOneCell();
+            if (!stepped) break;
+            if (!/\s/.test(stepped.char)) {
+              onSpace = false;
+            }
+          }
+          while (true) {
+            const curLine = lines[head.lineIndex];
+            let peekCol = head.colIndex - 1;
+            while (peekCol >= 0 && curLine?.cells[peekCol]?.isSoftPadding) peekCol--;
+            if (peekCol < 0 && head.lineIndex <= minVisibleLine) break;
+            const nextChar = peekCol >= 0 ? curLine?.cells[peekCol]?.char : null;
+            if (nextChar && /\s/.test(nextChar)) break;
+
+            const stepped = stepOneCell();
+            if (!stepped) break;
+            if (/\s/.test(stepped.char)) break;
+          }
+        }
+      } else {
+        stepOneCell();
+      }
     }
 
-    // Clamped to visible ceiling (activeLine - activeApertureHeight + 1, col 0)
-    // Dropping further Backspace inputs.
+    if (state.manifest.mode === 'local') {
+      debounceSavePage({
+        id: `${state.manifest.id}-page-${state.currentPageNumber}`,
+        manuscriptId: state.manifest.id,
+        pageNumber: state.currentPageNumber,
+        lines,
+        completedAt: null,
+      });
+    }
+
+    set({
+      currentPageLines: lines,
+      isHighlighting: true,
+      highlightHead: head,
+    });
+  },
+
+  startNewNotecard: () => {
+    const state = get();
+    if (state.manifest.pageMode !== 'notecard') return;
+    if (state.isLocked) return;
+
+    triggerVisualSaveOnTyping(set, get);
+    ensureActiveSessionOnTyping(set, get);
+    markProjectDirty(set, get);
+    flushPendingSave();
+
+    typewriterAudio.playPaperFeed();
+
+    const lines = [...state.currentPageLines];
+    const completedPage: PageRecord = {
+      id: `${state.manifest.id}-page-${state.currentPageNumber}`,
+      manuscriptId: state.manifest.id,
+      pageNumber: state.currentPageNumber,
+      lines,
+      completedAt: new Date().toISOString(),
+    };
+
+    const historical = [...state.historicalPages, completedPage];
+    const newPageNum = state.currentPageNumber + 1;
+    const firstLine = createEmptyLine(newPageNum, 0);
+
+    if (state.manifest.mode === 'local') {
+      savePage(completedPage).catch(console.error);
+      savePage({
+        id: `${state.manifest.id}-page-${newPageNum}`,
+        manuscriptId: state.manifest.id,
+        pageNumber: newPageNum,
+        lines: [firstLine],
+        completedAt: null,
+      }).catch(console.error);
+    }
+
+    set({
+      historicalPages: historical,
+      currentPageNumber: newPageNum,
+      currentPageLines: [firstLine],
+      activeLineIndex: 0,
+      activeColIndex: 0,
+      isHighlighting: false,
+      highlightHead: null,
+    });
   },
 
   handleEnter: () => {
@@ -1186,7 +1243,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
 
     const newSessionCommitted = (state.sessionCommittedLines || 0) + 1;
     const newOutbox = isScrollMode ? 0 : Math.floor(newSessionCommitted / 10);
-    if (!isScrollMode && newOutbox > state.manifest.outboxCount) {
+    if (state.manifest.pageMode === 'notecard' && newOutbox > state.manifest.outboxCount) {
       typewriterAudio.playPaperFeed();
     }
 
@@ -1391,8 +1448,10 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     });
   },
 
-  newProject: async () => {
-    await finalizeAndSaveCurrentProject(get, set);
+  newProject: async (skipSaveCurrent = false) => {
+    if (!skipSaveCurrent) {
+      await finalizeAndSaveCurrentProject(get, set);
+    }
     const state = get();
 
     const newId = `manuscript-${Date.now()}`;
@@ -1436,6 +1495,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     const updatedManifest: ManuscriptManifest = {
       ...state.manifest, // retains global settings
       ...globalSettings,
+      sessionWordTarget: undefined,
       id: newId,
       title,
       mode: 'local',
@@ -1533,7 +1593,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
             projectId: id,
             sessionNumber: 1,
             startedAt: loadedManifest.createdAt || new Date().toISOString(),
-            completedAt: loadedManifest.updatedAt || new Date().toISOString(),
+            completedAt: cleanText.trim() === '' ? null : (loadedManifest.updatedAt || new Date().toISOString()),
             text: cleanText,
             wordCount: countWords(cleanText),
           },
@@ -1559,11 +1619,23 @@ export const useTypingStore = create<TypingStore>((set, get) => {
 
     // Ensure all prior sessions are finalized so they don't say "Present",
     // and renumber contiguously to eliminate gaps from any pruned sessions
-    const sessions = pruned.map((s, idx) => ({
-      ...s,
-      sessionNumber: idx + 1,
-      completedAt: s.completedAt || loadedManifest.updatedAt || s.startedAt,
-    }));
+    const sessions = pruned.map((s, idx) => {
+      // If this is an empty project with a single session, keep it open (completedAt: null)
+      if (cleanText.trim() === '' && idx === 0 && pruned.length === 1) {
+        return {
+          ...s,
+          sessionNumber: 1,
+          completedAt: null,
+          wordCount: 0,
+          text: '',
+        };
+      }
+      return {
+        ...s,
+        sessionNumber: idx + 1,
+        completedAt: s.completedAt || loadedManifest.updatedAt || s.startedAt,
+      };
+    });
     for (const s of sessions) {
       saveSession(s).catch(console.error);
     }
@@ -1582,6 +1654,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       activeSessionId: sessions[sessions.length - 1]?.id || '',
       sessionCount: sessions.length,
       totalWordCount: countWords(cleanText),
+      sessionWordTarget: loadedManifest.sessionWordTarget,
       createdAt: loadedManifest.createdAt || new Date().toISOString(),
       updatedAt: loadedManifest.updatedAt || new Date().toISOString(), // PRESERVE existing timestamp!
     };
@@ -1727,9 +1800,8 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       if (remaining.length > 0) {
         await get().loadProject(remaining[0].id, true);
       } else {
-        // Requirement: Behavior for "no project loaded" state if all projects deleted
         // Auto-provision a fresh project with Session 1 so the platen is always functional
-        await get().newProject();
+        await get().newProject(true);
       }
     }
   },

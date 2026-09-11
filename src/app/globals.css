@@ -187,30 +187,30 @@
   --cursor-color: #EDEDED;
 }
 
-/* 6. Low Contrast (Slate gray background, lighter text box, charcoal text) */
+/* 6. Low Contrast (Overcast: background #646a71, platen background #6d747c, dark charcoal text #1c2024) */
 [data-theme="low-contrast"] {
-  --background: #5B6A78;
-  --foreground: #24282C;
-  --card: #748494;
-  --card-foreground: #24282C;
-  --popover: #6B7B8B;
-  --popover-foreground: #24282C;
-  --primary: #24282C;
-  --primary-foreground: #748494;
-  --secondary: #657484;
-  --secondary-foreground: #24282C;
-  --muted: #53616E;
-  --muted-foreground: #343A40;
-  --accent: #6C7D8E;
-  --accent-foreground: #1D2124;
+  --background: #646a71;
+  --foreground: #1c2024;
+  --card: #6d747c;
+  --card-foreground: #1c2024;
+  --popover: #6d747c;
+  --popover-foreground: #1c2024;
+  --primary: #1c2024;
+  --primary-foreground: #6d747c;
+  --secondary: #5e646b;
+  --secondary-foreground: #1c2024;
+  --muted: #585e65;
+  --muted-foreground: #2d3339;
+  --accent: #5e646b;
+  --accent-foreground: #1c2024;
   --destructive: #7E3333;
-  --border: #4D5B67;
-  --input: #4D5B67;
-  --ring: #343A40;
-  --highlight-bg: #536373;
-  --highlight-text: #E9ECEF;
-  --struck-color: #6E2C2C;
-  --cursor-color: #24282C;
+  --border: #52585f;
+  --input: #52585f;
+  --ring: #2d3339;
+  --highlight-bg: #4f555c;
+  --highlight-text: #f0f2f5;
+  --struck-color: #3d1c1c;
+  --cursor-color: #1c2024;
 }
 
 @layer base {
@@ -429,4 +429,36 @@ html[data-aperture-height="9"],
 html[data-aperture-height="10"],
 [data-aperture-height="10"] {
   --aperture-height-rem: 12.5rem;
+}
+
+/* ==========================================================================
+   SESSION TARGET TRACKER ANIMATIONS & THEME CONTRAST
+   ========================================================================== */
+@keyframes session-box-pulse {
+  0% {
+    opacity: 0.35;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.3);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.session-box-flash {
+  animation: session-box-pulse 200ms ease-out forwards;
+}
+
+[data-theme="spotlight"] .session-box-filled {
+  background-color: rgba(20, 20, 22, 0.45) !important;
+  border-color: rgba(20, 20, 22, 0.65) !important;
+}
+
+[data-theme="dark-amber"] .session-box-filled {
+  background-color: rgba(255, 176, 0, 0.45) !important;
+  border-color: rgba(255, 176, 0, 0.7) !important;
 }

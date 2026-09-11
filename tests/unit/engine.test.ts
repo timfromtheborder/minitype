@@ -2470,6 +2470,164 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(getFilledBoxes(250, target)).toBe(100); // capped at 100
     });
   });
+
+  describe('v0.9.5.11 Ergonomics, Shortcuts & Session Invariants', () => {
+    it('advances to a fresh notecard on startNewNotecard() when in notecard mode', () => {
+      const store = useTypingStore.getState();
+      store.setPageMode('notecard');
+
+      // Type some characters on card 1
+      store.insertChar('H');
+      store.insertChar('i');
+
+      expect(useTypingStore.getState().currentPageNumber).toBe(1);
+      expect(useTypingStore.getState().currentPageLines[0].cells).toHaveLength(2);
+
+      // Trigger startNewNotecard
+      useTypingStore.getState().startNewNotecard();
+
+      const state = useTypingStore.getState();
+      expect(state.currentPageNumber).toBe(2);
+      expect(state.activeLineIndex).toBe(0);
+      expect(state.activeColIndex).toBe(0);
+      expect(state.currentPageLines).toHaveLength(1);
+      expect(state.currentPageLines[0].cells).toHaveLength(0);
+      expect(state.historicalPages).toHaveLength(1);
+      expect(state.historicalPages[0].pageNumber).toBe(1);
+    });
+
+    it('highlights entire word backwards on handleBackspace({ byWord: true })', () => {
+      const store = useTypingStore.getState();
+
+      // Type "hello world"
+      for (const ch of 'hello world') {
+        store.insertChar(ch);
+      }
+
+      let state = useTypingStore.getState();
+      expect(state.isHighlighting).toBe(false);
+
+      // Backspace by word should highlight "world"
+      store.handleBackspace({ byWord: true });
+      state = useTypingStore.getState();
+      expect(state.isHighlighting).toBe(true);
+      expect(state.highlightHead).toEqual({ lineIndex: 0, colIndex: 6 }); // 'w' is at index 6
+
+      // Cells from 6 ("w") to 10 ("d") should be highlighted
+      const highlightedCells = state.currentPageLines[0].cells.filter((c) => c.state === 'highlighted');
+      expect(highlightedCells).toHaveLength(5);
+      expect(highlightedCells.map((c) => c.char).join('')).toBe('world');
+
+      // Backspace by word again should highlight "hello "
+      store.handleBackspace({ byWord: true });
+      state = useTypingStore.getState();
+      expect(state.highlightHead).toEqual({ lineIndex: 0, colIndex: 0 }); // 'h' is at index 0
+      const allHighlighted = state.currentPageLines[0].cells.filter((c) => c.state === 'highlighted');
+      expect(allHighlighted).toHaveLength(11);
+      expect(allHighlighted.map((c) => c.char).join('')).toBe('hello world');
+    });
+
+    it('ensures sessionWordTarget is not in global settings and defaults to undefined in new projects', async () => {
+      const store = useTypingStore.getState();
+      store.setManifest({ sessionWordTarget: 500 });
+      persistSettings(useTypingStore.getState().manifest);
+
+      const globalSettings = readSynchronousSettings();
+      // Should not be saved into global settings
+      expect(globalSettings?.sessionWordTarget).toBeUndefined();
+
+      // Create new project
+      await store.newProject();
+      expect(useTypingStore.getState().manifest.sessionWordTarget).toBeUndefined();
+    });
+
+    it('preserves Session 1 with completedAt: null when loading an empty project', async () => {
+      const store = useTypingStore.getState();
+      const emptyId = `empty-proj-${Date.now()}`;
+      await db.manuscripts.put({
+        id: emptyId,
+        title: 'Empty Project',
+        mode: 'local',
+        inboxCount: 2,
+        outboxCount: 0,
+        lastPrintedCharIndex: 0,
+        printedPagesCount: 0,
+        activeApertureHeight: 1,
+        wrapMode: 'soft',
+        pageSize: 54,
+        pageMode: 'scroll',
+        colorScheme: 'typewriter',
+        typeface: 'courier-prime',
+        textSize: 'm',
+      });
+      await db.pages.put({
+        id: `${emptyId}-page-1`,
+        manuscriptId: emptyId,
+        pageNumber: 1,
+        lines: [createEmptyLine(1, 0)],
+        completedAt: null,
+      });
+
+      await store.loadProject(emptyId);
+
+      const state = useTypingStore.getState();
+      expect(state.manifest.id).toBe(emptyId);
+      expect(state.activeSessions).toHaveLength(1);
+      expect(state.activeSessions[0].completedAt).toBeNull();
+      expect(state.activeSessions[0].sessionNumber).toBe(1);
+    });
+
+    it('does not resurrect a deleted project when deleting the sole remaining project', async () => {
+      const store = useTypingStore.getState();
+      const deleteTargetId = `del-${Date.now()}`;
+      await db.manuscripts.put({
+        id: deleteTargetId,
+        title: 'Doomed Project',
+        mode: 'local',
+        inboxCount: 2,
+        outboxCount: 0,
+        lastPrintedCharIndex: 0,
+        printedPagesCount: 0,
+        activeApertureHeight: 1,
+        wrapMode: 'soft',
+        pageSize: 54,
+        pageMode: 'scroll',
+        colorScheme: 'typewriter',
+        typeface: 'courier-prime',
+        textSize: 'm',
+      });
+      await store.loadProject(deleteTargetId);
+      expect(useTypingStore.getState().manifest.id).toBe(deleteTargetId);
+
+      // Clear all other manuscripts from db so doomed is the only one
+      await db.manuscripts.clear();
+      await db.manuscripts.put({
+        id: deleteTargetId,
+        title: 'Doomed Project',
+        mode: 'local',
+        inboxCount: 2,
+        outboxCount: 0,
+        lastPrintedCharIndex: 0,
+        printedPagesCount: 0,
+        activeApertureHeight: 1,
+        wrapMode: 'soft',
+        pageSize: 54,
+        pageMode: 'scroll',
+        colorScheme: 'typewriter',
+        typeface: 'courier-prime',
+        textSize: 'm',
+      });
+
+      await store.deleteProject(deleteTargetId);
+
+      // The deleted project must not exist in Dexie
+      const resurrected = await db.manuscripts.get(deleteTargetId);
+      expect(resurrected).toBeUndefined();
+
+      // Store should now have auto-provisioned a new project
+      expect(useTypingStore.getState().manifest.id).not.toBe(deleteTargetId);
+    });
+  });
 });
 
 

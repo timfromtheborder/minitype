@@ -32,11 +32,13 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
   totalWords: propTotalWords,
   currentFullText,
 }) => {
+  const currentProjectId = useTypingStore((state) => state.manifest.id);
   const sessionWordTarget = useTypingStore((state) => state.manifest.sessionWordTarget);
   const setManifest = useTypingStore((state) => state.setManifest);
 
-  // Chronological order: oldest at top, newest at bottom
-  const sortedSessions = [...sessions].sort((a, b) => a.sessionNumber - b.sessionNumber);
+  // Filter sessions strictly to the current project and sort chronologically: oldest at top, newest at bottom
+  const projectSessions = sessions.filter((s) => s.projectId === currentProjectId);
+  const sortedSessions = [...projectSessions].sort((a, b) => a.sessionNumber - b.sessionNumber);
 
   // Document total words
   const docTotalWords =
@@ -153,7 +155,6 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     window.getSelection()?.removeAllRanges();
-                    e.currentTarget.blur();
                   }
                 }}
                 className="w-16 sm:w-20 px-1.5 py-0.5 text-xs font-mono font-bold text-right rounded-[2px] border border-border/80 bg-background text-foreground focus:outline-hidden focus:border-primary"

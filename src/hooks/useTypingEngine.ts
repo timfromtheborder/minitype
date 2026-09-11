@@ -69,13 +69,19 @@ export function useTypingEngine(options?: UseTypingEngineOptions) {
       if (e.key === 'Backspace') {
         e.preventDefault();
         typewriterAudio.playBackspace();
-        state.handleBackspace();
+        const byWord = e.ctrlKey || e.metaKey;
+        state.handleBackspace({ byWord });
         return;
       }
 
       // 5. Enter Key Resolution
       if (e.key === 'Enter') {
         e.preventDefault();
+        if ((e.ctrlKey || e.metaKey) && state.manifest.pageMode === 'notecard') {
+          state.startNewNotecard();
+          return;
+        }
+
         if (state.isHighlighting) {
           typewriterAudio.playStrike();
         } else {
