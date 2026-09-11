@@ -9,7 +9,14 @@ import {
 import { LineRecord } from '@/types';
 import { sanitizeManuscript, calculatePrintDelayMs } from '@/lib/sanitize';
 import { wrapLine, MAX_COLUMNS } from '@/lib/wrap';
-import { serializeProjectFile, parseProjectFile, stripSessionMarkers } from '@/lib/projectSerializer';
+import {
+  serializeProjectFile,
+  parseProjectFile,
+  stripSessionMarkers,
+  getActiveSessionText,
+  reconcileSessionsWithText,
+  countWords,
+} from '@/lib/projectSerializer';
 
 describe('Typing Engine & State Machine Invariants', () => {
   beforeEach(() => {
@@ -1744,6 +1751,118 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(state.activeSessions).toHaveLength(2);
       expect(state.activeSessions[1].sessionNumber).toBe(2);
       expect(state.activeSessions[1].completedAt).toBeNull();
+    });
+
+    it('does not count lone punctuation as words', () => {
+      expect(countWords('')).toBe(0);
+      expect(countWords('   ')).toBe(0);
+      expect(countWords('.')).toBe(0);
+      expect(countWords('...')).toBe(0);
+      expect(countWords('---')).toBe(0);
+      expect(countWords('Hello.')).toBe(1);
+      expect(countWords('Hello world!')).toBe(2);
+    });
+
+    it('getActiveSessionText returns empty string for a blank active session', () => {
+      const fullText = 'The quick brown fox.\nSecond session text.';
+      const priorSessions = [
+        {
+          id: 's1',
+          projectId: 'p1',
+          sessionNumber: 1,
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          text: 'The quick brown fox.',
+          wordCount: 4,
+        },
+        {
+          id: 's2',
+          projectId: 'p1',
+          sessionNumber: 2,
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          text: 'Second session text.',
+          wordCount: 3,
+        },
+      ];
+
+      // If no new text has been typed in Session 3, it should return "" and NOT slice trailing letters
+      const activeText = getActiveSessionText(fullText, priorSessions);
+      expect(activeText).toBe('');
+      expect(countWords(activeText)).toBe(0);
+    });
+
+    it('reconcileSessionsWithText resets corrupted ghost sessions to 0 words and text', () => {
+      const fullText = 'The quick brown fox.';
+      const corruptedSessions = [
+        {
+          id: 's1',
+          projectId: 'p1',
+          sessionNumber: 1,
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          text: 'The quick brown fox.',
+          wordCount: 4,
+        },
+        {
+          id: 's2',
+          projectId: 'p1',
+          sessionNumber: 2,
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          text: 'x.', // Corrupted trailing slice from previous bug
+          wordCount: 1,
+        },
+        {
+          id: 's3',
+          projectId: 'p1',
+          sessionNumber: 3,
+          startedAt: new Date().toISOString(),
+          completedAt: null,
+          text: '',
+          wordCount: 1, // Corrupted wordCount from previous bug
+        },
+      ];
+
+      const reconciled = reconcileSessionsWithText(corruptedSessions, fullText);
+      expect(reconciled[0].wordCount).toBe(4);
+      expect(reconciled[1].wordCount).toBe(0);
+      expect(reconciled[1].text).toBe('');
+      expect(reconciled[2].wordCount).toBe(0);
+      expect(reconciled[2].text).toBe('');
+
+      // And pruning should remove s2 and s3!
+      const { pruned, removedIds } = pruneZeroContentSessions(reconciled);
+      expect(removedIds).toEqual(['s2', 's3']);
+      expect(pruned).toHaveLength(1);
+      expect(pruned[0].id).toBe('s1');
+    });
+
+    it('prunes sessions with empty text even if wordCount was set to 1', () => {
+      const sessions = [
+        {
+          id: 's1',
+          projectId: 'p1',
+          sessionNumber: 1,
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          text: 'Real words here',
+          wordCount: 3,
+        },
+        {
+          id: 's2',
+          projectId: 'p1',
+          sessionNumber: 2,
+          startedAt: new Date().toISOString(),
+          completedAt: null,
+          text: '',
+          wordCount: 1, // Stale wordCount
+        },
+      ];
+
+      const { pruned, removedIds } = pruneZeroContentSessions(sessions);
+      expect(removedIds).toEqual(['s2']);
+      expect(pruned).toHaveLength(1);
     });
   });
 });

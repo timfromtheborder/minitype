@@ -5,7 +5,71 @@ export const SESSION_DELIMITER_REGEX = /<!--\s*minitype:session\s+([^>]+)-->/gi;
 export function countWords(text: string): number {
   if (!text) return 0;
   const tokens = text.trim().split(/\s+/);
-  return tokens.filter((t) => t.length > 0).length;
+  return tokens.filter((t) => t.length > 0 && /\w/i.test(t)).length;
+}
+
+export function getActiveSessionText(fullText: string, priorSessions: SessionRecord[]): string {
+  if (!fullText) return '';
+  if (!priorSessions || priorSessions.length === 0) return fullText.trim();
+
+  let searchIndex = 0;
+  for (const s of priorSessions) {
+    const sessionText = (s.text || '').trim();
+    if (!sessionText) continue;
+    const foundIdx = fullText.indexOf(sessionText, searchIndex);
+    if (foundIdx !== -1) {
+      searchIndex = foundIdx + sessionText.length;
+    }
+  }
+
+  return fullText.slice(searchIndex).trim();
+}
+
+export function reconcileSessionsWithText(
+  sessions: SessionRecord[],
+  fullText: string
+): SessionRecord[] {
+  if (!sessions || sessions.length === 0) return [];
+  const trimmedFull = (fullText || '').trim();
+  if (trimmedFull.length === 0) {
+    return sessions.map((s) => ({
+      ...s,
+      text: '',
+      wordCount: 0,
+    }));
+  }
+
+  let searchIndex = 0;
+  return sessions.map((s) => {
+    if (searchIndex >= fullText.length) {
+      return {
+        ...s,
+        text: '',
+        wordCount: 0,
+      };
+    }
+
+    const candidate = (s.text || '').trim();
+    if (!candidate) {
+      return { ...s, text: '', wordCount: 0 };
+    }
+
+    const foundIdx = fullText.indexOf(candidate, searchIndex);
+    if (foundIdx !== -1) {
+      searchIndex = foundIdx + candidate.length;
+      return {
+        ...s,
+        text: candidate,
+        wordCount: countWords(candidate),
+      };
+    } else {
+      return {
+        ...s,
+        text: '',
+        wordCount: 0,
+      };
+    }
+  });
 }
 
 export function formatSessionDelimiter(session: SessionRecord): string {

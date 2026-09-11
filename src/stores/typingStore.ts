@@ -37,7 +37,13 @@ import {
 } from '@/db';
 import { textToManuscriptLines } from '@/lib/importer';
 import { sanitizeManuscript } from '@/lib/sanitize';
-import { parseProjectFile, stripSessionMarkers, countWords } from '@/lib/projectSerializer';
+import {
+  parseProjectFile,
+  stripSessionMarkers,
+  countWords,
+  getActiveSessionText,
+  reconcileSessionsWithText,
+} from '@/lib/projectSerializer';
 
 export function getPageLineLimit(mode?: PageMode, customSize?: number): number {
   if (mode === 'scroll') return Infinity;
@@ -64,20 +70,22 @@ export function pruneZeroContentSessions(sessions: SessionRecord[]): {
 
   for (let i = 0; i < sessions.length; i++) {
     const s = sessions[i];
-    const words = s.wordCount ?? countWords(s.text || '');
-    const hasText = Boolean(s.text && s.text.trim().length > 0);
-    const isZeroContent = words === 0 && !hasText;
+    const clean = (s.text || '').trim();
+    const words = countWords(clean);
+    const isZeroContent = words === 0;
 
     if (isZeroContent && (sessions.length > 1 || pruned.length > 0)) {
       removedIds.push(s.id);
     } else {
-      pruned.push({ ...s, wordCount: words });
+      pruned.push({ ...s, text: clean, wordCount: words });
     }
   }
 
   if (pruned.length === 0 && sessions.length > 0) {
-    pruned.push(sessions[0]);
-    const idx = removedIds.indexOf(sessions[0].id);
+    const first = sessions[0];
+    const clean = (first.text || '').trim();
+    pruned.push({ ...first, text: clean, wordCount: countWords(clean) });
+    const idx = removedIds.indexOf(first.id);
     if (idx >= 0) removedIds.splice(idx, 1);
   }
 
@@ -1388,8 +1396,11 @@ export const useTypingStore = create<TypingStore>((set, get) => {
           },
         ];
 
+    // Reconcile existing sessions against true cleanText to fix any slice/offset corruption
+    const reconciled = reconcileSessionsWithText(rawSessions, cleanText);
+
     // Prune any 0-content sessions on load
-    const { pruned, removedIds } = pruneZeroContentSessions(rawSessions);
+    const { pruned, removedIds } = pruneZeroContentSessions(reconciled);
     for (const remId of removedIds) {
       await deleteSession(remId).catch(console.error);
     }
@@ -1579,15 +1590,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       },
     ];
     const fullText = sanitizeManuscript(allPages, { doubleSpaceLinebreaks: false });
-    let currentSessionText = fullText;
-    if (activeSessions.length > 1) {
-      const priorSessionsTextLength = activeSessions
-        .slice(0, -1)
-        .reduce((acc, s) => acc + (s.text?.length || 0), 0);
-      currentSessionText = fullText.slice(priorSessionsTextLength).trim();
-    } else {
-      currentSessionText = fullText.trim();
-    }
+    const currentSessionText = getActiveSessionText(fullText, activeSessions.slice(0, -1));
     const currentWordCount = countWords(currentSessionText);
 
     // Requirement: If the current session is empty, reset the session time but don't start a new session
@@ -1712,14 +1715,13 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     const last = sessions[lastIdx];
 
     if (!last.completedAt) {
-      const priorWords = sessions.slice(0, lastIdx).reduce((acc, s) => acc + (s.wordCount || 0), 0);
-      const priorLength = sessions.slice(0, lastIdx).reduce((acc, s) => acc + (s.text?.length || 0), 0);
-      const activeText = text.slice(priorLength).trim();
-      const activeWords = Math.max(0, docTotalWords - priorWords);
+      const priorSessions = sessions.slice(0, lastIdx);
+      const activeText = getActiveSessionText(text, priorSessions);
+      const activeWords = countWords(activeText);
 
       sessions[lastIdx] = {
         ...last,
-        text: activeText || last.text || '',
+        text: activeText,
         wordCount: activeWords,
       };
 
@@ -1917,8 +1919,11 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         },
       ];
 
+      // Reconcile existing sessions against true cleanText to fix any slice/offset corruption
+      const reconciled = reconcileSessionsWithText(rawSessions, cleanText);
+
       // Prune any 0-content sessions left from previous runs
-      const { pruned: projectSessions, removedIds } = pruneZeroContentSessions(rawSessions);
+      const { pruned: projectSessions, removedIds } = pruneZeroContentSessions(reconciled);
       for (const remId of removedIds) {
         deleteSession(remId).catch(console.error);
       }
@@ -1928,18 +1933,12 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         const lastIdx = projectSessions.length - 1;
         const last = projectSessions[lastIdx];
         if (!last.completedAt) {
-          const priorWords = projectSessions
-            .slice(0, lastIdx)
-            .reduce((acc, s) => acc + (s.wordCount || 0), 0);
-          const priorLength = projectSessions
-            .slice(0, lastIdx)
-            .reduce((acc, s) => acc + (s.text?.length || 0), 0);
-          const activeText = cleanText.slice(priorLength).trim();
-          const docTotal = countWords(cleanText);
-          const activeWords = Math.max(0, docTotal - priorWords);
+          const priorSessions = projectSessions.slice(0, lastIdx);
+          const activeText = getActiveSessionText(cleanText, priorSessions);
+          const activeWords = countWords(activeText);
           projectSessions[lastIdx] = {
             ...last,
-            text: activeText || last.text || cleanText,
+            text: activeText,
             wordCount: activeWords,
           };
           saveSession(projectSessions[lastIdx]).catch(console.error);

@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useTypingStore } from '@/stores/typingStore';
 import { sanitizeManuscript } from '@/lib/sanitize';
-import { countWords } from '@/lib/projectSerializer';
+import { countWords, getActiveSessionText } from '@/lib/projectSerializer';
 
 export const DocumentStats: React.FC = React.memo(function DocumentStats() {
   const showStats = useTypingStore((state) => state.manifest.showStats ?? true);
@@ -48,10 +48,11 @@ export const DocumentStats: React.FC = React.memo(function DocumentStats() {
 
     let sessionWords = 0;
     if (currentSession && !currentSession.completedAt) {
-      const priorWords = sessions.slice(0, lastIndex).reduce((acc, s) => acc + (s.wordCount || 0), 0);
-      sessionWords = Math.max(0, totalWords - priorWords);
+      const priorSessions = sessions.slice(0, lastIndex);
+      const activeText = getActiveSessionText(fullClean, priorSessions);
+      sessionWords = countWords(activeText);
     } else if (currentSession) {
-      sessionWords = currentSession.wordCount || 0;
+      sessionWords = countWords(currentSession.text || '');
     } else {
       sessionWords = totalWords;
     }
