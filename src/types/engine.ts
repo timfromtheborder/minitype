@@ -42,7 +42,7 @@ export interface TypingEngineActions {
   setActiveColumnLimit: (limit: number) => void;
   clearText: () => Promise<void>;
   newProject: () => Promise<void>;
-  loadProject: (id: string) => Promise<void>;
+  loadProject: (id: string, skipSaveCurrent?: boolean) => Promise<void>;
   importTextFileAsProject: (title: string, rawText: string) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
   renameProject: (id: string, newTitle: string) => Promise<void>;

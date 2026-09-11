@@ -76,7 +76,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
       const text = await file.text();
       const fileName = file.name;
       await useTypingStore.getState().importTextFileAsProject(fileName, text);
-      onSelectDocumentTab();
+      await refreshFiles();
     } catch (err) {
       console.error('Failed to import project file:', err);
     } finally {
@@ -88,7 +88,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
     if (id !== activeManuscriptId) {
       await useTypingStore.getState().loadProject(id);
     }
-    onSelectDocumentTab();
+    await refreshFiles();
   };
 
   const handleDeleteProject = async (id: string) => {
@@ -259,7 +259,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
       </div>
 
       {/* Files List View */}
-      <div className="flex-1 min-h-0 overflow-y-auto square-scrollbar border border-border/80 bg-card text-card-foreground">
+      <div className="flex-1 min-h-0 overflow-y-auto square-scrollbar border border-border/80 bg-background text-foreground">
         {loading ? (
           <div className="flex items-center justify-center h-40 text-muted-foreground text-xs gap-2">
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -285,13 +285,15 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                   key={file.id}
                   onDoubleClick={() => handleOpenProject(file.id)}
                   onTouchEnd={() => handleTouchEnd(file.id)}
-                  className={`flex items-center justify-between p-2.5 sm:p-3 gap-2 sm:gap-3 transition-colors select-none ${
-                    isActive ? 'bg-muted/40' : 'hover:bg-muted/20'
+                  className={`flex items-center justify-between p-2.5 sm:p-3 gap-2 sm:gap-3 transition-all select-none ${
+                    isActive
+                      ? 'border-l-4 border-l-primary bg-primary/15 shadow-xs'
+                      : 'hover:bg-muted/30 border-l-4 border-l-transparent'
                   }`}
                 >
                   {/* File Info */}
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    <FileText className={`w-4 h-4 shrink-0 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <FileText className={`w-4 h-4 shrink-0 ${isActive ? 'text-primary font-bold' : 'text-muted-foreground'}`} />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         {isEditing ? (
@@ -316,10 +318,12 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                                 e.stopPropagation();
                                 handleStartRename(file);
                               }}
-                              className="font-mono text-xs sm:text-sm font-semibold truncate text-foreground hover:underline cursor-text"
+                              className={`font-mono text-xs sm:text-sm truncate text-foreground hover:underline cursor-text ${
+                                isActive ? 'font-bold' : 'font-semibold'
+                              }`}
                               title="Click to rename"
                             >
-                              {file.title || 'Untitled Manuscript'}
+                              {file.title || 'Untitled Project'}
                             </span>
                             <button
                               type="button"
@@ -335,7 +339,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                           </div>
                         )}
                         {isActive && (
-                          <span className="shrink-0 text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-primary/15 text-primary border border-primary/30 rounded-none">
+                          <span className="shrink-0 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-primary text-primary-foreground shadow-xs rounded-none">
                             Active
                           </span>
                         )}
@@ -363,22 +367,20 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                       <button
                         type="button"
                         onClick={() => handleOpenProject(file.id)}
-                        className="flex items-center gap-1 px-2 py-1 text-xs rounded-none border border-border/80 bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
+                        className="flex items-center gap-1 px-2 py-1 text-xs rounded-none border border-border/80 bg-muted/30 hover:bg-muted text-foreground transition-colors cursor-pointer"
                         title="Open this project"
                       >
                         <FolderOpen className="w-3.5 h-3.5" />
                         <span className="hidden sm:inline">Open</span>
                       </button>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={onSelectDocumentTab}
-                        className="flex items-center gap-1 px-2 py-1 text-xs rounded-none border border-primary/40 bg-primary/10 text-primary font-medium transition-colors cursor-pointer"
-                        title="Currently open in aperture"
+                      <span
+                        className="flex items-center gap-1 px-2 py-1 text-xs rounded-none border border-primary/50 bg-primary/20 text-primary font-bold shadow-xs select-none"
+                        title="Currently active project"
                       >
                         <Check className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Viewing</span>
-                      </button>
+                        <span className="hidden sm:inline">Active</span>
+                      </span>
                     )}
 
                     {/* Download Button */}

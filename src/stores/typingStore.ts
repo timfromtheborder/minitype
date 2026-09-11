@@ -126,19 +126,27 @@ export function persistSettings(manifest: Partial<ManuscriptManifest>): void {
       const merged = { ...current, ...settings };
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(merged));
       saveGlobalSettingsToDb(merged).catch(console.error);
+      if (merged.colorScheme && typeof document !== 'undefined') {
+        document.documentElement.setAttribute('data-theme', merged.colorScheme);
+      }
     } catch (e) {
       console.error('Failed to save settings to localStorage:', e);
     }
   }
 }
 
-let pauseSaveTimer: ReturnType<typeof setTimeout> | null = null;
+let delayToSavingTimer: ReturnType<typeof setTimeout> | null = null;
+let pauseDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let animSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function cancelVisualSaveTimers(): void {
-  if (pauseSaveTimer) {
-    clearTimeout(pauseSaveTimer);
-    pauseSaveTimer = null;
+  if (delayToSavingTimer) {
+    clearTimeout(delayToSavingTimer);
+    delayToSavingTimer = null;
+  }
+  if (pauseDebounceTimer) {
+    clearTimeout(pauseDebounceTimer);
+    pauseDebounceTimer = null;
   }
   if (animSaveTimer) {
     clearTimeout(animSaveTimer);
@@ -150,26 +158,52 @@ export function triggerVisualSaveOnTyping(
   set: (partial: Partial<TypingStore> | ((state: TypingStore) => Partial<TypingStore>)) => void,
   get: () => TypingStore
 ): void {
-  cancelVisualSaveTimers();
+  // If an end-of-save countdown was in progress, cancel it because the user typed again
+  if (animSaveTimer) {
+    clearTimeout(animSaveTimer);
+    animSaveTimer = null;
+  }
+  if (pauseDebounceTimer) {
+    clearTimeout(pauseDebounceTimer);
+    pauseDebounceTimer = null;
+  }
 
-  // 1. While typing: semi-opaque gray swirling loading circle
-  set({ saveState: 'typing' });
+  const currentSaveState = get().saveState;
 
-  // 2. 1 second after typing stops: turn into saving animation of red swirling loading circle
-  pauseSaveTimer = setTimeout(() => {
-    pauseSaveTimer = null;
-    set({ saveState: 'saving' });
+  // 1. 0.6 second delay before moving from checkmark ('saved') to gray circle animation ('saving')
+  if (currentSaveState === 'saved' && !delayToSavingTimer) {
+    delayToSavingTimer = setTimeout(() => {
+      delayToSavingTimer = null;
+      set({ saveState: 'saving' });
+    }, 600);
+  }
 
-    // 3. Green check after the animation plays for a random duration between 0.8s and 1.4s (800ms to 1400ms)
-    const randomDuration = 800 + Math.random() * 600;
-    animSaveTimer = setTimeout(() => {
-      animSaveTimer = null;
-      const current = get();
-      if (current.saveState === 'saving') {
-        set({ saveState: current.persistenceError ? 'error' : 'saved' });
-      }
-    }, randomDuration);
-  }, 1000);
+  // 2. Debounce detection of typing pause (400ms after last keystroke)
+  pauseDebounceTimer = setTimeout(() => {
+    pauseDebounceTimer = null;
+
+    const runEndSavingAnimation = () => {
+      // Delay the end of the saving animation for a random 0.6 - 1.4 second count (600ms to 1400ms)
+      const randomDuration = 600 + Math.random() * 800;
+      animSaveTimer = setTimeout(() => {
+        animSaveTimer = null;
+        const current = get();
+        if (current.saveState === 'saving') {
+          set({ saveState: current.persistenceError ? 'error' : 'saved' });
+        }
+      }, randomDuration);
+    };
+
+    if (delayToSavingTimer) {
+      // Typing paused before 600ms elapsed: transition immediately to saving so user sees feedback
+      clearTimeout(delayToSavingTimer);
+      delayToSavingTimer = null;
+      set({ saveState: 'saving' });
+      runEndSavingAnimation();
+    } else {
+      runEndSavingAnimation();
+    }
+  }, 400);
 }
 
 export interface TypingStore extends TypingEngineState, TypingEngineActions {
@@ -1020,19 +1054,21 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     });
   },
 
-  loadProject: async (id: string) => {
+  loadProject: async (id: string, skipSaveCurrent: boolean = false) => {
     await flushPendingSave();
     const state = get();
-    // Save current active project state before switching
-    await saveManuscript(state.manifest).catch(console.error);
-    const curPage: PageRecord = {
-      id: `${state.manifest.id}-page-${state.currentPageNumber}`,
-      manuscriptId: state.manifest.id,
-      pageNumber: state.currentPageNumber,
-      lines: state.currentPageLines,
-      completedAt: null,
-    };
-    await savePage(curPage).catch(console.error);
+    // Save current active project state before switching (skip if deleted or loading itself)
+    if (!skipSaveCurrent && state.manifest.id !== id) {
+      await saveManuscript(state.manifest).catch(console.error);
+      const curPage: PageRecord = {
+        id: `${state.manifest.id}-page-${state.currentPageNumber}`,
+        manuscriptId: state.manifest.id,
+        pageNumber: state.currentPageNumber,
+        lines: state.currentPageLines,
+        completedAt: null,
+      };
+      await savePage(curPage).catch(console.error);
+    }
 
     const data = await loadManuscriptProject(id);
     if (!data) return;
@@ -1214,7 +1250,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     if (state.manifest.id === id) {
       const remaining = await getAllManuscripts();
       if (remaining.length > 0) {
-        await get().loadProject(remaining[0].id);
+        await get().loadProject(remaining[0].id, true);
       } else {
         // Requirement: Behavior for "no project loaded" state if all projects deleted
         // Auto-provision a fresh project with Session 1 so the platen is always functional
@@ -1241,30 +1277,52 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     const projectId = state.manifest.id;
     const now = new Date().toISOString();
 
+    const allPages = [
+      ...state.historicalPages,
+      {
+        pageNumber: state.currentPageNumber,
+        lines: state.currentPageLines,
+        completedAt: null,
+      },
+    ];
+    const fullText = sanitizeManuscript(allPages, { doubleSpaceLinebreaks: false });
+    let currentSessionText = fullText;
+    if (activeSessions.length > 1) {
+      const priorSessionsTextLength = activeSessions
+        .slice(0, -1)
+        .reduce((acc, s) => acc + (s.text?.length || 0), 0);
+      currentSessionText = fullText.slice(priorSessionsTextLength).trim();
+    } else {
+      currentSessionText = fullText.trim();
+    }
+    const currentWordCount = countWords(currentSessionText);
+
+    // Requirement: If the current session is empty, reset the session time but don't start a new session
+    if (currentWordCount === 0 && currentSessionText.length === 0) {
+      if (activeSessions.length > 0) {
+        const lastSession = activeSessions[activeSessions.length - 1];
+        const updatedSession: SessionRecord = {
+          ...lastSession,
+          startedAt: now,
+          completedAt: null,
+          text: '',
+          wordCount: 0,
+        };
+        activeSessions[activeSessions.length - 1] = updatedSession;
+        await saveSession(updatedSession).catch(console.error);
+        set({ activeSessions });
+      }
+      return;
+    }
+
     // 1. Finalize the current active session
     if (activeSessions.length > 0) {
       const lastSession = activeSessions[activeSessions.length - 1];
-      const allPages = [
-        ...state.historicalPages,
-        {
-          pageNumber: state.currentPageNumber,
-          lines: state.currentPageLines,
-          completedAt: null,
-        },
-      ];
-      const fullText = sanitizeManuscript(allPages, { doubleSpaceLinebreaks: false });
-      let sessionText = fullText;
-      if (activeSessions.length > 1) {
-        const priorSessionsTextLength = activeSessions
-          .slice(0, -1)
-          .reduce((acc, s) => acc + (s.text?.length || 0), 0);
-        sessionText = fullText.slice(priorSessionsTextLength).trim();
-      }
       const updatedLastSession: SessionRecord = {
         ...lastSession,
         completedAt: now,
-        text: sessionText || lastSession.text || '',
-        wordCount: countWords(sessionText || lastSession.text || ''),
+        text: currentSessionText || lastSession.text || '',
+        wordCount: currentWordCount || lastSession.wordCount || 0,
       };
       activeSessions[activeSessions.length - 1] = updatedLastSession;
       await saveSession(updatedLastSession).catch(console.error);
@@ -1284,32 +1342,45 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     activeSessions.push(newSession);
     await saveSession(newSession).catch(console.error);
 
-    // 3. Advance to a fresh line in the aperture if current line has content
+    // 3. Advance to a fresh linebreak in the aperture if current line has content
     let lines = [...state.currentPageLines];
     const currentLine = lines[state.activeLineIndex];
     if (currentLine && currentLine.cells.length > 0) {
       lines[state.activeLineIndex] = { ...currentLine, isCommitted: true, wrapType: 'hard' };
       const nextIdx = state.activeLineIndex + 1;
       lines.push(createEmptyLine(state.currentPageNumber, nextIdx));
+
+      const updatedManifest: ManuscriptManifest = {
+        ...state.manifest,
+        activeSessionId: newSession.id,
+        sessionCount: activeSessions.length,
+      };
+      await saveManuscript(updatedManifest).catch(console.error);
+      await savePage({
+        id: `${state.manifest.id}-page-${state.currentPageNumber}`,
+        manuscriptId: state.manifest.id,
+        pageNumber: state.currentPageNumber,
+        lines,
+        completedAt: null,
+      }).catch(console.error);
+
       set({
         currentPageLines: lines,
         activeLineIndex: nextIdx,
         activeColIndex: 0,
         activeSessions,
-        manifest: {
-          ...state.manifest,
-          activeSessionId: newSession.id,
-          sessionCount: activeSessions.length,
-        },
+        manifest: updatedManifest,
       });
     } else {
+      const updatedManifest: ManuscriptManifest = {
+        ...state.manifest,
+        activeSessionId: newSession.id,
+        sessionCount: activeSessions.length,
+      };
+      await saveManuscript(updatedManifest).catch(console.error);
       set({
         activeSessions,
-        manifest: {
-          ...state.manifest,
-          activeSessionId: newSession.id,
-          sessionCount: activeSessions.length,
-        },
+        manifest: updatedManifest,
       });
     }
   },
@@ -1318,7 +1389,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     cancelVisualSaveTimers();
     set({ saveState: 'saving' });
     await flushPendingSave();
-    const randomDuration = 800 + Math.random() * 600;
+    const randomDuration = 600 + Math.random() * 800;
     animSaveTimer = setTimeout(() => {
       animSaveTimer = null;
       const current = get();
@@ -1393,9 +1464,14 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       const dbSettings = await getGlobalSettingsFromDb();
       if (dbSettings) {
         currentManifest = { ...currentManifest, ...dbSettings };
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(extractSettings(currentManifest)));
       }
     } catch (e) {
       console.error('Failed to load settings from IndexedDB:', e);
+    }
+
+    if (typeof document !== 'undefined' && currentManifest.colorScheme) {
+      document.documentElement.setAttribute('data-theme', currentManifest.colorScheme);
     }
 
     set({ manifest: currentManifest });
@@ -1454,6 +1530,10 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         createdAt: loadedManifest.createdAt || new Date().toISOString(),
         updatedAt: loadedManifest.updatedAt || new Date().toISOString(),
       };
+
+      if (typeof document !== 'undefined' && updatedManifest.colorScheme) {
+        document.documentElement.setAttribute('data-theme', updatedManifest.colorScheme);
+      }
 
       set({
         manifest: updatedManifest,

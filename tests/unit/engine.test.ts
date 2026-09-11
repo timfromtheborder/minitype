@@ -1346,20 +1346,64 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(importedSession?.importedAt).toBeTruthy();
     });
 
-    it('manages visual save state machine: typing -> saving -> saved', async () => {
+    it('manages visual save state machine with 0.6s delay and random saving duration', async () => {
       vi.useFakeTimers();
       const store = useTypingStore.getState();
-      store.insertChar('T');
-      expect(useTypingStore.getState().saveState).toBe('typing');
+      expect(store.saveState).toBe('saved');
 
-      // Fast-forward 1000ms pause
-      vi.advanceTimersByTime(1000);
+      store.insertChar('T');
+      // Initially still 'saved' due to 0.6s delay before moving to saving animation
+      expect(useTypingStore.getState().saveState).toBe('saved');
+
+      // Fast-forward past pause debounce (400ms) or 600ms delay: transitions to 'saving'
+      vi.advanceTimersByTime(500);
       expect(useTypingStore.getState().saveState).toBe('saving');
 
-      // Fast-forward 1400ms (max animation length)
+      // Fast-forward 1500ms (beyond the random 600-1400ms saving duration)
       vi.advanceTimersByTime(1500);
       expect(useTypingStore.getState().saveState).toBe('saved');
       vi.useRealTimers();
+    });
+
+    it('resets session start time without creating a new session if current session is empty', async () => {
+      const store = useTypingStore.getState();
+      await store.newProject();
+
+      const originalSessions = useTypingStore.getState().activeSessions;
+      expect(originalSessions).toHaveLength(1);
+      const originalStartedAt = originalSessions[0].startedAt;
+
+      // Small delay to ensure timestamp changes
+      await new Promise((r) => setTimeout(r, 10));
+
+      // Call startNewSession with 0 words in current session
+      await store.startNewSession();
+
+      const stateAfter = useTypingStore.getState();
+      expect(stateAfter.activeSessions).toHaveLength(1);
+      expect(stateAfter.manifest.sessionCount).toBe(1);
+      expect(stateAfter.activeSessions[0].startedAt).not.toBe(originalStartedAt);
+    });
+
+    it('deletes active project without resurrecting it', async () => {
+      const { db, getAllManuscripts } = await import('@/db');
+      await db.manuscripts.clear();
+      const store = useTypingStore.getState();
+
+      await store.newProject();
+      const p1 = useTypingStore.getState().manifest;
+      await store.newProject();
+      const p2 = useTypingStore.getState().manifest;
+
+      expect(useTypingStore.getState().manifest.id).toBe(p2.id);
+
+      // Delete active project p2
+      await store.deleteProject(p2.id);
+
+      const all = await getAllManuscripts();
+      expect(all.find((m) => m.id === p2.id)).toBeUndefined();
+      expect(all.find((m) => m.id === p1.id)).toBeDefined();
+      expect(useTypingStore.getState().manifest.id).toBe(p1.id);
     });
   });
 });

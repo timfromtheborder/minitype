@@ -63,7 +63,7 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
       </div>
 
       {/* Sessions Scrollable List */}
-      <div className="flex-1 min-h-0 overflow-y-auto square-scrollbar border border-border/80 bg-card text-card-foreground p-2 sm:p-3 space-y-2">
+      <div className="flex-1 min-h-0 overflow-y-auto square-scrollbar border border-border/80 bg-background text-foreground p-2 sm:p-3 space-y-2">
         {sortedSessions.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 p-4 text-center gap-2 text-muted-foreground">
             <Clock className="w-8 h-8 opacity-40" />
@@ -89,20 +89,19 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
             return (
               <div
                 key={session.id}
-                className="flex items-center justify-between p-2.5 sm:p-3 border border-border/60 bg-muted/20 text-foreground select-none gap-2 font-mono text-[11px] sm:text-xs"
+                className="flex items-center justify-between p-2.5 sm:p-3 border border-border/60 bg-muted/30 text-foreground select-none gap-3 font-mono text-[11px] sm:text-xs"
               >
-                <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
-                  <span className="font-semibold text-foreground">
+                <div className="flex items-center justify-between gap-3 min-w-0 flex-1">
+                  <span className="font-semibold text-foreground truncate">
                     {timeRange}
                   </span>
-                  <span className="text-muted-foreground/60">|</span>
-                  <span className="text-muted-foreground font-medium shrink-0">
+                  <span className="text-muted-foreground font-medium shrink-0 text-right ml-auto">
                     {session.wordCount.toLocaleString()} words
                   </span>
                 </div>
 
                 {isActive && (
-                  <span className="flex items-center gap-1 text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-none shrink-0 font-sans">
+                  <span className="flex items-center gap-1 text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-none shrink-0 font-sans ml-2">
                     <Sparkles className="w-2.5 h-2.5" />
                     <span>Active</span>
                   </span>

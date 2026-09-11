@@ -119,12 +119,10 @@ export default function Home() {
             type="button"
             onClick={() => engine.flushSave?.()}
             className={`flex items-center justify-center px-2.5 py-1.5 rounded-none border font-sans transition-all cursor-pointer shadow-xs shrink-0 ${
-              engine.saveState === 'saving'
-                ? 'border-red-500/80 bg-red-500/10 text-red-600 dark:text-red-400'
-                : engine.saveState === 'typing'
-                ? 'border-border/60 bg-muted/40 text-muted-foreground'
-                : engine.saveState === 'error' || engine.persistenceError
+              engine.saveState === 'error' || engine.persistenceError
                 ? 'border-red-500 bg-red-500/10 text-red-600 dark:text-red-400 font-semibold'
+                : engine.saveState === 'saving' || engine.saveState === 'typing'
+                ? 'border-border/60 bg-muted/40 text-muted-foreground'
                 : isSpotlight
                 ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground'
                 : 'border-border/70 bg-card text-card-foreground hover:bg-muted'
@@ -132,19 +130,15 @@ export default function Home() {
             title={
               engine.saveState === 'error' || engine.persistenceError
                 ? `Save Error: ${engine.persistenceError || 'IndexedDB write error'}`
-                : engine.saveState === 'saving'
+                : engine.saveState === 'saving' || engine.saveState === 'typing'
                 ? 'Saving changes...'
-                : engine.saveState === 'typing'
-                ? 'Drafting...'
                 : 'All changes saved. Click to force save now.'
             }
           >
-            {engine.saveState === 'saving' ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-red-500 shrink-0" />
-            ) : engine.saveState === 'typing' ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground/60 opacity-60 shrink-0" />
-            ) : engine.saveState === 'error' || engine.persistenceError ? (
+            {engine.saveState === 'error' || engine.persistenceError ? (
               <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+            ) : engine.saveState === 'saving' || engine.saveState === 'typing' ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground/60 opacity-60 shrink-0" />
             ) : (
               <Check className="w-3.5 h-3.5 opacity-80 shrink-0 text-emerald-600 dark:text-emerald-400" />
             )}

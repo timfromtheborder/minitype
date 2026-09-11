@@ -49,6 +49,25 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
       className={`${interTight.variable} ${courierPrime.variable} h-full antialiased font-sans`}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var raw = localStorage.getItem('minitype_global_settings');
+                  if (raw) {
+                    var s = JSON.parse(raw);
+                    if (s && s.colorScheme) {
+                      document.documentElement.setAttribute('data-theme', s.colorScheme);
+                    }
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning>{children}</body>
     </html>
   );
