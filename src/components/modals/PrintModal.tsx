@@ -50,6 +50,8 @@ export const PrintModal: React.FC<PrintModalProps> = ({
         doubleSpaceLinebreaks: manifest.doubleSpaceLinebreaks,
       });
       setSanitizedFullText(fullClean);
+      const computedTotalWords = countWords(fullClean);
+      useTypingStore.getState().syncSessionStats(fullClean, computedTotalWords);
     }
   }, [isOpen, manifest.id, manifest.title, manifest.doubleSpaceLinebreaks, pages]);
 
@@ -285,6 +287,8 @@ export const PrintModal: React.FC<PrintModalProps> = ({
             <ProjectSessionsTab
               sessions={activeSessions}
               projectTitle={title}
+              totalWords={totalWords}
+              currentFullText={sanitizedFullText}
             />
           </div>
 

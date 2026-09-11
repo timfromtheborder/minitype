@@ -1637,6 +1637,39 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(sync?.pageMode).toBe('scroll');
       expect(sync?.textSize).toBe('xl');
     });
+
+    it('syncs word counts to active session and manifest totalWordCount', () => {
+      const store = useTypingStore.getState();
+      // Insert words: "The quick brown fox" (4 words)
+      "The quick brown fox".split('').forEach((c) => store.insertChar(c));
+
+      useTypingStore.getState().syncSessionStats();
+
+      const state = useTypingStore.getState();
+      expect(state.manifest.totalWordCount).toBe(4);
+      expect(state.activeSessions).toHaveLength(1);
+      expect(state.activeSessions[0].wordCount).toBe(4);
+    });
+
+    it('accurately calculates active session words and cumulative total words with multiple sessions', async () => {
+      const store = useTypingStore.getState();
+      // Session 1: "First session words here" (4 words)
+      "First session words here".split('').forEach((c) => store.insertChar(c));
+
+      // Finalize and start Session 2
+      await useTypingStore.getState().startNewSession();
+
+      // Session 2: "Second session has more words" (5 words)
+      "Second session has more words".split('').forEach((c) => store.insertChar(c));
+
+      useTypingStore.getState().syncSessionStats();
+
+      const state = useTypingStore.getState();
+      expect(state.manifest.totalWordCount).toBe(9);
+      expect(state.activeSessions).toHaveLength(2);
+      expect(state.activeSessions[0].wordCount).toBe(4);
+      expect(state.activeSessions[1].wordCount).toBe(5);
+    });
   });
 });
 

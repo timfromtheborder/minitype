@@ -48,6 +48,7 @@ export interface TypingEngineActions {
   deleteProject: (id: string) => Promise<void>;
   renameProject: (id: string, newTitle: string) => Promise<void>;
   startNewSession: () => Promise<void>;
+  syncSessionStats: (fullText?: string, words?: number) => void;
   flushSave: () => Promise<void>;
   toggleStats: (show?: boolean) => void;
   toggleDoubleSpaceLinebreaks: (enabled?: boolean) => void;

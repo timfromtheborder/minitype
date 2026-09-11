@@ -1,10 +1,13 @@
 import React from 'react';
 import { SessionRecord } from '@/types';
 import { Clock, Sparkles } from 'lucide-react';
+import { countWords } from '@/lib/projectSerializer';
 
 interface ProjectSessionsTabProps {
   sessions: SessionRecord[];
   projectTitle: string;
+  totalWords?: number;
+  currentFullText?: string;
 }
 
 export function formatSessionDateTime(isoStr?: string | null): string {
@@ -25,10 +28,62 @@ export function formatSessionDateTime(isoStr?: string | null): string {
 export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
   sessions,
   projectTitle,
+  totalWords: propTotalWords,
+  currentFullText,
 }) => {
   // Chronological order: oldest at top, newest at bottom
   const sortedSessions = [...sessions].sort((a, b) => a.sessionNumber - b.sessionNumber);
-  const totalWords = sortedSessions.reduce((acc, s) => acc + (s.wordCount || 0), 0);
+
+  // Document total words
+  const docTotalWords =
+    propTotalWords !== undefined
+      ? propTotalWords
+      : currentFullText !== undefined
+      ? countWords(currentFullText)
+      : sortedSessions.reduce((acc, s) => acc + (s.wordCount || 0), 0);
+
+  // If there are no sessions recorded, but there is text in the project, create an initial active session
+  const effectiveSessions: SessionRecord[] =
+    sortedSessions.length > 0
+      ? sortedSessions
+      : [
+          {
+            id: 'session-1',
+            projectId: 'current',
+            sessionNumber: 1,
+            startedAt: new Date().toISOString(),
+            completedAt: null,
+            text: currentFullText || '',
+            wordCount: docTotalWords,
+          },
+        ];
+
+  // Resolve session word counts dynamically so active sessions always reflect current writing
+  const resolvedSessions = effectiveSessions.map((session, index) => {
+    const isLatest = index === effectiveSessions.length - 1;
+    const isActive = isLatest && !session.completedAt;
+
+    if (isActive) {
+      const priorWords = effectiveSessions
+        .slice(0, index)
+        .reduce((acc, s) => acc + (s.wordCount || 0), 0);
+      const activeWords = Math.max(0, docTotalWords - priorWords);
+      return {
+        ...session,
+        wordCount: activeWords,
+      };
+    }
+
+    return {
+      ...session,
+      wordCount: session.wordCount || countWords(session.text || ''),
+    };
+  });
+
+  const cumulativeTotalWords = Math.max(
+    docTotalWords,
+    resolvedSessions.reduce((acc, s) => acc + (s.wordCount || 0), 0)
+  );
 
   return (
     <div className="flex-1 min-h-0 flex flex-col gap-2.5 sm:gap-3 overflow-hidden font-sans">
@@ -48,7 +103,7 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
               Sessions
             </div>
             <div className="text-xs sm:text-sm font-mono font-bold text-foreground">
-              {sortedSessions.length}
+              {resolvedSessions.length}
             </div>
           </div>
           <div>
@@ -56,7 +111,7 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
               Total Words
             </div>
             <div className="text-xs sm:text-sm font-mono font-bold text-primary">
-              {totalWords.toLocaleString()}
+              {cumulativeTotalWords.toLocaleString()}
             </div>
           </div>
         </div>
@@ -64,7 +119,7 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
 
       {/* Sessions Scrollable List */}
       <div className="flex-1 min-h-0 overflow-y-auto square-scrollbar border border-border/80 bg-background text-foreground p-2 sm:p-3 space-y-2">
-        {sortedSessions.length === 0 ? (
+        {resolvedSessions.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 p-4 text-center gap-2 text-muted-foreground">
             <Clock className="w-8 h-8 opacity-40" />
             <p className="text-xs font-medium">No sessions recorded yet for this project.</p>
@@ -73,8 +128,8 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
             </p>
           </div>
         ) : (
-          sortedSessions.map((session, index) => {
-            const isLatest = index === sortedSessions.length - 1;
+          resolvedSessions.map((session, index) => {
+            const isLatest = index === resolvedSessions.length - 1;
             const isActive = isLatest && !session.completedAt;
             let timeRange: string;
             if (session.isImported) {

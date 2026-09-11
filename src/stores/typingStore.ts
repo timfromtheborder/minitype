@@ -1546,6 +1546,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         ...state.manifest,
         activeSessionId: newSession.id,
         sessionCount: activeSessions.length,
+        totalWordCount: countWords(fullText),
       };
       await saveManuscript(updatedManifest).catch(console.error);
       await savePage({
@@ -1568,6 +1569,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         ...state.manifest,
         activeSessionId: newSession.id,
         sessionCount: activeSessions.length,
+        totalWordCount: countWords(fullText),
       };
       await saveManuscript(updatedManifest).catch(console.error);
       set({
@@ -1577,10 +1579,62 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     }
   },
 
+  syncSessionStats: (fullText?: string, words?: number) => {
+    const state = get();
+    if (!state.activeSessions || state.activeSessions.length === 0) return;
+
+    let text = fullText;
+    if (text === undefined) {
+      const allPages = [
+        ...state.historicalPages,
+        {
+          pageNumber: state.currentPageNumber,
+          lines: state.currentPageLines,
+          completedAt: null,
+        },
+      ];
+      text = sanitizeManuscript(allPages, { doubleSpaceLinebreaks: false });
+    }
+
+    const docTotalWords = words !== undefined ? words : countWords(text);
+    const sessions = [...state.activeSessions];
+    const lastIdx = sessions.length - 1;
+    const last = sessions[lastIdx];
+
+    if (!last.completedAt) {
+      const priorWords = sessions.slice(0, lastIdx).reduce((acc, s) => acc + (s.wordCount || 0), 0);
+      const priorLength = sessions.slice(0, lastIdx).reduce((acc, s) => acc + (s.text?.length || 0), 0);
+      const activeText = text.slice(priorLength).trim();
+      const activeWords = Math.max(0, docTotalWords - priorWords);
+
+      sessions[lastIdx] = {
+        ...last,
+        text: activeText || last.text || '',
+        wordCount: activeWords,
+      };
+
+      const updatedManifest = {
+        ...state.manifest,
+        totalWordCount: docTotalWords,
+      };
+
+      set({
+        activeSessions: sessions,
+        manifest: updatedManifest,
+      });
+
+      if (state.manifest.mode === 'local') {
+        saveSession(sessions[lastIdx]).catch(console.error);
+        saveManuscript(updatedManifest).catch(console.error);
+      }
+    }
+  },
+
   flushSave: async () => {
     cancelVisualSaveTimers();
     set({ saveState: 'saving' });
     await flushPendingSave();
+    get().syncSessionStats();
     const randomDuration = 600 + Math.random() * 800;
     animSaveTimer = setTimeout(() => {
       animSaveTimer = null;
@@ -1752,6 +1806,29 @@ export const useTypingStore = create<TypingStore>((set, get) => {
           wordCount: countWords(cleanText),
         },
       ];
+
+      // Sync active session with current cleanText and wordCount
+      if (projectSessions.length > 0) {
+        const lastIdx = projectSessions.length - 1;
+        const last = projectSessions[lastIdx];
+        if (!last.completedAt) {
+          const priorWords = projectSessions
+            .slice(0, lastIdx)
+            .reduce((acc, s) => acc + (s.wordCount || 0), 0);
+          const priorLength = projectSessions
+            .slice(0, lastIdx)
+            .reduce((acc, s) => acc + (s.text?.length || 0), 0);
+          const activeText = cleanText.slice(priorLength).trim();
+          const docTotal = countWords(cleanText);
+          const activeWords = Math.max(0, docTotal - priorWords);
+          projectSessions[lastIdx] = {
+            ...last,
+            text: activeText || last.text || cleanText,
+            wordCount: activeWords,
+          };
+          saveSession(projectSessions[lastIdx]).catch(console.error);
+        }
+      }
 
       const loadedSettings = extractSettings(loadedManifest);
       // If a setting was NOT explicitly provided by syncSettings or db.settings, fallback to loadedManifest's setting
