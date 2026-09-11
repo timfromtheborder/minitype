@@ -243,8 +243,10 @@
 }
 
 /* ==========================================================================
-   MINITYPE TEXT SIZING ([S] [M] [L] [XL])
+   MINITYPE TEXT SIZING ([S] [M] [L] [XL]) - VIEWPORT-SAFE CLAMPING
    ========================================================================== */
+
+/* Base font-sizes for large viewports (desktops, large tablets) */
 html[data-text-size="s"],
 html[data-text-size="S"],
 [data-text-size="s"],
@@ -272,6 +274,74 @@ html[data-text-size="XL"],
 [data-text-size="xl"],
 [data-text-size="XL"] {
   font-size: 20px;
+}
+
+/* Adaptive viewport clamping:
+   Prevents platen and modal boxes from overflowing physical screen bounds
+   on phones (35ch portrait) and small tablets / landscape phones (70ch).
+*/
+@media (max-width: 640px) and (orientation: portrait) {
+  /* 35-column platen: clamp font-size so 36ch + padding always fits in viewport */
+  html[data-text-size="s"],
+  html[data-text-size="S"],
+  [data-text-size="s"],
+  [data-text-size="S"] {
+    font-size: clamp(11px, calc((100vw - 2rem) / 23.5), 14px);
+  }
+
+  html,
+  html[data-text-size="m"],
+  html[data-text-size="M"],
+  [data-text-size="m"],
+  [data-text-size="M"] {
+    font-size: clamp(12px, calc((100vw - 2rem) / 23.5), 16px);
+  }
+
+  html[data-text-size="l"],
+  html[data-text-size="L"],
+  [data-text-size="l"],
+  [data-text-size="L"] {
+    font-size: clamp(13px, calc((100vw - 2rem) / 23.5), 18px);
+  }
+
+  html[data-text-size="xl"],
+  html[data-text-size="XL"],
+  [data-text-size="xl"],
+  [data-text-size="XL"] {
+    font-size: clamp(13.5px, calc((100vw - 2rem) / 23.5), 20px);
+  }
+}
+
+@media (max-width: 900px) and ((min-width: 641px) or (orientation: landscape)) {
+  /* 70-column platen: clamp font-size so 71ch + padding fits on narrow landscape/tablets */
+  html[data-text-size="s"],
+  html[data-text-size="S"],
+  [data-text-size="s"],
+  [data-text-size="S"] {
+    font-size: clamp(10px, calc((100vw - 3.5rem) / 46.5), 14px);
+  }
+
+  html,
+  html[data-text-size="m"],
+  html[data-text-size="M"],
+  [data-text-size="m"],
+  [data-text-size="M"] {
+    font-size: clamp(11px, calc((100vw - 3.5rem) / 46.5), 16px);
+  }
+
+  html[data-text-size="l"],
+  html[data-text-size="L"],
+  [data-text-size="l"],
+  [data-text-size="L"] {
+    font-size: clamp(12px, calc((100vw - 3.5rem) / 46.5), 18px);
+  }
+
+  html[data-text-size="xl"],
+  html[data-text-size="XL"],
+  [data-text-size="xl"],
+  [data-text-size="XL"] {
+    font-size: clamp(12.5px, calc((100vw - 3.5rem) / 46.5), 20px);
+  }
 }
 
 /* Custom Square Monospace Scrollbar */

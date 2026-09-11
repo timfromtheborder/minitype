@@ -61,8 +61,8 @@ export default function Home() {
   const isSpotlight = engine.manifest.colorScheme === 'spotlight';
   const isPortrait = (engine.activeColumnLimit ?? 70) === 35;
   const boxWidthClass = isPortrait
-    ? 'w-[calc(36ch+1.5rem)] max-w-[calc(100vw-2rem)]'
-    : 'w-[calc(71ch+4rem)] max-w-[calc(100vw-2.5rem)]';
+    ? 'w-[calc(36ch+1.25rem)] max-w-[calc(100vw-1.5rem)]'
+    : 'w-[calc(71ch+3rem)] md:w-[calc(71ch+4rem)] max-w-[calc(100vw-2rem)] sm:max-w-[calc(100vw-2.5rem)]';
 
   return (
     <main

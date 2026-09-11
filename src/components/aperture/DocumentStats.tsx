@@ -12,8 +12,8 @@ export const DocumentStats: React.FC = React.memo(function DocumentStats() {
 
   const isPortrait = (activeColumnLimit ?? 70) === 35;
   const boxWidthClass = isPortrait
-    ? 'w-[calc(36ch+1.5rem)] max-w-[calc(100vw-2rem)]'
-    : 'w-[calc(71ch+4rem)] max-w-[calc(100vw-2.5rem)]';
+    ? 'w-[calc(36ch+1.25rem)] max-w-[calc(100vw-1.5rem)]'
+    : 'w-[calc(71ch+3rem)] md:w-[calc(71ch+4rem)] max-w-[calc(100vw-2rem)] sm:max-w-[calc(100vw-2.5rem)]';
 
   const lineStatText =
     pageMode === 'scroll'

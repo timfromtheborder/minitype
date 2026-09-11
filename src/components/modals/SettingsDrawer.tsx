@@ -130,7 +130,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                     key={size}
                     type="button"
                     onClick={() => onUpdateManifest({ textSize: size })}
-                    className={`py-1.5 rounded-none border text-center transition-all cursor-pointer font-bold ${
+                    className={`py-1.5 rounded-none border text-center transition-all cursor-pointer font-bold text-xs sm:text-sm ${
                       isSelected
                         ? 'border-primary bg-primary text-primary-foreground shadow-xs'
                         : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground'
@@ -155,13 +155,13 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                     const pageSize = mode === 'scroll' ? 999999 : mode === 'notecard' ? 10 : mode === 'page' ? 54 : 9999;
                     onUpdateManifest({ pageMode: mode, pageSize });
                   }}
-                  className={`py-1.5 rounded-none border text-center transition-all cursor-pointer capitalize ${
+                  className={`py-1.5 px-0.5 rounded-none border text-center transition-all cursor-pointer capitalize text-[10px] sm:text-xs truncate ${
                     (manifest.pageMode || 'scroll') === mode
                       ? 'border-primary bg-primary text-primary-foreground font-bold shadow-xs'
                       : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground'
                   }`}
                 >
-                  {mode}
+                  <span className="truncate">{mode}</span>
                 </button>
               ))}
             </div>
