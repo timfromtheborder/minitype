@@ -8,7 +8,7 @@ import { DocumentStats } from '@/components/aperture/DocumentStats';
 import { PaperTrayStack } from '@/components/stages/PaperTrayStack';
 import { SettingsDrawer } from '@/components/modals/SettingsDrawer';
 import { PrintModal } from '@/components/modals/PrintModal';
-import { Settings, FileText, Check, Loader2, AlertTriangle } from 'lucide-react';
+import { Settings, FileText } from 'lucide-react';
 
 export default function Home() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -61,18 +61,18 @@ export default function Home() {
   return (
     <main
       suppressHydrationWarning
-      className="relative w-full h-[100dvh] max-h-[100dvh] overflow-hidden flex flex-col justify-between p-2.5 sm:p-6 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] transition-colors duration-300 bg-background text-foreground font-sans"
+      className="relative w-full h-[100dvh] max-h-[100dvh] overflow-hidden p-2.5 sm:p-6 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] transition-colors duration-300 bg-background text-foreground font-sans select-none"
     >
-      {/* 1. TOP STAGE: Visual Wireframe Isometric Paper Outbox Tray (hidden in endless scroll mode) */}
-      {engine.manifest.pageMode !== 'scroll' && (
-        <header className="flex items-center justify-center w-full pt-2 sm:pt-4 select-none shrink-0">
-          <PaperTrayStack count={engine.manifest.outboxCount} />
-        </header>
-      )}
+      {/* Exactly Centered Monospace Aperture */}
+      <section className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+        <div className="relative flex flex-col items-center">
+          {/* Visual Wireframe Isometric Paper Outbox Tray (rendered only in notecard mode, above platen) */}
+          {engine.manifest.pageMode === 'notecard' && (
+            <div className="absolute bottom-full mb-1.5 sm:mb-2 left-1/2 -translate-x-1/2 pointer-events-none">
+              <PaperTrayStack count={engine.manifest.outboxCount} />
+            </div>
+          )}
 
-      {/* 2. CENTER STAGE: Exactly Centered Monospace Aperture */}
-      <section className="flex-1 flex flex-col items-center justify-center w-full my-auto">
-        <div className="flex flex-col items-center">
           <ApertureFrame
             lines={engine.currentPageLines}
             activeLineIndex={engine.activeLineIndex}
@@ -83,13 +83,13 @@ export default function Home() {
             isPaused={isPrintOpen || isSettingsOpen}
           />
 
-          {/* Live Drafting Metadata (Isolated subscriber component) */}
+          {/* Live Drafting Metadata and Right-Justified Save Checkbox */}
           <DocumentStats />
         </div>
       </section>
 
-      {/* 3. UTILITY DECK: Viewport Base, centered and matching input box width */}
-      <footer className="w-full flex justify-center items-center pb-1.5 sm:pb-2 select-none text-xs shrink-0">
+      {/* UTILITY DECK: Viewport Base, centered and matching input box width */}
+      <footer className="absolute bottom-0 left-0 right-0 flex justify-center items-center pb-[max(0.75rem,env(safe-area-inset-bottom))] px-2.5 sm:px-6 select-none text-xs">
         <div className={`flex items-center justify-between ${boxWidthClass} gap-2`}>
           {/* System Button */}
           <button
@@ -119,36 +119,6 @@ export default function Home() {
           >
             <Settings className="w-3.5 h-3.5 opacity-70 shrink-0" />
             <span>Settings</span>
-          </button>
-
-          {/* Live Save State Indicator */}
-          <button
-            type="button"
-            onClick={() => engine.flushSave?.()}
-            className={`flex items-center justify-center px-2.5 py-1.5 rounded-[2px] border font-sans transition-all cursor-pointer shadow-xs shrink-0 ${
-              engine.saveState === 'error' || engine.persistenceError
-                ? 'border-red-500 bg-red-500/10 text-red-600 dark:text-red-400 font-semibold'
-                : engine.saveState === 'saving' || engine.saveState === 'typing'
-                ? 'border-border/60 bg-muted/40 text-muted-foreground'
-                : isSpotlight
-                ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground'
-                : 'border-border/70 bg-card text-card-foreground hover:bg-muted'
-            }`}
-            title={
-              engine.saveState === 'error' || engine.persistenceError
-                ? `Save Error: ${engine.persistenceError || 'IndexedDB write error'}`
-                : engine.saveState === 'saving' || engine.saveState === 'typing'
-                ? 'Saving changes...'
-                : 'All changes saved. Click to force save now.'
-            }
-          >
-            {engine.saveState === 'error' || engine.persistenceError ? (
-              <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
-            ) : engine.saveState === 'saving' || engine.saveState === 'typing' ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground/60 opacity-60 shrink-0" />
-            ) : (
-              <Check className="w-3.5 h-3.5 opacity-80 shrink-0 text-emerald-600 dark:text-emerald-400" />
-            )}
           </button>
         </div>
       </footer>

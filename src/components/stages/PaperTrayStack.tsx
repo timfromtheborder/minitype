@@ -19,12 +19,11 @@ export const PaperTrayStack: React.FC<PaperTrayStackProps> = ({ count }) => {
   const p3 = '8,44';
   const basePoints = `${p0} ${p1} ${p2} ${p3}`;
 
-  // Limit rendering up to 24 sheets visually so it doesn't clip
-  const visibleSheets = Math.min(count, 24);
+  // Render up to 80 sheets visually
+  const visibleSheets = Math.min(count, 80);
 
-  // Spacing between pages is uniform across all sheets in the stack,
-  // but dynamically compresses as more pages appear (e.g. 5px down to 0.9px).
-  const step = visibleSheets <= 1 ? 4 : Math.max(0.9, Math.min(5, 20 / (visibleSheets - 1)));
+  // Spacing between pages dynamically fills vertical space (~65px) before compressing
+  const step = visibleSheets <= 1 ? 4.5 : Math.max(0.7, Math.min(4.5, 65 / (visibleSheets - 1)));
   const sheets: number[] = [];
   for (let i = 0; i < visibleSheets; i++) {
     sheets.push(i * step + 2);
@@ -34,8 +33,8 @@ export const PaperTrayStack: React.FC<PaperTrayStackProps> = ({ count }) => {
     <div className="flex flex-col items-center select-none group cursor-default">
       <svg
         width="110"
-        height="56"
-        viewBox="0 -22 120 72"
+        height="100"
+        viewBox="0 -72 120 120"
         className="text-foreground transition-all duration-300"
         style={{ overflow: 'visible' }}
       >

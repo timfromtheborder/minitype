@@ -87,7 +87,9 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
             <div className="flex items-center justify-between">
               <label className="text-muted-foreground">Aperture:</label>
               <span className="font-bold text-foreground">
-                {manifest.activeApertureHeight} {manifest.activeApertureHeight === 1 ? 'line' : 'lines'}
+                {manifest.pageMode === 'notecard'
+                  ? '10 lines (Locked for Notecard)'
+                  : `${manifest.activeApertureHeight} ${manifest.activeApertureHeight === 1 ? 'line' : 'lines'}`}
               </span>
             </div>
             <div className="flex items-center gap-3 pt-1">
@@ -97,18 +99,23 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 min={1}
                 max={10}
                 step={1}
-                value={manifest.activeApertureHeight}
+                value={manifest.pageMode === 'notecard' ? 10 : manifest.activeApertureHeight}
+                disabled={manifest.pageMode === 'notecard'}
                 onChange={(e) => {
+                  if (manifest.pageMode === 'notecard') return;
                   const val = Number(e.target.value) as ApertureHeight;
                   onUpdateHeight(val);
                   onUpdateManifest({ activeApertureHeight: val });
                 }}
                 onInput={(e) => {
+                  if (manifest.pageMode === 'notecard') return;
                   const val = Number(e.currentTarget.value) as ApertureHeight;
                   onUpdateHeight(val);
                   onUpdateManifest({ activeApertureHeight: val });
                 }}
-                className="w-full square-slider cursor-pointer"
+                className={`w-full square-slider ${
+                  manifest.pageMode === 'notecard' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+                }`}
                 aria-label="Aperture slider"
               />
               <span className="text-[10px] text-muted-foreground font-semibold">10</span>
@@ -154,14 +161,19 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Page Mode */}
           <div className="flex flex-col gap-1.5">
             <label className="text-muted-foreground">Page Mode:</label>
-            <div className="grid grid-cols-4 gap-1.5">
-              {(['scroll', 'page', 'notecard', 'paragraph'] as PageMode[]).map((mode) => (
+            <div className="grid grid-cols-3 gap-1.5">
+              {(['scroll', 'notecard', 'paragraph'] as PageMode[]).map((mode) => (
                 <button
                   key={mode}
                   type="button"
                   onClick={() => {
-                    const pageSize = mode === 'scroll' ? 999999 : mode === 'notecard' ? 10 : mode === 'page' ? 54 : 9999;
-                    onUpdateManifest({ pageMode: mode, pageSize });
+                    const pageSize = mode === 'scroll' ? 999999 : mode === 'notecard' ? 10 : 9999;
+                    if (mode === 'notecard') {
+                      onUpdateHeight(10);
+                      onUpdateManifest({ pageMode: mode, pageSize, activeApertureHeight: 10 });
+                    } else {
+                      onUpdateManifest({ pageMode: mode, pageSize });
+                    }
                   }}
                   className={`py-1.5 px-0.5 rounded-[2px] border text-center transition-all cursor-pointer capitalize text-[10px] sm:text-xs truncate ${
                     (manifest.pageMode || 'scroll') === mode
@@ -354,7 +366,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.5.5
+              Minitype v0.9.5.6
             </span>
           </div>
         </div>

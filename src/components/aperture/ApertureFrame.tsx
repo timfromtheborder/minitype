@@ -27,6 +27,7 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
   const bridgeRef = useRef<MobileKeyboardBridgeHandle>(null);
   const activeColumnLimit = useTypingStore((state) => state.activeColumnLimit);
   const setActiveColumnLimit = useTypingStore((state) => state.setActiveColumnLimit);
+  const pageMode = useTypingStore((state) => state.manifest.pageMode);
 
   // Monitor portrait mobile viewport to switch platen column bounds dynamically
   useEffect(() => {
@@ -124,7 +125,9 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
 
           // A line is at the topmost spot of the aperture window ONLY when the aperture is completely
           // full to capacity (visibleLines.length === height) and this line occupies the 0th (topmost) slot.
-          const isOldestInAperture = visibleLines.length === height && height > 1 && idx === 0;
+          // Fading effect is strictly enabled only in endless scroll mode.
+          const isOldestInAperture =
+            pageMode === 'scroll' && visibleLines.length === height && height > 1 && idx === 0;
 
           return (
             <HistoricalLine

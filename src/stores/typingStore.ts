@@ -609,6 +609,9 @@ export const useTypingStore = create<TypingStore>((set, get) => {
 
   setApertureHeight: (height: ApertureHeight) => {
     set((state) => {
+      // In notecard mode, aperture height is strictly locked to 10
+      const finalHeight = state.manifest.pageMode === 'notecard' ? 10 : height;
+
       // PRD 8.2: Any runtime modification to aperture height cancels active highlights
       let lines = state.currentPageLines;
       if (state.isHighlighting) {
@@ -620,7 +623,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         }));
       }
 
-      const updatedManifest = { ...state.manifest, activeApertureHeight: height };
+      const updatedManifest = { ...state.manifest, activeApertureHeight: finalHeight };
       persistSettings(updatedManifest);
       if (updatedManifest.mode === 'local') {
         saveManuscript(updatedManifest).catch(console.error);
@@ -649,7 +652,9 @@ export const useTypingStore = create<TypingStore>((set, get) => {
   setPageMode: (pageMode: PageMode) => {
     const pageSize = pageMode === 'scroll' ? 999999 : pageMode === 'notecard' ? 10 : pageMode === 'page' ? 54 : 9999;
     set((state) => {
-      const updated = { ...state.manifest, pageMode, pageSize };
+      // Locking aperture size to 10 for notecard mode
+      const activeApertureHeight = pageMode === 'notecard' ? 10 : state.manifest.activeApertureHeight;
+      const updated = { ...state.manifest, pageMode, pageSize, activeApertureHeight };
       persistSettings(updated);
       if (updated.mode === 'local') {
         saveManuscript(updated).catch(console.error);

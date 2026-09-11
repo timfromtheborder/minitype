@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
 import { useTypingStore } from '@/stores/typingStore';
 import { sanitizeManuscript } from '@/lib/sanitize';
-import { countWords, getActiveSessionText } from '@/lib/projectSerializer';
+import { countWords } from '@/lib/projectSerializer';
+import { Check, Loader2 } from 'lucide-react';
 
 export const DocumentStats: React.FC = React.memo(function DocumentStats() {
   const showStats = useTypingStore((state) => state.manifest.showStats ?? true);
@@ -14,6 +15,10 @@ export const DocumentStats: React.FC = React.memo(function DocumentStats() {
   const currentPageNumber = useTypingStore((state) => state.currentPageNumber);
   const activeSessions = useTypingStore((state) => state.activeSessions);
   const title = useTypingStore((state) => state.manifest.title || 'Untitled Project');
+
+  const saveState = useTypingStore((state) => state.saveState);
+  const persistenceError = useTypingStore((state) => state.persistenceError);
+  const flushSave = useTypingStore((state) => state.flushSave);
 
   const isPortrait = (activeColumnLimit ?? 70) === 35;
   const boxWidthClass = isPortrait
@@ -68,23 +73,42 @@ export const DocumentStats: React.FC = React.memo(function DocumentStats() {
       currentSessionNumber: sessionNum,
       currentSessionWords: sessionWords,
     };
-  }, [historicalPages, currentPageLines, currentPageNumber, activeSessions]);
-
-  if (showStats === false) return null;
+  }, [historicalPages, currentPageLines, currentPageNumber, activeSessions, pageMode]);
 
   return (
     <div
-      className={`flex items-center justify-center text-center ${boxWidthClass} px-3 sm:px-8 mt-1.5 text-muted-foreground text-xs font-mono pointer-events-none select-none`}
+      className={`relative flex items-center justify-center ${boxWidthClass} px-2.5 sm:px-6 md:px-8 mt-1.5 text-muted-foreground text-xs font-mono select-none`}
     >
-      <div className="flex items-center justify-center gap-1.5 sm:gap-2 flex-wrap">
+      {/* Centered Document Metadata - strictly on one line */}
+      <div
+        className={`flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap overflow-hidden text-ellipsis px-5 pointer-events-none transition-opacity duration-150 ${
+          showStats === false ? 'opacity-0' : 'opacity-100'
+        }`}
+      >
         <span>{lineStatText}</span>
         <span>·</span>
         <span>[ session: {currentSessionNumber} · {currentSessionWords} words ]</span>
         <span>·</span>
-        <span className="truncate max-w-[150px] sm:max-w-[250px]">{title.toLowerCase()}</span>
+        <span className="truncate max-w-[80px] sm:max-w-[160px] md:max-w-[220px]">{title.toLowerCase()}</span>
         <span>·</span>
         <span className="text-foreground/90 font-medium">{totalProjectWords} words</span>
       </div>
+
+      {/* Right-Justified Save Status Checkbox - beneath bottom-right corner of platen */}
+      <button
+        type="button"
+        onClick={() => flushSave?.()}
+        className="absolute right-2.5 sm:right-6 md:right-8 flex items-center justify-center w-[0.85em] h-[0.85em] rounded-[1.5px] border border-border/80 bg-card text-card-foreground shadow-xs cursor-pointer active:scale-95 transition-all p-0 leading-none shrink-0"
+        aria-label="Save status"
+      >
+        {persistenceError || saveState === 'error' ? (
+          <span className="text-red-500 font-bold leading-none text-[0.65em]">!</span>
+        ) : saveState === 'saving' || saveState === 'typing' ? (
+          <Loader2 className="w-[0.7em] h-[0.7em] animate-spin text-card-foreground" />
+        ) : (
+          <Check className="w-[0.7em] h-[0.7em] stroke-[2.5] text-card-foreground" />
+        )}
+      </button>
     </div>
   );
 });

@@ -952,14 +952,29 @@ describe('Typing Engine & State Machine Invariants', () => {
       const store = useTypingStore.getState();
       store.setApertureHeight(4);
       store.setManifest({ colorScheme: 'phosphor' });
-      store.setPageMode('notecard');
+      store.setPageMode('paragraph');
 
       const savedJson = localStorage.getItem('minitype_global_settings');
       expect(savedJson).toBeTruthy();
       const parsed = JSON.parse(savedJson!);
       expect(parsed.activeApertureHeight).toBe(4);
       expect(parsed.colorScheme).toBe('phosphor');
-      expect(parsed.pageMode).toBe('notecard');
+      expect(parsed.pageMode).toBe('paragraph');
+    });
+
+    it('locks aperture height to 10 in notecard mode and unlocks for scroll/paragraph', () => {
+      const store = useTypingStore.getState();
+      store.setPageMode('notecard');
+      expect(useTypingStore.getState().manifest.activeApertureHeight).toBe(10);
+
+      // Attempting to change aperture height in notecard mode is locked to 10
+      store.setApertureHeight(5);
+      expect(useTypingStore.getState().manifest.activeApertureHeight).toBe(10);
+
+      // Unlocks when switching to scroll or paragraph
+      store.setPageMode('scroll');
+      store.setApertureHeight(5);
+      expect(useTypingStore.getState().manifest.activeApertureHeight).toBe(5);
     });
 
     it('defaults audio to muted and persists sound toggle to localStorage', async () => {
@@ -1252,6 +1267,35 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(sixLines[0].actualIndex).toBe(1);
       expect(sixLines[0].isTopmost).toBe(true);
       expect(sixLines[1].isTopmost).toBe(false);
+    });
+
+    it('disables topmost line fading in notecard and paragraph modes, enabling only in scroll mode', () => {
+      const height = 5;
+      const computeLineFading = (lineCount: number, pageMode: 'scroll' | 'notecard' | 'paragraph') => {
+        const dummyLines = Array.from({ length: lineCount }, (_, i) => ({
+          ...createEmptyLine(1, i),
+          id: `line-${i}`,
+          isCommitted: i < lineCount - 1,
+        }));
+        const startIdx = Math.max(0, dummyLines.length - height);
+        const visibleLines = dummyLines.slice(startIdx);
+        return visibleLines.map((l, idx) => {
+          const isTopmost = pageMode === 'scroll' && visibleLines.length === height && height > 1 && idx === 0;
+          return { id: l.id, isTopmost };
+        });
+      };
+
+      // In scroll mode with full aperture: topmost line fades
+      const scrollResult = computeLineFading(5, 'scroll');
+      expect(scrollResult[0].isTopmost).toBe(true);
+
+      // In notecard mode with full aperture: topmost line DOES NOT fade
+      const notecardResult = computeLineFading(5, 'notecard');
+      expect(notecardResult[0].isTopmost).toBe(false);
+
+      // In paragraph mode with full aperture: topmost line DOES NOT fade
+      const paragraphResult = computeLineFading(5, 'paragraph');
+      expect(paragraphResult[0].isTopmost).toBe(false);
     });
   });
 
