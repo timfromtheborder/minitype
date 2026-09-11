@@ -229,6 +229,7 @@ function ensureActiveSessionOnTyping(set: any, get: any): void {
     ...state.manifest,
     activeSessionId: newSession.id,
     sessionCount: updatedSessions.length,
+    outboxCount: 0,
     updatedAt: new Date().toISOString(),
   };
 
@@ -242,6 +243,7 @@ function ensureActiveSessionOnTyping(set: any, get: any): void {
   set({
     activeSessions: updatedSessions,
     manifest: updatedManifest,
+    sessionCommittedLines: 0,
   });
 }
 
@@ -261,6 +263,8 @@ export const DEFAULT_MANIFEST: ManuscriptManifest = {
   typeface: 'courier-prime',
   textSize: 'm',
   showStats: true,
+  showSessionTargetTracker: true,
+  sessionWordTarget: undefined,
   doubleSpaceLinebreaks: false,
   sessionCount: 1,
   totalWordCount: 0,
@@ -277,6 +281,8 @@ export const SETTING_KEYS = [
   'typeface',
   'textSize',
   'showStats',
+  'showSessionTargetTracker',
+  'sessionWordTarget',
   'doubleSpaceLinebreaks',
 ] as const;
 
@@ -554,6 +560,7 @@ export interface TypingStore extends TypingEngineState, TypingEngineActions {
   currentPageNumber: number;
   historicalPages: PageRecord[];
   pendingWrappedCells: CharacterCell[] | null;
+  sessionCommittedLines: number;
 }
 
 export const useTypingStore = create<TypingStore>((set, get) => {
@@ -584,6 +591,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     pendingWrappedCells: null,
     saveState: 'saved',
     activeSessions: [],
+    sessionCommittedLines: 0,
     isProjectDirty: false,
 
   setActiveColumnLimit: (limit: number) =>
@@ -778,7 +786,14 @@ export const useTypingStore = create<TypingStore>((set, get) => {
 
     // Check if advancing to the next line completes the page
     const nextLineIndex = activeLineIndex + 1;
+    const isScrollMode = state.manifest.pageMode === 'scroll';
     const pageLineLimit = getPageLineLimit(state.manifest.pageMode, state.manifest.pageSize);
+    const newSessionCommitted = (state.sessionCommittedLines || 0) + 1;
+    const newOutbox = isScrollMode ? 0 : Math.floor(newSessionCommitted / 10);
+    if (!isScrollMode && newOutbox > state.manifest.outboxCount) {
+      typewriterAudio.playPaperFeed();
+    }
+
     if (nextLineIndex >= pageLineLimit) {
       const completedPage: PageRecord = {
         id: `${state.manifest.id}-page-${state.currentPageNumber}`,
@@ -788,9 +803,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         completedAt: new Date().toISOString(),
       };
 
-      const newOutbox = state.manifest.outboxCount + 1;
       const historical = [...state.historicalPages, completedPage];
-      typewriterAudio.playPaperFeed();
 
       const newPageNum = state.currentPageNumber + 1;
       const firstLine: LineRecord = {
@@ -831,6 +844,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         isLocked: false,
         lockReason: null,
         pendingWrappedCells: null,
+        sessionCommittedLines: newSessionCommitted,
       });
       return;
     }
@@ -844,12 +858,18 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     };
     lines.push(nextLineRecord);
 
+    const updatedManifest = newOutbox !== state.manifest.outboxCount
+      ? { ...state.manifest, outboxCount: newOutbox }
+      : state.manifest;
+
     set({
+      manifest: updatedManifest,
       currentPageLines: lines,
       activeLineIndex: nextLineIndex,
       activeColIndex: wrapResult.nextLineCells.length,
       isHighlighting: false,
       highlightHead: null,
+      sessionCommittedLines: newSessionCommitted,
     });
   },
 
@@ -994,10 +1014,14 @@ export const useTypingStore = create<TypingStore>((set, get) => {
           }).catch(console.error);
         }
 
+        const isScrollMode = state.manifest.pageMode === 'scroll';
+        const newSessionCommitted = Math.max(0, (state.sessionCommittedLines || 0) - 1);
+        const newOutbox = isScrollMode ? 0 : Math.floor(newSessionCommitted / 10);
+
         set({
           manifest: {
             ...state.manifest,
-            outboxCount: Math.max(0, state.manifest.outboxCount - 1),
+            outboxCount: newOutbox,
           },
           historicalPages: historical,
           currentPageNumber: prevPage.pageNumber,
@@ -1006,6 +1030,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
           activeColIndex: lastLine ? lastLine.cells.length : 0,
           isHighlighting: false,
           highlightHead: null,
+          sessionCommittedLines: newSessionCommitted,
         });
         return;
       }
@@ -1155,8 +1180,15 @@ export const useTypingStore = create<TypingStore>((set, get) => {
 
     const nextLineIndex = state.activeLineIndex + 1;
     const isParagraphMode = state.manifest.pageMode === 'paragraph';
+    const isScrollMode = state.manifest.pageMode === 'scroll';
     const pageLineLimit = getPageLineLimit(state.manifest.pageMode, state.manifest.pageSize);
     const shouldCompletePage = isParagraphMode || nextLineIndex >= pageLineLimit;
+
+    const newSessionCommitted = (state.sessionCommittedLines || 0) + 1;
+    const newOutbox = isScrollMode ? 0 : Math.floor(newSessionCommitted / 10);
+    if (!isScrollMode && newOutbox > state.manifest.outboxCount) {
+      typewriterAudio.playPaperFeed();
+    }
 
     if (shouldCompletePage) {
       // Page completed on Enter
@@ -1168,9 +1200,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         completedAt: new Date().toISOString(),
       };
 
-      const newOutbox = state.manifest.outboxCount + 1;
       const historical = [...state.historicalPages, completedPage];
-      typewriterAudio.playPaperFeed();
 
       const newPageNum = state.currentPageNumber + 1;
       const firstLine = createEmptyLine(newPageNum, 0);
@@ -1206,6 +1236,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         highlightHead: null,
         isLocked: false,
         lockReason: null,
+        sessionCommittedLines: newSessionCommitted,
       });
       return;
     }
@@ -1224,12 +1255,18 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       savePage(pageToSave).catch(console.error);
     }
 
+    const updatedManifest = newOutbox !== state.manifest.outboxCount
+      ? { ...state.manifest, outboxCount: newOutbox }
+      : state.manifest;
+
     set({
+      manifest: updatedManifest,
       currentPageLines: lines,
       activeLineIndex: nextLineIndex,
       activeColIndex: 0,
       isHighlighting: false,
       highlightHead: null,
+      sessionCommittedLines: newSessionCommitted,
     });
   },
 
@@ -1350,6 +1387,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       activeSessions: [initialSession],
       manifest: updatedManifest,
       saveState: 'saved',
+      sessionCommittedLines: 0,
     });
   },
 
@@ -1451,6 +1489,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       activeSessions: [initialSession],
       manifest: updatedManifest,
       saveState: 'saved',
+      sessionCommittedLines: 0,
       isProjectDirty: false,
     });
   },
@@ -1537,7 +1576,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       id: loadedManifest.id,
       title: loadedManifest.title || 'Untitled Project',
       mode: 'local',
-      outboxCount: partitioned.historicalPages.length,
+      outboxCount: 0,
       lastPrintedCharIndex: loadedManifest.lastPrintedCharIndex ?? 0,
       printedPagesCount: loadedManifest.printedPagesCount ?? 0,
       activeSessionId: sessions[sessions.length - 1]?.id || '',
@@ -1590,6 +1629,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       lockReason: null,
       pendingWrappedCells: null,
       saveState: 'saved',
+      sessionCommittedLines: 0,
       isProjectDirty: false,
     });
   },
@@ -1672,6 +1712,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       lockReason: null,
       pendingWrappedCells: null,
       saveState: 'saved',
+      sessionCommittedLines: 0,
       isProjectDirty: false,
     });
   },
@@ -1812,6 +1853,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         activeColIndex: 0,
         activeSessions,
         manifest: updatedManifest,
+        sessionCommittedLines: 0,
       });
     } else {
       const updatedManifest: ManuscriptManifest = {
@@ -1825,6 +1867,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       set({
         activeSessions,
         manifest: updatedManifest,
+        sessionCommittedLines: 0,
       });
     }
   },
@@ -1947,6 +1990,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
           wordCount: 0,
         },
       ],
+      sessionCommittedLines: 0,
       isProjectDirty: false,
     });
   },
@@ -2138,7 +2182,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         id: loadedManifest.id,
         title: loadedManifest.title || 'Untitled Project',
         mode: 'local',
-        outboxCount: partitioned.historicalPages.length,
+        outboxCount: 0,
         lastPrintedCharIndex: loadedManifest.lastPrintedCharIndex ?? 0,
         printedPagesCount: loadedManifest.printedPagesCount ?? 0,
         activeSessionId: loadedManifest.activeSessionId || normalizedSessions[normalizedSessions.length - 1].id,
@@ -2201,6 +2245,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         highlightHead: null,
         isLocked: false,
         lockReason: null,
+        sessionCommittedLines: 0,
       });
     } catch (e) {
       console.error('Failed to rehydrate project from IndexedDB:', e);

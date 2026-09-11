@@ -2,6 +2,7 @@ import React from 'react';
 import { SessionRecord } from '@/types';
 import { Clock, Sparkles } from 'lucide-react';
 import { countWords, getActiveSessionText } from '@/lib/projectSerializer';
+import { useTypingStore } from '@/stores/typingStore';
 
 interface ProjectSessionsTabProps {
   sessions: SessionRecord[];
@@ -31,6 +32,9 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
   totalWords: propTotalWords,
   currentFullText,
 }) => {
+  const sessionWordTarget = useTypingStore((state) => state.manifest.sessionWordTarget);
+  const setManifest = useTypingStore((state) => state.setManifest);
+
   // Chronological order: oldest at top, newest at bottom
   const sortedSessions = [...sessions].sort((a, b) => a.sessionNumber - b.sessionNumber);
 
@@ -104,7 +108,7 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
   return (
     <div className="flex-1 min-h-0 flex flex-col gap-2.5 sm:gap-3 overflow-hidden font-sans">
       {/* Overview Banner */}
-      <div className="flex items-center justify-between p-2.5 sm:p-3 border border-border/70 bg-muted/25 rounded-[2px] shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 sm:p-3 border border-border/70 bg-muted/25 rounded-[2px] shrink-0 gap-2">
         <div className="flex flex-col gap-0.5 min-w-0">
           <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">
             Project Overview
@@ -128,6 +132,37 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
             </div>
             <div className="text-xs sm:text-sm font-mono font-bold text-primary">
               {cumulativeTotalWords.toLocaleString()}
+            </div>
+          </div>
+          <div className="border-l border-border/60 pl-3">
+            <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+              Session Target
+            </div>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <input
+                type="number"
+                min={0}
+                max={99999}
+                step={50}
+                placeholder="Off"
+                value={sessionWordTarget && sessionWordTarget > 0 ? sessionWordTarget : ''}
+                onChange={(e) => {
+                  const val = e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0);
+                  setManifest({ sessionWordTarget: val > 0 ? val : undefined });
+                }}
+                className="w-16 sm:w-20 px-1.5 py-0.5 text-xs font-mono font-bold text-right rounded-[2px] border border-border/80 bg-background text-foreground focus:outline-hidden focus:border-primary"
+                title="Target words per session (enter 0 or clear to turn off)"
+              />
+              {sessionWordTarget && sessionWordTarget > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setManifest({ sessionWordTarget: undefined })}
+                  className="text-[10px] text-muted-foreground hover:text-foreground cursor-pointer underline shrink-0"
+                  title="Turn off target"
+                >
+                  Off
+                </button>
+              ) : null}
             </div>
           </div>
         </div>

@@ -365,7 +365,8 @@ describe('Typing Engine & State Machine Invariants', () => {
 
       const state = useTypingStore.getState();
       expect(state.historicalPages).toHaveLength(1);
-      expect(state.manifest.outboxCount).toBe(1);
+      // Under 10-line tracking: 30 lines = 3 sheets
+      expect(state.manifest.outboxCount).toBe(3);
       expect(state.currentPageNumber).toBe(2);
       expect(state.activeLineIndex).toBe(0);
       expect(state.isLocked).toBe(false);
@@ -401,13 +402,14 @@ describe('Typing Engine & State Machine Invariants', () => {
       store.handleEnter(); // Linebreak makes a new page
 
       expect(useTypingStore.getState().currentPageNumber).toBe(2);
-      expect(useTypingStore.getState().manifest.outboxCount).toBe(1);
+      // Paragraphs do not automatically increment outbox sheets (< 10 lines)
+      expect(useTypingStore.getState().manifest.outboxCount).toBe(0);
 
       store.insertChar('B');
       store.handleEnter();
 
       expect(useTypingStore.getState().currentPageNumber).toBe(3);
-      expect(useTypingStore.getState().manifest.outboxCount).toBe(2);
+      expect(useTypingStore.getState().manifest.outboxCount).toBe(0);
     });
 
     it('does not paginate or complete page in scroll mode (endless scroll)', () => {
@@ -751,7 +753,7 @@ describe('Typing Engine & State Machine Invariants', () => {
       store.handleEnter();
       expect(useTypingStore.getState().currentPageNumber).toBe(2);
       expect(useTypingStore.getState().historicalPages).toHaveLength(1);
-      expect(useTypingStore.getState().manifest.outboxCount).toBe(1);
+      expect(useTypingStore.getState().manifest.outboxCount).toBe(0);
 
       // Press Backspace on empty Page 2: strikes out carriage return and restores Page 1
       store.handleBackspace();
@@ -2337,6 +2339,79 @@ describe('Typing Engine & State Machine Invariants', () => {
 
       const occurrences = clean.split('Duplicated paragraph.').length - 1;
       expect(occurrences).toBe(1);
+    });
+
+    it('resets paper outbox count to 0 when loading an existing project', async () => {
+      const store = useTypingStore.getState();
+      await store.newProject();
+      const projId = store.manifest.id;
+
+      // Save manuscript with outboxCount = 15 and multiple pages
+      await db.manuscripts.update(projId, { outboxCount: 15 });
+      await db.pages.put({
+        id: `${projId}-page-1`,
+        manuscriptId: projId,
+        pageNumber: 1,
+        lines: textToManuscriptLines('First page.').lines,
+        completedAt: new Date().toISOString(),
+      });
+      await db.pages.put({
+        id: `${projId}-page-2`,
+        manuscriptId: projId,
+        pageNumber: 2,
+        lines: textToManuscriptLines('Second page.').lines,
+        completedAt: null,
+      });
+
+      // Load project - outboxCount must reset to 0
+      await store.loadProject(projId, true);
+      expect(useTypingStore.getState().manifest.outboxCount).toBe(0);
+      expect(useTypingStore.getState().sessionCommittedLines).toBe(0);
+    });
+
+    it('increments outboxCount only at 10-line increments within a session', () => {
+      const store = useTypingStore.getState();
+      store.setPageMode('paragraph');
+
+      // Type 9 short paragraphs (9 lines total)
+      for (let i = 1; i <= 9; i++) {
+        store.insertChar('L');
+        store.handleEnter();
+        expect(useTypingStore.getState().manifest.outboxCount).toBe(0);
+      }
+
+      // 10th line triggers outboxCount milestone = 1
+      store.insertChar('L');
+      store.handleEnter();
+      expect(useTypingStore.getState().manifest.outboxCount).toBe(1);
+
+      // Next 9 lines (total 19) keep outboxCount at 1
+      for (let i = 11; i <= 19; i++) {
+        store.insertChar('L');
+        store.handleEnter();
+        expect(useTypingStore.getState().manifest.outboxCount).toBe(1);
+      }
+
+      // 20th line triggers milestone = 2
+      store.insertChar('L');
+      store.handleEnter();
+      expect(useTypingStore.getState().manifest.outboxCount).toBe(2);
+    });
+
+    it('supports configuring session word target and disabling it', () => {
+      const store = useTypingStore.getState();
+
+      // Default new project has no sessionWordTarget
+      expect(store.manifest.sessionWordTarget).toBeUndefined();
+      expect(store.manifest.showSessionTargetTracker).toBe(true);
+
+      // Set target to 500 words
+      store.setManifest({ sessionWordTarget: 500 });
+      expect(useTypingStore.getState().manifest.sessionWordTarget).toBe(500);
+
+      // Clear / turn off target
+      store.setManifest({ sessionWordTarget: undefined });
+      expect(useTypingStore.getState().manifest.sessionWordTarget).toBeUndefined();
     });
   });
 });

@@ -33,6 +33,8 @@ export interface ManuscriptManifest {
   typeface: Typeface;
   textSize?: TextSize;
   showStats?: boolean;
+  showSessionTargetTracker?: boolean;
+  sessionWordTarget?: number;
   doubleSpaceLinebreaks?: boolean;
   activeSessionId?: string;
   sessionCount?: number;

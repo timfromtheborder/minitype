@@ -43,6 +43,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   };
 
   const showStats = manifest.showStats ?? true;
+  const showSessionTargetTracker = manifest.showSessionTargetTracker ?? true;
   const isDoubleSpace = manifest.doubleSpaceLinebreaks ?? false;
 
   const handleClose = () => {
@@ -312,6 +313,33 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
               </button>
             </div>
 
+            {/* Session target tracker */}
+            <div
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => onUpdateManifest({ showSessionTargetTracker: !showSessionTargetTracker })}
+            >
+              <span className="text-muted-foreground">Session target tracker</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={showSessionTargetTracker}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUpdateManifest({ showSessionTargetTracker: !showSessionTargetTracker });
+                }}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[2px] border transition-colors duration-150 ease-in-out focus:outline-hidden ${
+                  showSessionTargetTracker ? 'bg-primary border-primary' : 'bg-muted/70 border-border/80'
+                }`}
+                title="Session target tracker"
+              >
+                <span
+                  className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-[1px] shadow-xs transition-transform duration-150 ease-in-out ${
+                    showSessionTargetTracker ? 'translate-x-4 bg-primary-foreground' : 'translate-x-0.5 bg-muted-foreground/70'
+                  }`}
+                />
+              </button>
+            </div>
+
             {/* Double-space paragraphs */}
             <div
               className="flex items-center justify-between cursor-pointer"
@@ -370,7 +398,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.5.7
+              Minitype v0.9.5.8
             </span>
           </div>
         </div>

@@ -6,6 +6,7 @@ import { readSynchronousSettings } from '@/stores/typingStore';
 import { ApertureFrame } from '@/components/aperture/ApertureFrame';
 import { DocumentStats } from '@/components/aperture/DocumentStats';
 import { PaperTrayStack } from '@/components/stages/PaperTrayStack';
+import { SessionTargetTracker } from '@/components/stages/SessionTargetTracker';
 import { SettingsDrawer } from '@/components/modals/SettingsDrawer';
 import { PrintModal } from '@/components/modals/PrintModal';
 import { Settings, FileText } from 'lucide-react';
@@ -66,10 +67,23 @@ export default function Home() {
       {/* Exactly Centered Monospace Aperture */}
       <section className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
         <div className="relative flex flex-col items-center">
-          {/* Visual Wireframe Isometric Paper Outbox Tray (rendered only in notecard mode, above platen) */}
+          {/* Visual Wireframe Isometric Paper Outbox Tray (rendered only in notecard mode, above platen / target tracker) */}
           {engine.manifest.pageMode === 'notecard' && (
-            <div className="absolute bottom-full mb-1.5 sm:mb-2 left-1/2 -translate-x-1/2 pointer-events-none">
+            <div
+              className={`absolute bottom-full left-1/2 -translate-x-1/2 pointer-events-none transition-all ${
+                engine.manifest.showSessionTargetTracker !== false && (engine.manifest.sessionWordTarget ?? 0) > 0
+                  ? 'mb-4 sm:mb-5'
+                  : 'mb-1.5 sm:mb-2'
+              }`}
+            >
               <PaperTrayStack count={engine.manifest.outboxCount} />
+            </div>
+          )}
+
+          {/* Session Target Tracking Graphic (rendered directly above platen with minimal space between) */}
+          {engine.manifest.showSessionTargetTracker !== false && (engine.manifest.sessionWordTarget ?? 0) > 0 && (
+            <div className="absolute bottom-full mb-1 sm:mb-1.5 left-0 right-0 pointer-events-none">
+              <SessionTargetTracker />
             </div>
           )}
 

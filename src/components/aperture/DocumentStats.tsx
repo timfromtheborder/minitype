@@ -14,6 +14,7 @@ export const DocumentStats: React.FC = React.memo(function DocumentStats() {
   const currentPageNumber = useTypingStore((state) => state.currentPageNumber);
   const activeSessions = useTypingStore((state) => state.activeSessions);
   const title = useTypingStore((state) => state.manifest.title || 'Untitled Project');
+  const sessionWordTarget = useTypingStore((state) => state.manifest.sessionWordTarget);
 
   const saveState = useTypingStore((state) => state.saveState);
   const persistenceError = useTypingStore((state) => state.persistenceError);
@@ -80,7 +81,21 @@ export const DocumentStats: React.FC = React.memo(function DocumentStats() {
       >
         <span>{lineStatText}</span>
         <span>·</span>
-        <span>[ session: {currentSessionNumber} · {currentSessionWords} words ]</span>
+        <span>
+          [ session: {currentSessionNumber} ·{' '}
+          <span
+            className={
+              sessionWordTarget && sessionWordTarget > 0 && currentSessionWords >= sessionWordTarget
+                ? 'font-bold text-foreground'
+                : undefined
+            }
+          >
+            {sessionWordTarget && sessionWordTarget > 0
+              ? `${currentSessionWords}/${sessionWordTarget} words`
+              : `${currentSessionWords} words`}
+          </span>{' '}
+          ]
+        </span>
         <span>·</span>
         <span className="truncate max-w-[80px] sm:max-w-[160px] md:max-w-[220px]">{title.toLowerCase()}</span>
         <span>·</span>
