@@ -122,12 +122,14 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
             );
           }
 
+          const isOldestInAperture = total >= height && height > 1 && idx === 0;
+
           return (
             <HistoricalLine
               key={line.id}
               line={line}
               lineIndex={actualIndex}
-              isTopmost={idx === 0}
+              isTopmost={isOldestInAperture}
             />
           );
         })}

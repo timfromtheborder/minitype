@@ -17,7 +17,7 @@ export const HistoricalLine = React.memo(function HistoricalLine({
     <div
       data-line-index={lineIndex}
       className={`flex flex-row items-center font-mono leading-[1.1] h-[1.25rem] whitespace-pre select-none w-full transition-opacity duration-150 ${
-        isTopmost ? 'opacity-45' : ''
+        isTopmost ? 'opacity-65' : ''
       }`}
     >
       {line.cells.map((cell) => (
