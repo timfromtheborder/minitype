@@ -1454,7 +1454,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     }
     const state = get();
 
-    const newId = `manuscript-${Date.now()}`;
+    const newId = `manuscript-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const initialSession: SessionRecord = {
       id: `${newId}-session-1`,
       projectId: newId,
@@ -1711,7 +1711,7 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     await flushPendingSave();
     const state = get();
     const cleanTitle = title.replace(/\.(txt|md|minitype)$/i, '').trim() || 'Untitled Project';
-    const newId = `manuscript-${Date.now()}`;
+    const newId = `manuscript-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
     // Parse sessions if delimiter codes exist in project file
     const importTime = new Date().toISOString();
