@@ -143,7 +143,10 @@ export const MobileKeyboardBridge = forwardRef<
       if (store.isHighlighting) {
         typewriterAudio.playStrike();
       } else {
-        typewriterAudio.playCarriageReturn();
+        const isCompletingNotecard = store.manifest.pageMode === 'notecard' && store.activeLineIndex >= 9;
+        if (!isCompletingNotecard) {
+          typewriterAudio.playCarriageReturn();
+        }
       }
       store.handleEnter();
     }
@@ -177,7 +180,10 @@ export const MobileKeyboardBridge = forwardRef<
       if (store.isHighlighting) {
         typewriterAudio.playStrike();
       } else {
-        typewriterAudio.playCarriageReturn();
+        const isCompletingNotecard = store.manifest.pageMode === 'notecard' && store.activeLineIndex >= 9;
+        if (!isCompletingNotecard) {
+          typewriterAudio.playCarriageReturn();
+        }
       }
       store.handleEnter();
     } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {

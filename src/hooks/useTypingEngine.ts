@@ -82,9 +82,10 @@ export function useTypingEngine(options?: UseTypingEngineOptions) {
           return;
         }
 
+        const isNotecardEnding = state.manifest.pageMode === 'notecard' && state.activeLineIndex >= 9;
         if (state.isHighlighting) {
           typewriterAudio.playStrike();
-        } else {
+        } else if (!isNotecardEnding) {
           typewriterAudio.playCarriageReturn();
         }
         state.handleEnter();

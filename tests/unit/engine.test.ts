@@ -2497,6 +2497,19 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(state.currentPageLines[0].cells).toHaveLength(0);
       expect(state.historicalPages).toHaveLength(1);
       expect(state.historicalPages[0].pageNumber).toBe(1);
+      expect(state.historicalPages[0].lines[0].isCommitted).toBe(true);
+      expect(state.historicalPages[0].lines[0].wrapType).toBe('hard');
+
+      // Type on card 2 and verify clean newline separation between cards in sanitizeManuscript
+      store.insertChar('T');
+      store.insertChar('w');
+      store.insertChar('o');
+      const currentState = useTypingStore.getState();
+      const allPages = [
+        ...currentState.historicalPages,
+        { pageNumber: currentState.currentPageNumber, lines: currentState.currentPageLines, completedAt: null }
+      ];
+      expect(sanitizeManuscript(allPages)).toBe('Hi\nTwo');
     });
 
     it('highlights entire word backwards on handleBackspace({ byWord: true })', () => {

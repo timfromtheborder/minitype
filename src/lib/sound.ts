@@ -6,6 +6,7 @@ class TypewriterAudio {
   private keyClickBuffers: AudioBuffer[] = [];
   private backspaceBuffers: AudioBuffer[] = [];
   private strikeBuffers: AudioBuffer[] = [];
+  private duckUntil: number = 0;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -269,12 +270,13 @@ class TypewriterAudio {
     if (this.isMuted) return;
     const ctx = this.getContext();
     if (!ctx) return;
+    if (ctx.currentTime < this.duckUntil) return;
 
     try {
       const t = ctx.currentTime;
 
-      // 1. The "Zip" (rapid ratchet wheel sliding from t to t + 0.11s)
-      const zipDuration = 0.11;
+      // 1. The "Zip" (softer ratchet wheel sliding from t to t + 0.10s)
+      const zipDuration = 0.10;
       const zipBuffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * zipDuration), ctx.sampleRate);
       const zipData = zipBuffer.getChannelData(0);
       const zipSize = zipData.length;
@@ -282,7 +284,6 @@ class TypewriterAudio {
       // 7 rapid tooth clicks in the burst
       for (let i = 0; i < zipSize; i++) {
         const p = i / zipSize;
-        // Tooth repetition every ~15ms
         const tooth = Math.sin(p * Math.PI * 14);
         const toothEnv = tooth > 0.6 ? 1 : 0.05;
         zipData[i] = (Math.random() * 2 - 1) * toothEnv * (0.5 + 0.5 * p);
@@ -298,7 +299,7 @@ class TypewriterAudio {
       zipFilter.Q.setValueAtTime(2.5, t);
 
       const zipGain = ctx.createGain();
-      zipGain.gain.setValueAtTime(0.24, t);
+      zipGain.gain.setValueAtTime(0.14, t);
       zipGain.gain.exponentialRampToValueAtTime(0.005, t + zipDuration);
 
       zipSource.connect(zipFilter);
@@ -306,26 +307,26 @@ class TypewriterAudio {
       zipGain.connect(ctx.destination);
       zipSource.start(t);
 
-      // 2. The "Clunk" (solid margin stop impact at t + 0.11s)
-      const clunkTime = t + 0.105;
+      // 2. The "Clunk" (margin stop impact - softened and de-bassed)
+      const clunkTime = t + 0.095;
 
-      // Low platen thud
+      // Platen thud: lighter acoustic knock without heavy sub-bass
       const thudOsc = ctx.createOscillator();
       const thudGain = ctx.createGain();
       thudOsc.type = 'triangle';
-      thudOsc.frequency.setValueAtTime(130, clunkTime);
-      thudOsc.frequency.exponentialRampToValueAtTime(42, clunkTime + 0.07);
+      thudOsc.frequency.setValueAtTime(160, clunkTime);
+      thudOsc.frequency.exponentialRampToValueAtTime(80, clunkTime + 0.045);
 
-      thudGain.gain.setValueAtTime(0.48, clunkTime);
-      thudGain.gain.exponentialRampToValueAtTime(0.001, clunkTime + 0.07);
+      thudGain.gain.setValueAtTime(0.14, clunkTime);
+      thudGain.gain.exponentialRampToValueAtTime(0.001, clunkTime + 0.045);
 
       thudOsc.connect(thudGain);
       thudGain.connect(ctx.destination);
       thudOsc.start(clunkTime);
-      thudOsc.stop(clunkTime + 0.07);
+      thudOsc.stop(clunkTime + 0.045);
 
-      // Metallic stop latch impact
-      const metalBuffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.035), ctx.sampleRate);
+      // Metallic stop latch impact (softened)
+      const metalBuffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.03), ctx.sampleRate);
       const metalData = metalBuffer.getChannelData(0);
       for (let i = 0; i < metalData.length; i++) {
         metalData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (metalData.length * 0.2));
@@ -335,12 +336,12 @@ class TypewriterAudio {
 
       const metalFilter = ctx.createBiquadFilter();
       metalFilter.type = 'bandpass';
-      metalFilter.frequency.setValueAtTime(1100, clunkTime);
+      metalFilter.frequency.setValueAtTime(1200, clunkTime);
       metalFilter.Q.setValueAtTime(3.0, clunkTime);
 
       const metalGain = ctx.createGain();
-      metalGain.gain.setValueAtTime(0.35, clunkTime);
-      metalGain.gain.exponentialRampToValueAtTime(0.001, clunkTime + 0.035);
+      metalGain.gain.setValueAtTime(0.20, clunkTime);
+      metalGain.gain.exponentialRampToValueAtTime(0.001, clunkTime + 0.03);
 
       metalSource.connect(metalFilter);
       metalFilter.connect(metalGain);
@@ -411,8 +412,9 @@ class TypewriterAudio {
   }
 
   /**
-   * Synthesizes a soft, minimal 'shweep' paper flapping sound for adding a page to the stack.
-   * Simulates a lightweight parchment sheet sliding and settling into the tray.
+   * Synthesizes a cardstock paper scrape sound for notecard paper feed / new card.
+   * Simulates sliding cardstock across the platen, similar to the strikeout scrape sound.
+   * Ducks subsequent sounds (like carriage return) to keep the transition clean.
    */
   public playPaperFeed() {
     if (this.isMuted) return;
@@ -421,35 +423,34 @@ class TypewriterAudio {
 
     try {
       const t = ctx.currentTime;
-      const duration = 0.16; // 160ms
+      // Duck enter/carriage return sounds for 350ms
+      this.duckUntil = t + 0.35;
+
+      const duration = 0.15; // 150ms scraping sound
       const bufferSize = Math.floor(ctx.sampleRate * duration);
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const data = buffer.getChannelData(0);
 
-      // Soft paper whoosh with subtle aerodynamic flap flutter
+      // Cardstock scraping friction texture: fast swell and textured friction decay
       for (let i = 0; i < bufferSize; i++) {
         const progress = i / bufferSize;
-        // Smooth bell curve envelope: rapid soft rise, gentle decay
-        const env = Math.sin(progress * Math.PI) * Math.exp(-progress * 1.5);
-        // Aerodynamic flutter modulation (~18Hz paper flap)
-        const flutter = 1 + 0.25 * Math.sin(progress * 2 * Math.PI * 18);
-        data[i] = (Math.random() * 2 - 1) * env * flutter;
+        const env = progress < 0.12 ? progress / 0.12 : Math.exp(-(progress - 0.12) * 3.5);
+        const texture = 1 + 0.35 * Math.sin(progress * 70 * Math.PI);
+        data[i] = (Math.random() * 2 - 1) * env * texture;
       }
 
       const noise = ctx.createBufferSource();
       noise.buffer = buffer;
 
-      // Bandpass filter sweeping smoothly upward then resting ("shweep")
+      // Bandpass sweeping downward to create the cardstock scraping texture
       const filter = ctx.createBiquadFilter();
       filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(750, t);
-      filter.frequency.exponentialRampToValueAtTime(1900, t + 0.08);
+      filter.frequency.setValueAtTime(2600, t);
       filter.frequency.exponentialRampToValueAtTime(1100, t + duration);
-      filter.Q.setValueAtTime(1.4, t);
+      filter.Q.setValueAtTime(2.0, t);
 
-      // Very minimal, gentle gain (non-intrusive)
       const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.18, t);
+      gain.gain.setValueAtTime(0.28, t);
       gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
 
       noise.connect(filter);

@@ -455,7 +455,16 @@ html[data-aperture-height="10"],
 
 @keyframes platen-notecard-flash {
   0% {
-    opacity: 0.14;
+    opacity: 0.10;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes platen-darken-flash {
+  0% {
+    opacity: 0.16;
   }
   100% {
     opacity: 0;
@@ -463,7 +472,12 @@ html[data-aperture-height="10"],
 }
 
 .platen-flash-effect {
-  animation: platen-notecard-flash 350ms ease-out forwards;
+  animation: platen-notecard-flash 180ms ease-out forwards;
+}
+
+[data-theme="spotlight"] .platen-flash-effect {
+  background-color: #000000 !important;
+  animation: platen-darken-flash 180ms ease-out forwards !important;
 }
 
 [data-theme="spotlight"] .session-box-filled,

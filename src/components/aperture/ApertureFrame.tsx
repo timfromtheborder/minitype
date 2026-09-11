@@ -39,7 +39,7 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
       setIsNotecardFlashing(true);
       const timer = setTimeout(() => {
         setIsNotecardFlashing(false);
-      }, 350);
+      }, 180);
       prevPageNumRef.current = currentPageNumber;
       return () => clearTimeout(timer);
     }

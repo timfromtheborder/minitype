@@ -789,11 +789,11 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     const pageLineLimit = getPageLineLimit(state.manifest.pageMode, state.manifest.pageSize);
     const newSessionCommitted = (state.sessionCommittedLines || 0) + 1;
     const newOutbox = isScrollMode ? 0 : Math.floor(newSessionCommitted / 10);
-    if (state.manifest.pageMode === 'notecard' && newOutbox > state.manifest.outboxCount) {
-      typewriterAudio.playPaperFeed();
-    }
 
     if (nextLineIndex >= pageLineLimit) {
+      if (state.manifest.pageMode === 'notecard') {
+        typewriterAudio.playPaperFeed();
+      }
       const completedPage: PageRecord = {
         id: `${state.manifest.id}-page-${state.currentPageNumber}`,
         manuscriptId: state.manifest.id,
@@ -1142,6 +1142,23 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     typewriterAudio.playPaperFeed();
 
     const lines = [...state.currentPageLines];
+    if (lines.length > 0 && state.activeLineIndex < lines.length) {
+      let activeLine = lines[state.activeLineIndex];
+      if (state.isHighlighting) {
+        activeLine = {
+          ...activeLine,
+          cells: activeLine.cells.map((c) =>
+            c.state === 'highlighted' ? { ...c, state: 'struck', isStruck: true } : c
+          ),
+        };
+      }
+      lines[state.activeLineIndex] = {
+        ...activeLine,
+        isCommitted: true,
+        wrapType: 'hard',
+      };
+    }
+
     const completedPage: PageRecord = {
       id: `${state.manifest.id}-page-${state.currentPageNumber}`,
       manuscriptId: state.manifest.id,
@@ -1243,11 +1260,11 @@ export const useTypingStore = create<TypingStore>((set, get) => {
 
     const newSessionCommitted = (state.sessionCommittedLines || 0) + 1;
     const newOutbox = isScrollMode ? 0 : Math.floor(newSessionCommitted / 10);
-    if (state.manifest.pageMode === 'notecard' && newOutbox > state.manifest.outboxCount) {
-      typewriterAudio.playPaperFeed();
-    }
 
     if (shouldCompletePage) {
+      if (state.manifest.pageMode === 'notecard') {
+        typewriterAudio.playPaperFeed();
+      }
       // Page completed on Enter
       const completedPage: PageRecord = {
         id: `${state.manifest.id}-page-${state.currentPageNumber}`,
