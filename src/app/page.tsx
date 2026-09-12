@@ -39,19 +39,6 @@ export default function Home() {
     }
   }, [colorScheme, textSize]);
 
-  // Compile full manuscript pages strictly on-demand when the Project dialog opens
-  const manuscriptPages = useMemo(() => {
-    if (!isPrintOpen) return [];
-    const state = useTypingStore.getState();
-    return [
-      ...state.historicalPages,
-      {
-        pageNumber: state.currentPageNumber,
-        lines: state.currentPageLines,
-        completedAt: null,
-      },
-    ];
-  }, [isPrintOpen]);
 
   const handlePrintedComplete = React.useCallback(
     (printedCount: number) => {
@@ -155,8 +142,6 @@ export default function Home() {
       <PrintModal
         isOpen={isPrintOpen}
         onClose={() => setIsPrintOpen(false)}
-        pages={manuscriptPages}
-        manifest={manifest}
         onPrintedComplete={handlePrintedComplete}
         onClearText={clearText}
       />

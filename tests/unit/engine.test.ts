@@ -2872,6 +2872,51 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(afterState.activeLineIndex).toBe(beforeActive);
     });
   });
+
+  describe('v0.9.6.7 Project Loading & Notecard Invariants', () => {
+    it('starts on a fresh empty notecard when opening a project with notecard mode active', async () => {
+      const store = useTypingStore.getState();
+      await store.newProject();
+      store.setPageMode('notecard');
+
+      // Draft 15 lines in project A (10 lines on Card 1, 5 lines on Card 2)
+      for (let i = 1; i <= 14; i++) {
+        `Line ${i}`.split('').forEach((c) => store.insertChar(c));
+        store.handleEnter();
+      }
+      `Line 15`.split('').forEach((c) => store.insertChar(c));
+      await store.flushSave();
+
+      const projAId = useTypingStore.getState().manifest.id;
+
+      // Create and switch to Project B
+      await store.newProject();
+      expect(useTypingStore.getState().manifest.id).not.toBe(projAId);
+
+      // Open Project A with notecard mode on
+      await store.loadProject(projAId);
+
+      const stateA = useTypingStore.getState();
+      expect(stateA.manifest.id).toBe(projAId);
+      expect(stateA.manifest.pageMode).toBe('notecard');
+      expect(stateA.manifest.outboxCount).toBe(0);
+
+      // Existing 15 lines must be partitioned into completed historical cards (Card 1: 10 lines, Card 2: 5 lines)
+      expect(stateA.historicalPages).toHaveLength(2);
+      expect(stateA.historicalPages[0].lines).toHaveLength(10);
+      expect(stateA.historicalPages[0].completedAt).not.toBeNull();
+      expect(stateA.historicalPages[1].lines).toHaveLength(5);
+      expect(stateA.historicalPages[1].completedAt).not.toBeNull();
+
+      // Platen must be a fresh, blank notecard (Card 3)
+      expect(stateA.currentPageNumber).toBe(3);
+      expect(stateA.currentPageLines).toHaveLength(1);
+      expect(stateA.currentPageLines[0].cells).toHaveLength(0);
+      expect(stateA.activeLineIndex).toBe(0);
+      expect(stateA.activeColIndex).toBe(0);
+    });
+  });
 });
+
 
 

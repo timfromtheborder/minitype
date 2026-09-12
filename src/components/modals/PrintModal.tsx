@@ -19,8 +19,8 @@ import { countWords } from '@/lib/projectSerializer';
 interface PrintModalProps {
   isOpen: boolean;
   onClose: () => void;
-  pages: PageRecord[];
-  manifest: ManuscriptManifest;
+  pages?: PageRecord[];
+  manifest?: ManuscriptManifest;
   onPrintedComplete?: (printedCharCount: number) => void;
   onClearText?: () => void;
 }
@@ -31,11 +31,17 @@ const documentScrollPositions = new Map<string, number>();
 export const PrintModal: React.FC<PrintModalProps> = ({
   isOpen,
   onClose,
-  pages,
-  manifest,
+  pages: propPages,
+  manifest: propManifest,
   onPrintedComplete,
 }) => {
   const [activeTab, setActiveTab] = useState<'document' | 'project' | 'files'>('document');
+  const storeManifest = useTypingStore((state) => state.manifest);
+  const storeHistoricalPages = useTypingStore((state) => state.historicalPages);
+  const storeCurrentPageNumber = useTypingStore((state) => state.currentPageNumber);
+  const storeCurrentPageLines = useTypingStore((state) => state.currentPageLines);
+
+  const manifest = propManifest ?? storeManifest;
   const [title, setTitle] = useState<string>(manifest.title || 'Untitled Manuscript');
   const [sanitizedFullText, setSanitizedFullText] = useState<string>('');
   const previewScrollRef = useRef<HTMLDivElement>(null);
@@ -46,7 +52,15 @@ export const PrintModal: React.FC<PrintModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setTitle(manifest.title || 'Untitled Manuscript');
-      const fullClean = sanitizeManuscript(pages, {
+      const allPages = propPages ?? [
+        ...storeHistoricalPages,
+        {
+          pageNumber: storeCurrentPageNumber,
+          lines: storeCurrentPageLines,
+          completedAt: null,
+        },
+      ];
+      const fullClean = sanitizeManuscript(allPages, {
         doubleSpaceLinebreaks: manifest.doubleSpaceLinebreaks,
         pageMode: manifest.pageMode,
       });
@@ -54,7 +68,17 @@ export const PrintModal: React.FC<PrintModalProps> = ({
       const computedTotalWords = countWords(fullClean);
       useTypingStore.getState().syncSessionStats(fullClean, computedTotalWords);
     }
-  }, [isOpen, manifest.id, manifest.title, manifest.doubleSpaceLinebreaks, pages]);
+  }, [
+    isOpen,
+    manifest.id,
+    manifest.title,
+    manifest.doubleSpaceLinebreaks,
+    manifest.pageMode,
+    propPages,
+    storeHistoricalPages,
+    storeCurrentPageNumber,
+    storeCurrentPageLines,
+  ]);
 
   // Restore scroll position specifically for the currently open document
   useEffect(() => {

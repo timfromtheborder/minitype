@@ -117,7 +117,7 @@ describe('partitionManuscriptLines', () => {
   });
 
   it('partitions lines into historical pages and active page in notecard mode (10 lines per card)', () => {
-    // 25 lines total -> 2 completed cards (10 lines each) + 1 active card (5 lines)
+    // 24 lines total -> 2 completed cards (10 lines each) + 1 active card (4 lines)
     const longText = Array.from({ length: 24 }, (_, i) => `Sentence ${i + 1}`).join('\n');
     const parsed = textToManuscriptLines(longText, 1, 70);
     const partitioned = partitionManuscriptLines(parsed.lines, 'notecard', 10, 'card-doc');

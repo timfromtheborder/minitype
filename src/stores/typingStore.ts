@@ -37,7 +37,7 @@ import {
   saveGlobalSettingsToDb,
   getGlobalSettingsFromDb,
 } from '@/db';
-import { textToManuscriptLines, partitionManuscriptLines, healDuplicatedManuscriptText } from '@/lib/importer';
+import { textToManuscriptLines, partitionManuscriptLines, healDuplicatedManuscriptText, type PartitionedManuscript } from '@/lib/importer';
 import { sanitizeManuscript } from '@/lib/sanitize';
 import {
   parseProjectFile,
@@ -1772,15 +1772,55 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     const cleanText = healDuplicatedManuscriptText(rawCleanText);
 
     const state = get();
+    const globalSettings = extractSettings(readSynchronousSettings() || state.manifest);
+    const effectivePageMode = globalSettings.pageMode || loadedManifest.pageMode || 'scroll';
+    const effectivePageSize = globalSettings.pageSize || loadedManifest.pageSize || 54;
     const columnLimit = state.activeColumnLimit ?? MAX_COLUMNS;
     // Parse into platen lines with a fresh empty line at the end
     const parsed = textToManuscriptLines(cleanText, 1, columnLimit);
-    const partitioned = partitionManuscriptLines(
-      parsed.lines,
-      loadedManifest.pageMode,
-      loadedManifest.pageSize,
-      loadedManifest.id
-    );
+
+    let partitioned: PartitionedManuscript;
+    if (effectivePageMode === 'notecard') {
+      const contentLines = parsed.lines.filter((l) => l.cells.length > 0 || l.isCommitted);
+      if (contentLines.length === 0) {
+        partitioned = {
+          historicalPages: [],
+          currentPageNumber: 1,
+          currentPageLines: [createEmptyLine(1, 0)],
+        };
+      } else {
+        const historicalPages: PageRecord[] = [];
+        for (let i = 0; i < contentLines.length; i += 10) {
+          const chunk = contentLines.slice(i, i + 10);
+          const pageNum = historicalPages.length + 1;
+          historicalPages.push({
+            id: `${loadedManifest.id}-page-${pageNum}`,
+            manuscriptId: loadedManifest.id,
+            pageNumber: pageNum,
+            lines: chunk.map((l, lIdx) => ({
+              ...l,
+              id: `p${pageNum}-line-${lIdx}`,
+              lineIndex: lIdx,
+              isCommitted: true,
+            })),
+            completedAt: new Date().toISOString(),
+          });
+        }
+        const nextCardNum = historicalPages.length + 1;
+        partitioned = {
+          historicalPages,
+          currentPageNumber: nextCardNum,
+          currentPageLines: [createEmptyLine(nextCardNum, 0)],
+        };
+      }
+    } else {
+      partitioned = partitionManuscriptLines(
+        parsed.lines,
+        effectivePageMode,
+        effectivePageSize,
+        loadedManifest.id
+      );
+    }
 
     // Prepare sessions: if none exist in db, generate Session 1 from cleanText
     let rawSessions: SessionRecord[] = existingSessions && existingSessions.length > 0
@@ -1839,7 +1879,6 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     }
 
     // CRITICAL: Global settings are preserved across document changes!
-    const globalSettings = extractSettings(readSynchronousSettings() || state.manifest);
     const updatedManifest: ManuscriptManifest = {
       ...state.manifest,
       ...globalSettings,
@@ -2435,14 +2474,53 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         pageMode: loadedManifest.pageMode,
       });
       const cleanText = healDuplicatedManuscriptText(rawCleanText);
+      const effectivePageMode = currentManifest.pageMode || loadedManifest.pageMode || 'scroll';
+      const effectivePageSize = currentManifest.pageSize || loadedManifest.pageSize || 54;
       const columnLimit = get().activeColumnLimit ?? MAX_COLUMNS;
       const parsed = textToManuscriptLines(cleanText, 1, columnLimit);
-      const partitioned = partitionManuscriptLines(
-        parsed.lines,
-        loadedManifest.pageMode,
-        loadedManifest.pageSize,
-        loadedManifest.id
-      );
+      let partitioned: PartitionedManuscript;
+      // In notecard mode, if the persisted pages already ended with a fresh empty active card,
+      // preserve that empty active card so reload doesn't pull completed cards back onto the platen
+      const lastPage = pages && pages.length > 1 ? pages[pages.length - 1] : null;
+      const isLastPageEmptyCard =
+        effectivePageMode === 'notecard' &&
+        lastPage !== null &&
+        lastPage.completedAt === null &&
+        (!lastPage.lines || lastPage.lines.every((l) => !l.cells || l.cells.length === 0));
+
+      if (isLastPageEmptyCard && lastPage) {
+        const contentLines = parsed.lines.filter((l) => l.cells.length > 0 || l.isCommitted);
+        const historicalPages: PageRecord[] = [];
+        for (let i = 0; i < contentLines.length; i += 10) {
+          const chunk = contentLines.slice(i, i + 10);
+          const pageNum = historicalPages.length + 1;
+          historicalPages.push({
+            id: `${loadedManifest.id}-page-${pageNum}`,
+            manuscriptId: loadedManifest.id,
+            pageNumber: pageNum,
+            lines: chunk.map((l, lIdx) => ({
+              ...l,
+              id: `p${pageNum}-line-${lIdx}`,
+              lineIndex: lIdx,
+              isCommitted: true,
+            })),
+            completedAt: new Date().toISOString(),
+          });
+        }
+        const nextCardNum = historicalPages.length + 1;
+        partitioned = {
+          historicalPages,
+          currentPageNumber: nextCardNum,
+          currentPageLines: [createEmptyLine(nextCardNum, 0)],
+        };
+      } else {
+        partitioned = partitionManuscriptLines(
+          parsed.lines,
+          effectivePageMode,
+          effectivePageSize,
+          loadedManifest.id
+        );
+      }
 
       let rawSessions = sessions && sessions.length > 0 ? sessions : [
         {

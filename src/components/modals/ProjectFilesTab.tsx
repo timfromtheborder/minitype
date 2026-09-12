@@ -89,6 +89,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
       await useTypingStore.getState().loadProject(id);
     }
     await refreshFiles();
+    onSelectDocumentTab();
   };
 
   const handleDeleteProject = async (id: string) => {
