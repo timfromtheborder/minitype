@@ -174,4 +174,47 @@ describe('Page Mode Bidirectional Transitions (Scroll <-> Paragraph)', () => {
     expect(toScroll.activeLineIndex).toBe(1);
     expect(toScroll.activeColIndex).toBe(4);
   });
+
+  it('preserves cell characters when backspacing across lines after mode transitions (no dot corruption)', () => {
+    typeString('Paragraph 1 line.\n');
+    typeString('Paragraph 2 line.\n');
+    typeString('Paragraph 3 active');
+
+    // Switch scroll -> paragraph -> scroll
+    useTypingStore.getState().setPageMode('paragraph');
+    useTypingStore.getState().setPageMode('scroll');
+    useTypingStore.getState().setApertureHeight(5);
+
+    // Initial lines check
+    const initialLines = useTypingStore.getState().currentPageLines;
+    expect(initialLines[0].cells.map((c) => c.char).join('')).toBe('Paragraph 1 line.');
+    expect(initialLines[1].cells.map((c) => c.char).join('')).toBe('Paragraph 2 line.');
+    expect(initialLines[2].cells.map((c) => c.char).join('')).toBe('Paragraph 3 active');
+
+    // Backspace 18 times to highlight all of line 2 and cross into line 1
+    // Line 2 has 18 chars ("Paragraph 3 active")
+    for (let i = 0; i < 22; i++) {
+      useTypingStore.getState().handleBackspace();
+    }
+
+    const stateDuringHighlight = useTypingStore.getState();
+    expect(stateDuringHighlight.isHighlighting).toBe(true);
+    expect(stateDuringHighlight.highlightHead?.lineIndex).toBe(1);
+
+    // Crucial check: line 1 must still have its original text, NOT corrupted into '.' dots
+    expect(stateDuringHighlight.currentPageLines[1].cells.map((c) => c.char).join('')).toBe('Paragraph 2 line.');
+    expect(stateDuringHighlight.currentPageLines[0].cells.map((c) => c.char).join('')).toBe('Paragraph 1 line.');
+
+    // Enter strikes out highlighted cells
+    useTypingStore.getState().handleEnter();
+
+    const stateAfterEnter = useTypingStore.getState();
+    expect(stateAfterEnter.isHighlighting).toBe(false);
+    // All characters still fully preserved
+    expect(stateAfterEnter.currentPageLines[1].cells.map((c) => c.char).join('')).toBe('Paragraph 2 line.');
+    expect(stateAfterEnter.currentPageLines[2].cells.map((c) => c.char).join('')).toBe('Paragraph 3 active');
+    // Cells that were highlighted are now struck
+    expect(stateAfterEnter.currentPageLines[2].cells.every((c) => c.state === 'struck' && c.isStruck)).toBe(true);
+  });
 });
+

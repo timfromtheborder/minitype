@@ -273,10 +273,10 @@ export const createApertureSlice: StateCreator<
       if (printableIndex >= 0) {
         lines[activeLineIndex] = {
           ...currentLine,
-          cells: currentLine.cells.map((cell, idx) =>
+          cells: currentLine.cells.map((c, idx) =>
             idx === printableIndex
-              ? { ...cell, state: 'highlighted' as const, isStruck: cell.isStruck || cell.state === 'struck' }
-              : cell
+              ? { ...c, state: 'highlighted' as const, isStruck: c.isStruck || c.state === 'struck' }
+              : c
           ),
         };
 
@@ -320,10 +320,10 @@ export const createApertureSlice: StateCreator<
           if (prevPrintableIndex >= 0) {
             lines[prevLineIndex] = {
               ...prevLine,
-              cells: prevLine.cells.map((cell, idx) =>
+              cells: prevLine.cells.map((c, idx) =>
                 idx === prevPrintableIndex
-                  ? { ...cell, state: 'highlighted' as const, isStruck: cell.isStruck || cell.state === 'struck' }
-                  : cell
+                  ? { ...c, state: 'highlighted' as const, isStruck: c.isStruck || c.state === 'struck' }
+                  : c
               ),
             };
 
@@ -423,7 +423,7 @@ export const createApertureSlice: StateCreator<
               cells: prevLine.cells.map((c, idx) =>
                 idx === prevPrintableIndex
                   ? { ...c, state: 'highlighted' as const, isStruck: c.isStruck || c.state === 'struck' }
-                  : cell
+                  : c
               ),
             };
             head = { lineIndex: prevLineIndex, colIndex: prevPrintableIndex };
