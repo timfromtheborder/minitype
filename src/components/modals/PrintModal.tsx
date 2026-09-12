@@ -47,11 +47,18 @@ export const PrintModal: React.FC<PrintModalProps> = ({
   const previewScrollRef = useRef<HTMLDivElement>(null);
 
   const activeSessions = useTypingStore((state) => state.activeSessions);
+  const prevDocIdRef = useRef<string | null>(null);
+  const prevIsOpenRef = useRef<boolean>(false);
 
-  // Sync title and compile manuscript when modal opens or manifest/pages update
+  // Sync title and compile manuscript when modal opens or document changes
   useEffect(() => {
     if (isOpen) {
-      setTitle(manifest.title || 'Untitled Manuscript');
+      if (!prevIsOpenRef.current || prevDocIdRef.current !== manifest.id) {
+        setTitle(manifest.title || 'Untitled Manuscript');
+        prevDocIdRef.current = manifest.id;
+      }
+      prevIsOpenRef.current = true;
+
       const allPages = propPages ?? [
         ...storeHistoricalPages,
         {
@@ -67,11 +74,12 @@ export const PrintModal: React.FC<PrintModalProps> = ({
       setSanitizedFullText(fullClean);
       const computedTotalWords = countWords(fullClean);
       useTypingStore.getState().syncSessionStats(fullClean, computedTotalWords);
+    } else {
+      prevIsOpenRef.current = false;
     }
   }, [
     isOpen,
     manifest.id,
-    manifest.title,
     manifest.doubleSpaceLinebreaks,
     manifest.pageMode,
     propPages,
@@ -209,6 +217,13 @@ export const PrintModal: React.FC<PrintModalProps> = ({
                     }
                   }}
                   placeholder="Untitled Manuscript"
+                  onBlur={() => {
+                    if (!title.trim()) {
+                      const fallback = 'Untitled Manuscript';
+                      setTitle(fallback);
+                      useTypingStore.getState().setManifest({ title: fallback });
+                    }
+                  }}
                   className="bg-transparent text-sm font-sans font-semibold tracking-wide text-foreground border-b border-dashed border-border/80 hover:border-foreground focus:border-foreground focus:outline-none px-1 py-0.5 w-full max-w-[240px] sm:max-w-[340px] truncate transition-colors cursor-text"
                   title="Click to edit document title"
                 />
