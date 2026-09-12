@@ -42,7 +42,8 @@ export const PrintModal: React.FC<PrintModalProps> = ({
   const storeCurrentPageLines = useTypingStore((state) => state.currentPageLines);
 
   const manifest = propManifest ?? storeManifest;
-  const [title, setTitle] = useState<string>(manifest.title || 'Untitled Manuscript');
+  const storeTitle = useTypingStore((state) => state.manifest.title);
+  const [title, setTitle] = useState<string>(manifest.title || 'Untitled Project');
   const [sanitizedFullText, setSanitizedFullText] = useState<string>('');
   const previewScrollRef = useRef<HTMLDivElement>(null);
 
@@ -50,11 +51,18 @@ export const PrintModal: React.FC<PrintModalProps> = ({
   const prevDocIdRef = useRef<string | null>(null);
   const prevIsOpenRef = useRef<boolean>(false);
 
+  // Sync title from store if project changes or is renamed externally
+  useEffect(() => {
+    if (storeTitle !== undefined && storeTitle !== title) {
+      setTitle(storeTitle);
+    }
+  }, [storeTitle]);
+
   // Sync title and compile manuscript when modal opens or document changes
   useEffect(() => {
     if (isOpen) {
       if (!prevIsOpenRef.current || prevDocIdRef.current !== manifest.id) {
-        setTitle(manifest.title || 'Untitled Manuscript');
+        setTitle(manifest.title || 'Untitled Project');
         prevDocIdRef.current = manifest.id;
       }
       prevIsOpenRef.current = true;
@@ -216,10 +224,10 @@ export const PrintModal: React.FC<PrintModalProps> = ({
                       window.getSelection()?.removeAllRanges();
                     }
                   }}
-                  placeholder="Untitled Manuscript"
+                  placeholder="Untitled Project"
                   onBlur={() => {
                     if (!title.trim()) {
-                      const fallback = 'Untitled Manuscript';
+                      const fallback = 'Untitled Project';
                       setTitle(fallback);
                       useTypingStore.getState().setManifest({ title: fallback });
                     }
@@ -330,14 +338,36 @@ export const PrintModal: React.FC<PrintModalProps> = ({
           {/* Project Tab View (Sessions List) */}
           <div className={`flex-1 min-h-0 flex-col gap-2.5 sm:gap-3 overflow-hidden ${activeTab === 'project' ? 'flex' : 'hidden'}`}>
             <div className="flex items-center justify-between border-b border-border/60 pb-2 sm:pb-3 gap-2 shrink-0">
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2.5 flex-1 min-w-0">
                 <span className="text-xs font-sans font-bold tracking-widest uppercase text-muted-foreground shrink-0">
                   Sessions
                 </span>
                 <span className="text-muted-foreground/40 font-sans text-xs shrink-0">/</span>
-                <span className="text-sm font-sans font-semibold text-foreground truncate">
-                  {title || 'Untitled Project'}
-                </span>
+                <input
+                  type="text"
+                  data-modal-input="true"
+                  value={title}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setTitle(val);
+                    useTypingStore.getState().setManifest({ title: val });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      window.getSelection()?.removeAllRanges();
+                    }
+                  }}
+                  placeholder="Untitled Project"
+                  onBlur={() => {
+                    if (!title.trim()) {
+                      const fallback = 'Untitled Project';
+                      setTitle(fallback);
+                      useTypingStore.getState().setManifest({ title: fallback });
+                    }
+                  }}
+                  className="bg-transparent text-sm font-sans font-semibold tracking-wide text-foreground border-b border-dashed border-border/80 hover:border-foreground focus:border-foreground focus:outline-none px-1 py-0.5 w-full max-w-[240px] sm:max-w-[340px] truncate transition-colors cursor-text"
+                  title="Click to edit project title"
+                />
               </div>
 
               <button
@@ -362,14 +392,36 @@ export const PrintModal: React.FC<PrintModalProps> = ({
           {/* Files Tab View */}
           <div className={`flex-1 min-h-0 flex-col gap-2.5 sm:gap-3 overflow-hidden ${activeTab === 'files' ? 'flex' : 'hidden'}`}>
             <div className="flex items-center justify-between border-b border-border/60 pb-2 sm:pb-3 gap-2 shrink-0">
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2.5 flex-1 min-w-0">
                 <span className="text-xs font-sans font-bold tracking-widest uppercase text-muted-foreground shrink-0">
                   Projects
                 </span>
                 <span className="text-muted-foreground/40 font-sans text-xs shrink-0">/</span>
-                <span className="text-sm font-sans font-semibold text-foreground truncate">
-                  {title || 'Untitled Project'}
-                </span>
+                <input
+                  type="text"
+                  data-modal-input="true"
+                  value={title}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setTitle(val);
+                    useTypingStore.getState().setManifest({ title: val });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      window.getSelection()?.removeAllRanges();
+                    }
+                  }}
+                  placeholder="Untitled Project"
+                  onBlur={() => {
+                    if (!title.trim()) {
+                      const fallback = 'Untitled Project';
+                      setTitle(fallback);
+                      useTypingStore.getState().setManifest({ title: fallback });
+                    }
+                  }}
+                  className="bg-transparent text-sm font-sans font-semibold tracking-wide text-foreground border-b border-dashed border-border/80 hover:border-foreground focus:border-foreground focus:outline-none px-1 py-0.5 w-full max-w-[240px] sm:max-w-[340px] truncate transition-colors cursor-text"
+                  title="Click to edit project title"
+                />
               </div>
 
               <button
@@ -388,6 +440,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
               <ProjectFilesTab
                 activeManuscriptId={manifest.id}
                 onCloseModal={onClose}
+                isActiveTab={activeTab === 'files'}
               />
             </div>
           </div>

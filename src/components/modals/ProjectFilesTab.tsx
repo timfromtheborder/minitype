@@ -22,6 +22,7 @@ import {
 interface ProjectFilesTabProps {
   activeManuscriptId: string;
   onCloseModal: () => void;
+  isActiveTab?: boolean;
 }
 
 type SortField = 'modified' | 'created' | 'name';
@@ -30,9 +31,14 @@ type SortDirection = 'asc' | 'desc';
 export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
   activeManuscriptId,
   onCloseModal: _onCloseModal,
+  isActiveTab = false,
 }) => {
-  const [files, setFiles] = useState<ManuscriptManifest[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const activeTitle = useTypingStore((state) => state.manifest.title);
+  const [files, setFiles] = useState<ManuscriptManifest[]>(() => {
+    const currentManifest = useTypingStore.getState().manifest;
+    return currentManifest && currentManifest.id ? [currentManifest] : [];
+  });
+  const [loading, setLoading] = useState<boolean>(() => !useTypingStore.getState().manifest?.id);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState<string>('');
@@ -41,21 +47,54 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastTapRef = useRef<{ id: string; time: number }>({ id: '', time: 0 });
 
-  const refreshFiles = async () => {
+  const refreshFiles = async (showLoader = true) => {
     try {
-      setLoading(true);
+      if (showLoader && files.length === 0) {
+        setLoading(true);
+      }
       const list = await getAllManuscripts();
-      setFiles(list);
+      const currentManifest = useTypingStore.getState().manifest;
+      let mergedList = [...list];
+      if (currentManifest && currentManifest.id) {
+        const idx = mergedList.findIndex((m) => m.id === currentManifest.id);
+        if (idx >= 0) {
+          mergedList[idx] = {
+            ...mergedList[idx],
+            title: currentManifest.title || mergedList[idx].title,
+          };
+        } else {
+          mergedList.unshift(currentManifest);
+        }
+      }
+      setFiles(mergedList);
     } catch (e) {
       console.error('Failed to load projects list:', e);
     } finally {
-      setLoading(false);
+      if (showLoader) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     refreshFiles();
   }, [activeManuscriptId]);
+
+  // Silently refresh whenever this tab becomes active
+  useEffect(() => {
+    if (isActiveTab) {
+      refreshFiles(false);
+    }
+  }, [isActiveTab]);
+
+  // Synchronize active manuscript title in memory immediately when edited from top box
+  useEffect(() => {
+    if (activeManuscriptId && activeTitle !== undefined) {
+      setFiles((prev) =>
+        prev.map((f) => (f.id === activeManuscriptId ? { ...f, title: activeTitle } : f))
+      );
+    }
+  }, [activeManuscriptId, activeTitle]);
 
   const handleNewFile = async () => {
     await useTypingStore.getState().newProject();
@@ -97,15 +136,17 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
 
   const handleStartRename = (file: ManuscriptManifest) => {
     setEditingId(file.id);
-    setEditingTitle(file.title || 'Untitled Manuscript');
+    const isCurrentActive = file.id === activeManuscriptId;
+    const currentTitle = (isCurrentActive && activeTitle !== undefined ? activeTitle : file.title) || 'Untitled Project';
+    setEditingTitle(currentTitle);
   };
 
   const handleCommitRename = async (id: string) => {
     if (!editingId) return;
-    const finalTitle = editingTitle.trim() || 'Untitled Manuscript';
+    const finalTitle = editingTitle.trim() || 'Untitled Project';
     await useTypingStore.getState().renameProject(id, finalTitle);
     setEditingId(null);
-    await refreshFiles();
+    await refreshFiles(false);
   };
 
   const handleTouchEnd = (fileId: string) => {
@@ -322,7 +363,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                               }`}
                               title="Click to rename"
                             >
-                              {file.title || 'Untitled Project'}
+                              {(isActive && activeTitle !== undefined ? activeTitle : file.title) || 'Untitled Project'}
                             </span>
                             <button
                               type="button"
