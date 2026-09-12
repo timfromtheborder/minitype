@@ -389,7 +389,9 @@ input[type="range"].square-slider::-moz-range-thumb {
 /* ==========================================================================
    MINITYPE STATIC APERTURE HEIGHT MAPPINGS
    ========================================================================== */
-:root,
+:root {
+  --aperture-height-rem: 1.25rem;
+}
 html[data-aperture-height="1"],
 [data-aperture-height="1"] {
   --aperture-height-rem: 1.25rem;
@@ -427,7 +429,9 @@ html[data-aperture-height="9"],
   --aperture-height-rem: 11.25rem;
 }
 html[data-aperture-height="10"],
-[data-aperture-height="10"] {
+[data-aperture-height="10"],
+html[data-page-mode="notecard"],
+[data-page-mode="notecard"] {
   --aperture-height-rem: 12.5rem;
 }
 

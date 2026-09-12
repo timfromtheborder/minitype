@@ -78,7 +78,10 @@ export default function Home() {
               </div>
             )}
 
-            <ApertureFrame isPaused={isPrintOpen || isSettingsOpen} />
+            <ApertureFrame
+              height={activeApertureHeight}
+              isPaused={isPrintOpen || isSettingsOpen}
+            />
           </div>
 
           {/* Live Drafting Metadata and Right-Justified Save Checkbox */}

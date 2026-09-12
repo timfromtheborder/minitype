@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import React from 'react';
+import { renderToString } from 'react-dom/server';
 import { useTypingStore, readSynchronousSettings, persistSettings, getInitialManifest } from '@/stores/typingStore';
+import { ApertureFrame } from '@/components/aperture/ApertureFrame';
 import { db } from '@/db';
 
 describe('Aperture Persistence Invariant', () => {
@@ -162,5 +165,25 @@ describe('Aperture Persistence Invariant', () => {
     await store.loadProject(project1Id);
     expect(useTypingStore.getState().manifest.id).toBe(project1Id);
     expect(useTypingStore.getState().manifest.activeApertureHeight).toBe(7);
+  });
+
+  it('ApertureFrame renders with CSS variable height and matches activeApertureHeight setting', () => {
+    // 1. When height is 1
+    useTypingStore.getState().setApertureHeight(1);
+    let html = renderToString(React.createElement(ApertureFrame, { height: 1, isPaused: false }));
+    expect(html).toContain('height:var(--aperture-height-rem, 1.25rem)');
+    expect(html).toContain('min-height:var(--aperture-height-rem, 1.25rem)');
+
+    // 2. When height is 4
+    useTypingStore.getState().setApertureHeight(4);
+    html = renderToString(React.createElement(ApertureFrame, { height: 4, isPaused: false }));
+    expect(html).toContain('height:var(--aperture-height-rem, 5rem)');
+    expect(html).toContain('min-height:var(--aperture-height-rem, 5rem)');
+
+    // 3. In notecard mode (locked to 10 lines)
+    useTypingStore.getState().setManifest({ pageMode: 'notecard', pageSize: 10 });
+    html = renderToString(React.createElement(ApertureFrame, { height: 10, isPaused: false }));
+    expect(html).toContain('height:var(--aperture-height-rem, 12.5rem)');
+    expect(html).toContain('min-height:var(--aperture-height-rem, 12.5rem)');
   });
 });

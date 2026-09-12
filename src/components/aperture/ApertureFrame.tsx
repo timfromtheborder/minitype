@@ -208,7 +208,10 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = React.memo(function A
           <div
             aria-hidden="true"
             className="absolute right-[calc(100%+0.75rem)] sm:right-[calc(100%+1.25rem)] top-0 bottom-0 flex flex-col justify-end select-none pointer-events-none"
-            style={{ height: `${viewportHeightRem}rem` }}
+            style={{
+              height: `var(--aperture-height-rem, ${viewportHeightRem}rem)`,
+              minHeight: `var(--aperture-height-rem, ${viewportHeightRem}rem)`,
+            }}
           >
             {visibleLines.map((line, idx) => {
               const actualIndex = startIdx + idx;
@@ -226,7 +229,10 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = React.memo(function A
 
         <div
           className={`flex flex-col justify-end ${platenWidthClass} overflow-hidden`}
-          style={{ height: `${viewportHeightRem}rem` }}
+          style={{
+            height: `var(--aperture-height-rem, ${viewportHeightRem}rem)`,
+            minHeight: `var(--aperture-height-rem, ${viewportHeightRem}rem)`,
+          }}
         >
           {visibleLines.map((line, idx) => {
             const actualIndex = startIdx + idx;
