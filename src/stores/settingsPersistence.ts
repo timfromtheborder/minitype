@@ -68,7 +68,9 @@ export function readSynchronousSettings(): (Partial<ManuscriptManifest> & { _upd
       if (Object.keys(settings).length > 0) {
         candidates.push({
           settings,
-          updatedAt: typeof parsed._updatedAt === 'number' ? parsed._updatedAt : 0,
+          updatedAt: typeof parsed._updatedAt === 'number'
+            ? parsed._updatedAt
+            : (typeof parsed.updatedAt === 'number' ? parsed.updatedAt : 0),
           priority,
         });
       }
@@ -85,12 +87,16 @@ export function readSynchronousSettings(): (Partial<ManuscriptManifest> & { _upd
     tryParse(sessionStorage.getItem(SETTINGS_KEY), 2);
   } catch (e) {}
 
-  // Tier 3: document.cookie
+  // Tier 3: document.cookie (parse all matching cookies and collect all candidates)
   try {
-    if (typeof document !== 'undefined') {
-      const match = document.cookie.match(new RegExp(`(?:^|; )${SETTINGS_KEY}=([^;]*)`));
-      if (match) {
-        tryParse(decodeURIComponent(match[1]), 3);
+    if (typeof document !== 'undefined' && document.cookie) {
+      const cookies = document.cookie.split(';');
+      for (const c of cookies) {
+        const trimmed = c.trim();
+        if (trimmed.startsWith(`${SETTINGS_KEY}=`)) {
+          const rawVal = trimmed.slice(SETTINGS_KEY.length + 1);
+          tryParse(decodeURIComponent(rawVal), 3);
+        }
       }
     }
   } catch (e) {}
@@ -177,7 +183,7 @@ export function persistSettings(manifest: Partial<ManuscriptManifest>): void {
       window.name = `minitype_settings:${serialized}`;
     } catch (e) {}
 
-    // 4. Synchronous Cookies
+    // 4. Synchronous Cookies: Write strictly to root and clear any legacy subpath shadow cookies
     try {
       if (typeof document !== 'undefined') {
         const isSecure = window.location.protocol === 'https:';
@@ -187,11 +193,15 @@ export function persistSettings(manifest: Partial<ManuscriptManifest>): void {
         // Write to root
         document.cookie = `${SETTINGS_KEY}=${cookieVal}; path=/; max-age=31536000; SameSite=Lax${secureFlag}`;
 
-        // Write to current subfolder path (e.g. /minitype/ on GitHub Pages)
+        // Actively clear any legacy subfolder path cookies (e.g. /minitype or /minitype/)
         const currentPath = window.location.pathname.replace(/\/[^/]*$/, '') || '';
+        const pathsToClear = new Set<string>(['/minitype', '/minitype/']);
         if (currentPath && currentPath !== '/') {
-          document.cookie = `${SETTINGS_KEY}=${cookieVal}; path=${currentPath}; max-age=31536000; SameSite=Lax${secureFlag}`;
-          document.cookie = `${SETTINGS_KEY}=${cookieVal}; path=${currentPath}/; max-age=31536000; SameSite=Lax${secureFlag}`;
+          pathsToClear.add(currentPath);
+          pathsToClear.add(`${currentPath}/`);
+        }
+        for (const p of pathsToClear) {
+          document.cookie = `${SETTINGS_KEY}=; path=${p}; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secureFlag}`;
         }
       }
     } catch (e) {}

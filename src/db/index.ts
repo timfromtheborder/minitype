@@ -183,17 +183,24 @@ export async function getPagesForManuscript(manuscriptId: string): Promise<PageR
     .sortBy('pageNumber');
 }
 
+let settingsSaveQueue: Promise<void> = Promise.resolve();
+
 export async function saveGlobalSettingsToDb(settings: Partial<ManuscriptManifest>): Promise<void> {
-  try {
-    const existing = await db.settings.get('global');
-    const merged = { ...(existing?.settings || {}), ...settings };
-    if (!(merged as any)._updatedAt) {
-      (merged as any)._updatedAt = Date.now();
+  settingsSaveQueue = settingsSaveQueue.then(async () => {
+    try {
+      await db.transaction('rw', db.settings, async () => {
+        const existing = await db.settings.get('global');
+        const merged = { ...(existing?.settings || {}), ...settings };
+        if (!(merged as any)._updatedAt) {
+          (merged as any)._updatedAt = Date.now();
+        }
+        await db.settings.put({ id: 'global', settings: merged });
+      });
+    } catch (err) {
+      console.error('Failed to save settings to IndexedDB:', err);
     }
-    await db.settings.put({ id: 'global', settings: merged });
-  } catch (err) {
-    console.error('Failed to save settings to IndexedDB:', err);
-  }
+  });
+  return settingsSaveQueue;
 }
 
 export async function getGlobalSettingsFromDb(): Promise<Partial<ManuscriptManifest> | null> {

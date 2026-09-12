@@ -106,11 +106,6 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   const val = Number(e.target.value) as ApertureHeight;
                   onUpdateHeight(val);
                 }}
-                onInput={(e) => {
-                  if (manifest.pageMode === 'notecard') return;
-                  const val = Number(e.currentTarget.value) as ApertureHeight;
-                  onUpdateHeight(val);
-                }}
                 className={`w-full square-slider ${
                   manifest.pageMode === 'notecard' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
                 }`}
@@ -364,7 +359,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.7.1
+              Minitype v0.9.7.2
             </span>
           </div>
         </div>

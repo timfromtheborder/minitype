@@ -50,7 +50,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       suppressHydrationWarning
       data-theme="typewriter"
-      data-aperture-height="1"
       data-page-mode="scroll"
       className={`${interTight.variable} ${courierPrime.variable} h-full antialiased font-sans`}
     >
@@ -72,8 +71,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 try { check(localStorage.getItem('minitype_global_settings')); } catch (e) {}
                 try { check(sessionStorage.getItem('minitype_global_settings')); } catch (e) {}
                 try {
-                  var match = document.cookie.match(/(?:^|; )minitype_global_settings=([^;]*)/);
-                  if (match) check(decodeURIComponent(match[1]));
+                  if (document.cookie) {
+                    var cks = document.cookie.split(';');
+                    for (var cIdx = 0; cIdx < cks.length; cIdx++) {
+                      var cTrimmed = cks[cIdx].trim();
+                      if (cTrimmed.indexOf('minitype_global_settings=') === 0) {
+                        check(decodeURIComponent(cTrimmed.slice(25)));
+                      }
+                    }
+                  }
                 } catch (e) {}
                 try {
                   if (window.name && window.name.indexOf('minitype_settings:') === 0) {

@@ -3009,6 +3009,50 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(sessionsInDb).toHaveLength(1);
       expect(sessionsInDb[0].sessionNumber).toBe(1);
     });
+
+    it('correctly resolves the latest timestamp when multiple duplicate cookies exist across subpaths', () => {
+      // Stale cookie with older timestamp (e.g. from /minitype/)
+      const stalePayload = encodeURIComponent(JSON.stringify({ activeApertureHeight: 2, _updatedAt: 1000 }));
+      // Fresh cookie with newer timestamp (e.g. from /)
+      const freshPayload = encodeURIComponent(JSON.stringify({ activeApertureHeight: 7, _updatedAt: 5000 }));
+
+      // Simulate document.cookie having multiple entries for minitype_global_settings
+      // In browser cookie string, multiple cookies with the same name are semicolon-separated
+      Object.defineProperty(document, 'cookie', {
+        writable: true,
+        value: `minitype_global_settings=${stalePayload}; minitype_global_settings=${freshPayload}`,
+      });
+
+      const sync = readSynchronousSettings();
+      expect(sync).not.toBeNull();
+      expect(sync?.activeApertureHeight).toBe(7);
+      expect(sync?._updatedAt).toBe(5000);
+    });
+
+    it('handles rapid sequential aperture height updates and persists final value to IndexedDB', async () => {
+      const store = useTypingStore.getState();
+      await store.newProject();
+
+      // Simulate rapid slider ticks 1 -> 3 -> 5 -> 8
+      store.setApertureHeight(1);
+      store.setApertureHeight(3);
+      store.setApertureHeight(5);
+      store.setApertureHeight(8);
+
+      // Verify store immediately reflects the final value
+      expect(useTypingStore.getState().manifest.activeApertureHeight).toBe(8);
+
+      // Wait a short tick for the serialized DB write queue to finish
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const dbSettings = await db.settings.get('global');
+      expect(dbSettings).toBeDefined();
+      expect(dbSettings?.settings.activeApertureHeight).toBe(8);
+
+      // Verify rehydrate preserves 8
+      await useTypingStore.getState().rehydrate();
+      expect(useTypingStore.getState().manifest.activeApertureHeight).toBe(8);
+    });
   });
 });
 

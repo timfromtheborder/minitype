@@ -275,21 +275,23 @@ export const createPersistenceSlice: StateCreator<
           const syncUpdatedAt = (syncSettings as any)?._updatedAt || 0;
           const dbUpdatedAt = (dbRecord as any)?._updatedAt || 0;
 
-          // If DB has settings, and either sync was missing or DB is newer/equal
-          if (!syncSettings || dbUpdatedAt >= syncUpdatedAt) {
+          // If DB has settings, and either sync was missing or DB is strictly newer
+          if (!syncSettings || dbUpdatedAt > syncUpdatedAt) {
             currentManifest = { ...currentManifest, ...explicitDb };
             // Reseed all synchronous stores with database settings
             persistSettings(currentManifest);
           } else {
-            // Sync settings are newer -> preserve any settings that were missing from syncSettings
+            // Sync settings are newer or equal -> preserve any settings that were missing from syncSettings
             const missingKeys: any = {};
             for (const key of SETTING_KEYS) {
               if ((explicitSync as any)[key] === undefined && (explicitDb as any)[key] !== undefined) {
                 missingKeys[key] = (explicitDb as any)[key];
               }
             }
-            currentManifest = { ...currentManifest, ...missingKeys };
-            persistSettings(currentManifest);
+            if (Object.keys(missingKeys).length > 0) {
+              currentManifest = { ...currentManifest, ...missingKeys };
+              persistSettings(currentManifest);
+            }
           }
         } else if (syncSettings) {
           // No DB record yet -> save current sync settings to IndexedDB

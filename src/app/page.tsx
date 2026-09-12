@@ -27,7 +27,9 @@ export default function Home() {
   const setManifest = useTypingStore((s) => s.setManifest);
   const clearText = useTypingStore((s) => s.clearText);
 
-  // Sync active palette data-theme and data-text-size attribute with document root
+  const activeApertureHeight = useTypingStore((s) => s.manifest.activeApertureHeight);
+
+  // Sync active palette data-theme, data-text-size, and data-aperture-height attribute with document root
   useEffect(() => {
     if (typeof document !== 'undefined') {
       if (colorScheme) {
@@ -36,8 +38,11 @@ export default function Home() {
       if (textSize) {
         document.documentElement.setAttribute('data-text-size', textSize);
       }
+      if (activeApertureHeight) {
+        document.documentElement.setAttribute('data-aperture-height', String(activeApertureHeight));
+      }
     }
-  }, [colorScheme, textSize]);
+  }, [colorScheme, textSize, activeApertureHeight]);
 
 
   const handlePrintedComplete = React.useCallback(
