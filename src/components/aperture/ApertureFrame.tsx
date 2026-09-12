@@ -6,25 +6,39 @@ import { ActiveLine } from './ActiveLine';
 import { MobileKeyboardBridge, MobileKeyboardBridgeHandle } from './MobileKeyboardBridge';
 
 interface ApertureFrameProps {
-  lines: LineRecord[];
-  activeLineIndex: number;
-  activeColIndex: number;
-  height: ApertureHeight;
-  isLocked: boolean;
-  isHighlighting: boolean;
+  lines?: LineRecord[];
+  activeLineIndex?: number;
+  activeColIndex?: number;
+  height?: ApertureHeight;
+  isLocked?: boolean;
+  isHighlighting?: boolean;
   isPaused?: boolean;
 }
 
-export const ApertureFrame: React.FC<ApertureFrameProps> = ({
-  lines,
-  activeLineIndex,
-  activeColIndex,
-  height,
-  isLocked,
-  isHighlighting,
+export const ApertureFrame: React.FC<ApertureFrameProps> = React.memo(function ApertureFrame({
+  lines: propLines,
+  activeLineIndex: propActiveLineIndex,
+  activeColIndex: propActiveColIndex,
+  height: propHeight,
+  isLocked: propIsLocked,
+  isHighlighting: propIsHighlighting,
   isPaused = false,
-}) => {
+}) {
   const bridgeRef = useRef<MobileKeyboardBridgeHandle>(null);
+  const storeLines = useTypingStore((state) => state.currentPageLines);
+  const storeActiveLineIndex = useTypingStore((state) => state.activeLineIndex);
+  const storeActiveColIndex = useTypingStore((state) => state.activeColIndex);
+  const storeHeight = useTypingStore((state) => state.manifest.activeApertureHeight);
+  const storeIsLocked = useTypingStore((state) => state.isLocked);
+  const storeIsHighlighting = useTypingStore((state) => state.isHighlighting);
+
+  const lines = propLines ?? storeLines;
+  const activeLineIndex = propActiveLineIndex ?? storeActiveLineIndex;
+  const activeColIndex = propActiveColIndex ?? storeActiveColIndex;
+  const height = propHeight ?? storeHeight;
+  const isLocked = propIsLocked ?? storeIsLocked;
+  const isHighlighting = propIsHighlighting ?? storeIsHighlighting;
+
   const activeColumnLimit = useTypingStore((state) => state.activeColumnLimit);
   const setActiveColumnLimit = useTypingStore((state) => state.setActiveColumnLimit);
   const pageMode = useTypingStore((state) => state.manifest.pageMode);
@@ -254,4 +268,4 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = ({
       />
     </div>
   );
-};
+});

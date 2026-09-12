@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTypingEngine } from '@/hooks/useTypingEngine';
-import { useTypingStore, readSynchronousSettings } from '@/stores/typingStore';
+import { useTypingStore } from '@/stores/typingStore';
 import { ApertureFrame } from '@/components/aperture/ApertureFrame';
 import { DocumentStats } from '@/components/aperture/DocumentStats';
 import { SessionTargetTracker } from '@/components/stages/SessionTargetTracker';
@@ -13,46 +13,58 @@ import { Settings, FileText, Check, Loader2 } from 'lucide-react';
 export default function Home() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
-  const engine = useTypingEngine({ isPaused: isPrintOpen || isSettingsOpen });
+  useTypingEngine({ isPaused: isPrintOpen || isSettingsOpen });
 
-
+  const colorScheme = useTypingStore((s) => s.manifest.colorScheme);
+  const textSize = useTypingStore((s) => s.manifest.textSize);
+  const showSessionTargetTracker = useTypingStore((s) => s.manifest.showSessionTargetTracker);
+  const sessionWordTarget = useTypingStore((s) => s.manifest.sessionWordTarget);
+  const saveState = useTypingStore((s) => s.saveState);
+  const persistenceError = useTypingStore((s) => s.persistenceError);
+  const manifest = useTypingStore((s) => s.manifest);
+  const setApertureHeight = useTypingStore((s) => s.setApertureHeight);
+  const setPageSize = useTypingStore((s) => s.setPageSize);
+  const setManifest = useTypingStore((s) => s.setManifest);
+  const clearText = useTypingStore((s) => s.clearText);
 
   // Sync active palette data-theme and data-text-size attribute with document root
   useEffect(() => {
     if (typeof document !== 'undefined') {
-      if (engine.manifest.colorScheme) {
-        document.documentElement.setAttribute('data-theme', engine.manifest.colorScheme);
+      if (colorScheme) {
+        document.documentElement.setAttribute('data-theme', colorScheme);
       }
-      if (engine.manifest.textSize) {
-        document.documentElement.setAttribute('data-text-size', engine.manifest.textSize);
+      if (textSize) {
+        document.documentElement.setAttribute('data-text-size', textSize);
       }
     }
-  }, [engine.manifest.colorScheme, engine.manifest.textSize]);
+  }, [colorScheme, textSize]);
 
   // Compile full manuscript pages strictly on-demand when the Project dialog opens
   const manuscriptPages = useMemo(() => {
     if (!isPrintOpen) return [];
+    const state = useTypingStore.getState();
     return [
-      ...engine.historicalPages,
+      ...state.historicalPages,
       {
-        pageNumber: engine.currentPageNumber,
-        lines: engine.currentPageLines,
+        pageNumber: state.currentPageNumber,
+        lines: state.currentPageLines,
         completedAt: null,
       },
     ];
-  }, [isPrintOpen, engine.historicalPages, engine.currentPageNumber, engine.currentPageLines]);
+  }, [isPrintOpen]);
 
   const handlePrintedComplete = React.useCallback(
     (printedCount: number) => {
-      engine.setManifest({
+      const state = useTypingStore.getState();
+      state.setManifest({
         lastPrintedCharIndex: printedCount,
-        printedPagesCount: engine.manifest.outboxCount,
+        printedPagesCount: state.manifest.outboxCount,
       });
     },
-    [engine.setManifest, engine.manifest.outboxCount]
+    []
   );
 
-  const isSpotlight = engine.manifest.colorScheme === 'spotlight';
+  const isSpotlight = colorScheme === 'spotlight';
 
   return (
     <main
@@ -64,21 +76,13 @@ export default function Home() {
         <div className="relative flex flex-col items-center">
           {/* Platen Container with anchored Target Tracker */}
           <div className="relative">
-            {engine.manifest.showSessionTargetTracker !== false && (engine.manifest.sessionWordTarget ?? 0) > 0 && (
+            {showSessionTargetTracker !== false && (sessionWordTarget ?? 0) > 0 && (
               <div className="absolute bottom-full -mb-[1px] left-0 right-0 pointer-events-none">
                 <SessionTargetTracker />
               </div>
             )}
 
-            <ApertureFrame
-              lines={engine.currentPageLines}
-              activeLineIndex={engine.activeLineIndex}
-              activeColIndex={engine.activeColIndex}
-              height={engine.manifest.activeApertureHeight}
-              isLocked={engine.isLocked}
-              isHighlighting={engine.isHighlighting}
-              isPaused={isPrintOpen || isSettingsOpen}
-            />
+            <ApertureFrame isPaused={isPrintOpen || isSettingsOpen} />
           </div>
 
           {/* Live Drafting Metadata and Right-Justified Save Checkbox */}
@@ -126,9 +130,9 @@ export default function Home() {
             className="flex items-center justify-center pointer-events-none select-none text-muted-foreground w-4 h-4 ml-0.5"
             aria-hidden="true"
           >
-            {engine.persistenceError || engine.saveState === 'error' ? (
+            {persistenceError || saveState === 'error' ? (
               <span className="text-destructive font-bold leading-none text-xs">!</span>
-            ) : engine.saveState === 'saving' || engine.saveState === 'typing' ? (
+            ) : saveState === 'saving' || saveState === 'typing' ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (
               <Check className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -141,10 +145,10 @@ export default function Home() {
       <SettingsDrawer
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
-        manifest={engine.manifest}
-        onUpdateHeight={engine.setApertureHeight}
-        onUpdatePageSize={engine.setPageSize}
-        onUpdateManifest={engine.setManifest}
+        manifest={manifest}
+        onUpdateHeight={setApertureHeight}
+        onUpdatePageSize={setPageSize}
+        onUpdateManifest={setManifest}
       />
 
       {/* Project Modal */}
@@ -152,9 +156,9 @@ export default function Home() {
         isOpen={isPrintOpen}
         onClose={() => setIsPrintOpen(false)}
         pages={manuscriptPages}
-        manifest={engine.manifest}
+        manifest={manifest}
         onPrintedComplete={handlePrintedComplete}
-        onClearText={engine.clearText}
+        onClearText={clearText}
       />
     </main>
   );

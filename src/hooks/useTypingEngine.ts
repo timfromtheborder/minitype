@@ -24,7 +24,7 @@ export interface UseTypingEngineOptions {
 }
 
 export function useTypingEngine(options?: UseTypingEngineOptions) {
-  const store = useTypingStore();
+  const rehydrate = useTypingStore((s) => s.rehydrate);
   const isPaused = options?.isPaused ?? false;
 
   const handleKeyDown = useCallback(
@@ -145,8 +145,8 @@ export function useTypingEngine(options?: UseTypingEngineOptions) {
 
   // Rehydrate persisted manuscript from IndexedDB on initial mount
   useEffect(() => {
-    store.rehydrate();
-  }, []);
+    rehydrate();
+  }, [rehydrate]);
 
   // Flush any pending debounced saves immediately on tab close, hide, or refresh
   useEffect(() => {
@@ -170,16 +170,5 @@ export function useTypingEngine(options?: UseTypingEngineOptions) {
     };
   }, []);
 
-
-  // Compute visible lines for the typing aperture based on activeApertureHeight
-  const height = store.manifest.activeApertureHeight;
-  const totalLines = store.currentPageLines.length;
-  const startIdx = Math.max(0, totalLines - height);
-  const visibleLines: LineRecord[] = store.currentPageLines.slice(startIdx);
-
-  return {
-    ...store,
-    visibleLines,
-    visibleStartIndex: startIdx,
-  };
+  return {};
 }

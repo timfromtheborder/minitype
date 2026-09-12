@@ -1,42 +1,17 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { useTypingStore } from '@/stores/typingStore';
-import { sanitizeManuscript } from '@/lib/sanitize';
-import { countWords } from '@/lib/projectSerializer';
+import { resolveActiveSessionStats } from '@/lib/projectSerializer';
 
 export const SessionTargetTracker: React.FC = React.memo(function SessionTargetTracker() {
   const target = useTypingStore((state) => state.manifest.sessionWordTarget);
   const showTracker = useTypingStore((state) => state.manifest.showSessionTargetTracker ?? true);
-  const pageMode = useTypingStore((state) => state.manifest.pageMode);
-  const currentPageLines = useTypingStore((state) => state.currentPageLines);
-  const historicalPages = useTypingStore((state) => state.historicalPages);
-  const currentPageNumber = useTypingStore((state) => state.currentPageNumber);
+  const totalProjectWords = useTypingStore((state) => state.manifest.totalWordCount ?? 0);
   const activeSessions = useTypingStore((state) => state.activeSessions);
   const activeColumnLimit = useTypingStore((state) => state.activeColumnLimit);
 
   const { currentSessionWords } = useMemo(() => {
-    const allPages = [
-      ...historicalPages,
-      {
-        pageNumber: currentPageNumber,
-        lines: currentPageLines,
-        completedAt: null,
-      },
-    ];
-    const fullClean = sanitizeManuscript(allPages, { doubleSpaceLinebreaks: false, pageMode });
-    const totalWords = countWords(fullClean);
-
-    const sessions = activeSessions && activeSessions.length > 0 ? activeSessions : [];
-    const lastIndex = sessions.length - 1;
-    const lastSession = lastIndex >= 0 ? sessions[lastIndex] : null;
-    const isSessionActive = lastSession && !lastSession.completedAt;
-
-    if (isSessionActive) {
-      const priorSessions = sessions.slice(0, lastIndex);
-      const priorWords = priorSessions.reduce((acc, s) => acc + (s.wordCount || 0), 0);
-      return { currentSessionWords: Math.max(0, totalWords - priorWords) };
-    }
-    return { currentSessionWords: 0 };
-  }, [historicalPages, currentPageLines, currentPageNumber, activeSessions, pageMode]);
+    return resolveActiveSessionStats(activeSessions, totalProjectWords);
+  }, [activeSessions, totalProjectWords]);
 
   const boxCount = 100;
   const filledCount = target && target > 0

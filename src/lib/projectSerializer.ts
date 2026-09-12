@@ -83,6 +83,48 @@ export function getActiveSessionText(fullText: string, priorSessions: SessionRec
   return '';
 }
 
+export interface ActiveSessionStats {
+  currentSessionNumber: number;
+  currentSessionWords: number;
+  totalProjectWords: number;
+  priorWords: number;
+  isActive: boolean;
+}
+
+/**
+ * Centrally resolves active session statistics and word allocations.
+ */
+export function resolveActiveSessionStats(
+  sessions: SessionRecord[] | undefined,
+  totalWords: number
+): ActiveSessionStats {
+  const list = sessions && sessions.length > 0 ? sessions : [];
+  const lastIndex = list.length - 1;
+  const lastSession = lastIndex >= 0 ? list[lastIndex] : null;
+  const isSessionActive = Boolean(lastSession && !lastSession.completedAt);
+
+  if (isSessionActive && lastSession) {
+    const priorSessions = list.slice(0, lastIndex);
+    const priorWords = priorSessions.reduce((acc, s) => acc + (s.wordCount || 0), 0);
+    const activeWords = Math.max(0, totalWords - priorWords);
+    return {
+      currentSessionNumber: lastSession.sessionNumber,
+      currentSessionWords: activeWords,
+      totalProjectWords: totalWords,
+      priorWords,
+      isActive: true,
+    };
+  }
+
+  return {
+    currentSessionNumber: list.length + 1,
+    currentSessionWords: 0,
+    totalProjectWords: totalWords,
+    priorWords: list.reduce((acc, s) => acc + (s.wordCount || 0), 0),
+    isActive: false,
+  };
+}
+
 export function reconcileSessionsWithText(
   sessions: SessionRecord[],
   fullText: string

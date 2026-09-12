@@ -45,6 +45,7 @@ import {
   countWords,
   getActiveSessionText,
   reconcileSessionsWithText,
+  resolveActiveSessionStats,
 } from '@/lib/projectSerializer';
 
 export function getPageLineLimit(mode?: PageMode, customSize?: number): number {
@@ -800,15 +801,6 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       const updated = { ...state.manifest, ...newManifest, mode: 'local' as const };
       persistSettings(updated);
       saveManuscript(updated).catch(console.error);
-      const currentPage: PageRecord = {
-        id: `${updated.id}-page-${state.currentPageNumber}`,
-        manuscriptId: updated.id,
-        pageNumber: state.currentPageNumber,
-        lines: state.currentPageLines,
-        completedAt: null,
-      };
-      savePage(currentPage).catch(console.error);
-      state.historicalPages.forEach((p) => savePage(p).catch(console.error));
       return { manifest: updated };
     });
   },
@@ -2116,10 +2108,9 @@ export const useTypingStore = create<TypingStore>((set, get) => {
       doubleSpaceLinebreaks: false,
       pageMode: state.manifest.pageMode,
     });
-    const priorSessions = activeSessions.slice(0, -1);
-    const priorWords = priorSessions.reduce((acc, s) => acc + (s.wordCount || 0), 0);
     const docTotalWords = countWords(fullText);
-    const currentWordCount = Math.max(0, docTotalWords - priorWords);
+    const { currentSessionWords: currentWordCount } = resolveActiveSessionStats(activeSessions, docTotalWords);
+    const priorSessions = activeSessions.slice(0, -1);
     const currentSessionText = getActiveSessionText(fullText, priorSessions);
 
     // Requirement: If the current session is empty, reset the session time but don't start a new session
@@ -2249,15 +2240,14 @@ export const useTypingStore = create<TypingStore>((set, get) => {
     const last = sessions[lastIdx];
 
     if (!last.completedAt) {
+      const { currentSessionWords } = resolveActiveSessionStats(sessions, docTotalWords);
       const priorSessions = sessions.slice(0, lastIdx);
-      const priorWords = priorSessions.reduce((acc, s) => acc + (s.wordCount || 0), 0);
-      const activeWords = Math.max(0, docTotalWords - priorWords);
       const activeText = getActiveSessionText(text, priorSessions);
 
       sessions[lastIdx] = {
         ...last,
         text: activeText,
-        wordCount: activeWords,
+        wordCount: currentSessionWords,
       };
 
       const updatedManifest = {
@@ -2489,10 +2479,9 @@ export const useTypingStore = create<TypingStore>((set, get) => {
         const lastIdx = projectSessions.length - 1;
         const last = projectSessions[lastIdx];
         if (!last.completedAt) {
-          const priorSessions = projectSessions.slice(0, lastIdx);
-          const priorWords = priorSessions.reduce((acc, s) => acc + (s.wordCount || 0), 0);
           const docTotalWords = countWords(cleanText);
-          const activeWords = Math.max(0, docTotalWords - priorWords);
+          const { currentSessionWords: activeWords } = resolveActiveSessionStats(projectSessions, docTotalWords);
+          const priorSessions = projectSessions.slice(0, lastIdx);
           const activeText = getActiveSessionText(cleanText, priorSessions);
           projectSessions[lastIdx] = {
             ...last,

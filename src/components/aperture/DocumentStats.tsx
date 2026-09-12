@@ -1,15 +1,12 @@
 import React, { useMemo } from 'react';
 import { useTypingStore } from '@/stores/typingStore';
-import { sanitizeManuscript } from '@/lib/sanitize';
-import { countWords } from '@/lib/projectSerializer';
+import { resolveActiveSessionStats } from '@/lib/projectSerializer';
 
 export const DocumentStats: React.FC = React.memo(function DocumentStats() {
   const showStats = useTypingStore((state) => state.manifest.showStats ?? true);
   const pageMode = useTypingStore((state) => state.manifest.pageMode);
   const activeLineIndex = useTypingStore((state) => state.activeLineIndex);
-  const currentPageLines = useTypingStore((state) => state.currentPageLines);
-  const historicalPages = useTypingStore((state) => state.historicalPages);
-  const currentPageNumber = useTypingStore((state) => state.currentPageNumber);
+  const totalProjectWords = useTypingStore((state) => state.manifest.totalWordCount ?? 0);
   const activeSessions = useTypingStore((state) => state.activeSessions);
   const title = useTypingStore((state) => state.manifest.title || 'Untitled Project');
   const sessionWordTarget = useTypingStore((state) => state.manifest.sessionWordTarget);
@@ -17,46 +14,9 @@ export const DocumentStats: React.FC = React.memo(function DocumentStats() {
   const showLineStat = pageMode === 'notecard';
   const lineStatText = showLineStat ? `line: ${activeLineIndex + 1}/10` : null;
 
-  const { totalProjectWords, currentSessionNumber, currentSessionWords } = useMemo(() => {
-    const allPages = [
-      ...historicalPages,
-      {
-        pageNumber: currentPageNumber,
-        lines: currentPageLines,
-        completedAt: null,
-      },
-    ];
-    const fullClean = sanitizeManuscript(allPages, { doubleSpaceLinebreaks: false, pageMode });
-    const totalWords = countWords(fullClean);
-
-    const sessions = activeSessions && activeSessions.length > 0 ? activeSessions : [];
-    const lastIndex = sessions.length - 1;
-    const lastSession = lastIndex >= 0 ? sessions[lastIndex] : null;
-
-    // Check if we currently have an uncompleted active session in progress
-    const isSessionActive = lastSession && !lastSession.completedAt;
-
-    let sessionNum = 1;
-    let sessionWords = 0;
-
-    if (isSessionActive) {
-      sessionNum = lastSession.sessionNumber;
-      const priorSessions = sessions.slice(0, lastIndex);
-      const priorWords = priorSessions.reduce((acc, s) => acc + (s.wordCount || 0), 0);
-      sessionWords = Math.max(0, totalWords - priorWords);
-    } else {
-      // All prior sessions were completed (e.g. freshly loaded file, or after starting a session).
-      // When a new session is going to start on the next keystroke, show its upcoming number and 0 words.
-      sessionNum = sessions.length + 1;
-      sessionWords = 0;
-    }
-
-    return {
-      totalProjectWords: totalWords,
-      currentSessionNumber: sessionNum,
-      currentSessionWords: sessionWords,
-    };
-  }, [historicalPages, currentPageLines, currentPageNumber, activeSessions, pageMode]);
+  const { currentSessionNumber, currentSessionWords } = useMemo(() => {
+    return resolveActiveSessionStats(activeSessions, totalProjectWords);
+  }, [activeSessions, totalProjectWords]);
 
   return (
     <div

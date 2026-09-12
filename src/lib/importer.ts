@@ -209,7 +209,8 @@ export function healDuplicatedManuscriptText(rawText: string): string {
   if (paragraphs.length >= 2) {
     let healed = false;
     let p = [...paragraphs];
-    for (let k = 1; k <= Math.floor(p.length / 2); k++) {
+    const maxK = Math.min(20, Math.floor(p.length / 2));
+    for (let k = 1; k <= maxK; k++) {
       const suffix = p.slice(p.length - k);
       let matches = 0;
       while (p.length >= (matches + 2) * k) {
@@ -240,7 +241,8 @@ export function healDuplicatedManuscriptText(rawText: string): string {
 
   // 2. String-level repeating suffix healing (for single multi-line blocks or line-wrapped repeats)
   let healedText = text.trimEnd();
-  for (let len = Math.floor(healedText.length / 2); len >= 15; len--) {
+  const maxLen = Math.min(4000, Math.floor(healedText.length / 2));
+  for (let len = maxLen; len >= 15; len--) {
     const suffix = healedText.slice(-len);
     if (suffix.trim().length >= 10 && healedText.slice(0, -len).endsWith(suffix)) {
       while (healedText.length >= len * 2 && healedText.slice(0, -len).endsWith(suffix)) {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { SessionRecord } from '@/types';
 import { Clock, Sparkles } from 'lucide-react';
-import { countWords, getActiveSessionText } from '@/lib/projectSerializer';
+import { countWords, getActiveSessionText, resolveActiveSessionStats } from '@/lib/projectSerializer';
 import { useTypingStore } from '@/stores/typingStore';
 
 interface ProjectSessionsTabProps {
@@ -70,14 +70,13 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
     const isActive = isLatest && !session.completedAt;
 
     if (isActive) {
+      const { currentSessionWords } = resolveActiveSessionStats(effectiveSessions, docTotalWords);
       const priorSessions = effectiveSessions.slice(0, index);
-      const priorWords = priorSessions.reduce((acc, s) => acc + (s.wordCount || 0), 0);
-      const activeWords = Math.max(0, docTotalWords - priorWords);
       const activeText = getActiveSessionText(currentFullText || '', priorSessions);
       return {
         ...session,
         text: activeText,
-        wordCount: activeWords,
+        wordCount: currentSessionWords,
       };
     }
 
