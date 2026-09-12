@@ -52,7 +52,8 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
   const effectiveSessions: SessionRecord[] =
     sortedSessions.length > 0
       ? sortedSessions
-      : [
+      : docTotalWords > 0
+      ? [
           {
             id: 'session-1',
             projectId: 'current',
@@ -62,7 +63,8 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
             text: currentFullText || '',
             wordCount: docTotalWords,
           },
-        ];
+        ]
+      : [];
 
   // Resolve session word counts dynamically so active sessions always reflect current writing
   const resolvedSessions = effectiveSessions.map((session, index) => {

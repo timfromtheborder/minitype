@@ -188,28 +188,17 @@ export const createProjectSlice: StateCreator<
     const state = get();
     await clearManuscriptData(state.manifest.id).catch(console.error);
 
-    const initialSession: SessionRecord = {
-      id: `${state.manifest.id}-session-1`,
-      projectId: state.manifest.id,
-      sessionNumber: 1,
-      startedAt: new Date().toISOString(),
-      completedAt: null,
-      text: '',
-      wordCount: 0,
-    };
-
     const updatedManifest: ManuscriptManifest = {
       ...state.manifest,
       outboxCount: 0,
       lastPrintedCharIndex: 0,
       printedPagesCount: 0,
-      activeSessionId: initialSession.id,
-      sessionCount: 1,
+      activeSessionId: undefined,
+      sessionCount: 0,
       totalWordCount: 0,
     };
     persistSettings(updatedManifest);
     await saveManuscript(updatedManifest).catch(console.error);
-    await saveSession(initialSession).catch(console.error);
     await savePage({
       id: `${state.manifest.id}-page-1`,
       manuscriptId: state.manifest.id,
@@ -229,7 +218,7 @@ export const createProjectSlice: StateCreator<
       isLocked: false,
       lockReason: null,
       pendingWrappedCells: null,
-      activeSessions: [initialSession],
+      activeSessions: [],
       manifest: updatedManifest,
       saveState: 'saved',
       sessionCommittedLines: 0,
@@ -243,15 +232,6 @@ export const createProjectSlice: StateCreator<
     const state = get();
 
     const newId = `manuscript-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    const initialSession: SessionRecord = {
-      id: `${newId}-session-1`,
-      projectId: newId,
-      sessionNumber: 1,
-      startedAt: new Date().toISOString(),
-      completedAt: null,
-      text: '',
-      wordCount: 0,
-    };
 
     // Calculate unique title with incremental duplicate counter if 'Untitled Project' exists
     const existing = await getAllManuscripts().catch(() => []);
@@ -290,8 +270,8 @@ export const createProjectSlice: StateCreator<
       outboxCount: 0,
       lastPrintedCharIndex: 0,
       printedPagesCount: 0,
-      activeSessionId: initialSession.id,
-      sessionCount: 1,
+      activeSessionId: undefined,
+      sessionCount: 0,
       totalWordCount: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -310,7 +290,6 @@ export const createProjectSlice: StateCreator<
     }
 
     await saveManuscript(updatedManifest).catch(console.error);
-    await saveSession(initialSession).catch(console.error);
     await savePage({
       id: `${newId}-page-1`,
       manuscriptId: newId,
@@ -334,7 +313,7 @@ export const createProjectSlice: StateCreator<
       isLocked: false,
       lockReason: null,
       pendingWrappedCells: null,
-      activeSessions: [initialSession],
+      activeSessions: [],
       manifest: updatedManifest,
       saveState: 'saved',
       sessionCommittedLines: 0,
@@ -413,22 +392,26 @@ export const createProjectSlice: StateCreator<
     }
 
     // Prepare sessions: if none exist in db, generate Session 1 from cleanText
-    let rawSessions: SessionRecord[] = existingSessions && existingSessions.length > 0
-      ? [...existingSessions]
-      : [
-          {
-            id: `${id}-session-1`,
-            projectId: id,
-            sessionNumber: 1,
-            startedAt: loadedManifest.createdAt || new Date().toISOString(),
-            completedAt: cleanText.trim() === '' ? null : (loadedManifest.updatedAt || new Date().toISOString()),
-            text: cleanText,
-            wordCount: countWords(cleanText),
-          },
-        ];
+    // Prepare sessions: if none exist in db, generate Session 1 from cleanText ONLY if there is text
+    let rawSessions: SessionRecord[] = [];
+    if (existingSessions && existingSessions.length > 0) {
+      rawSessions = [...existingSessions];
+    } else if (cleanText.trim() !== '') {
+      rawSessions = [
+        {
+          id: `${id}-session-1`,
+          projectId: id,
+          sessionNumber: 1,
+          startedAt: loadedManifest.createdAt || new Date().toISOString(),
+          completedAt: loadedManifest.updatedAt || new Date().toISOString(),
+          text: cleanText,
+          wordCount: countWords(cleanText),
+        },
+      ];
+    }
 
     // If there is only 1 session and its text is empty, populate it with cleanText
-    if (rawSessions.length === 1 && (!rawSessions[0].text || rawSessions[0].text.trim() === '')) {
+    if (rawSessions.length === 1 && (!rawSessions[0].text || rawSessions[0].text.trim() === '') && cleanText.trim() !== '') {
       rawSessions[0] = {
         ...rawSessions[0],
         text: cleanText,
@@ -445,25 +428,13 @@ export const createProjectSlice: StateCreator<
       await deleteSession(remId).catch(console.error);
     }
 
-    // Ensure all prior sessions are finalized so they don't say "Present",
+    // Ensure all prior sessions are finalized so historical sessions are immutable (Invariant 7 & 8),
     // and renumber contiguously to eliminate gaps from any pruned sessions
-    const sessions = pruned.map((s, idx) => {
-      // If this is an empty project with a single session, keep it open (completedAt: null)
-      if (cleanText.trim() === '' && idx === 0 && pruned.length === 1) {
-        return {
-          ...s,
-          sessionNumber: 1,
-          completedAt: null,
-          wordCount: 0,
-          text: '',
-        };
-      }
-      return {
-        ...s,
-        sessionNumber: idx + 1,
-        completedAt: s.completedAt || loadedManifest.updatedAt || s.startedAt,
-      };
-    });
+    const sessions = pruned.map((s, idx) => ({
+      ...s,
+      sessionNumber: idx + 1,
+      completedAt: s.completedAt || loadedManifest.updatedAt || s.startedAt,
+    }));
     for (const s of sessions) {
       saveSession(s).catch(console.error);
     }
@@ -478,7 +449,7 @@ export const createProjectSlice: StateCreator<
       outboxCount: 0,
       lastPrintedCharIndex: loadedManifest.lastPrintedCharIndex ?? 0,
       printedPagesCount: loadedManifest.printedPagesCount ?? 0,
-      activeSessionId: sessions[sessions.length - 1]?.id || '',
+      activeSessionId: (sessions.length > 0 ? sessions[sessions.length - 1]?.id : '') || '',
       sessionCount: sessions.length,
       totalWordCount: countWords(cleanText),
       sessionWordTarget: loadedManifest.sessionWordTarget,
@@ -498,18 +469,20 @@ export const createProjectSlice: StateCreator<
       }
     }
 
-    // Prune stale pages from IndexedDB and sync valid pages
-    await pruneStalePagesForManuscript(loadedManifest.id, partitioned.currentPageNumber);
-    for (const hp of partitioned.historicalPages) {
-      savePage(hp).catch(console.error);
+    if (cleanText.trim() !== '' || pages.length > 0) {
+      // Prune stale pages from IndexedDB and sync valid pages
+      await pruneStalePagesForManuscript(loadedManifest.id, partitioned.currentPageNumber);
+      for (const hp of partitioned.historicalPages) {
+        savePage(hp).catch(console.error);
+      }
+      savePage({
+        id: `${loadedManifest.id}-page-${partitioned.currentPageNumber}`,
+        manuscriptId: loadedManifest.id,
+        pageNumber: partitioned.currentPageNumber,
+        lines: partitioned.currentPageLines,
+        completedAt: null,
+      }).catch(console.error);
     }
-    savePage({
-      id: `${loadedManifest.id}-page-${partitioned.currentPageNumber}`,
-      manuscriptId: loadedManifest.id,
-      pageNumber: partitioned.currentPageNumber,
-      lines: partitioned.currentPageLines,
-      completedAt: null,
-    }).catch(console.error);
 
     if (typeof window !== 'undefined') {
       localStorage.setItem(ACTIVE_PROJECT_KEY, id);

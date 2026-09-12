@@ -56,7 +56,11 @@ export const createPaginationSlice: StateCreator<
         }));
       }
 
-      const updatedManifest = { ...state.manifest, activeApertureHeight: finalHeight };
+      const updatedManifest = {
+        ...state.manifest,
+        activeApertureHeight: finalHeight,
+        ...(state.manifest.pageMode !== 'notecard' ? { preferredApertureHeight: height } : {}),
+      };
       persistSettings(updatedManifest);
       if (updatedManifest.mode === 'local') {
         saveManuscript(updatedManifest).catch(console.error);

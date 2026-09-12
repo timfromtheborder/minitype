@@ -4,6 +4,7 @@ import {
   CharacterCell,
   LineRecord,
   PageRecord,
+  SessionRecord,
   ManuscriptManifest,
   SaveState,
 } from '@/types';
@@ -249,17 +250,7 @@ export const createPersistenceSlice: StateCreator<
       isLocked: false,
       lockReason: null,
       pendingWrappedCells: null,
-      activeSessions: [
-        {
-          id: `${manifest.id}-session-1`,
-          projectId: manifest.id,
-          sessionNumber: 1,
-          startedAt: new Date().toISOString(),
-          completedAt: null,
-          text: '',
-          wordCount: 0,
-        },
-      ],
+      activeSessions: [],
       sessionCommittedLines: 0,
       isProjectDirty: false,
     });
@@ -411,20 +402,25 @@ export const createPersistenceSlice: StateCreator<
           );
         }
 
-        let rawSessions = sessions && sessions.length > 0 ? sessions : [
-          {
-            id: `${loadedManifest.id}-session-1`,
-            projectId: loadedManifest.id,
-            sessionNumber: 1,
-            startedAt: loadedManifest.createdAt || new Date().toISOString(),
-            completedAt: null,
-            text: cleanText,
-            wordCount: countWords(cleanText),
-          },
-        ];
+        let rawSessions: SessionRecord[] = [];
+        if (sessions && sessions.length > 0) {
+          rawSessions = [...sessions];
+        } else if (cleanText.trim() !== '') {
+          rawSessions = [
+            {
+              id: `${loadedManifest.id}-session-1`,
+              projectId: loadedManifest.id,
+              sessionNumber: 1,
+              startedAt: loadedManifest.createdAt || new Date().toISOString(),
+              completedAt: loadedManifest.updatedAt || new Date().toISOString(),
+              text: cleanText,
+              wordCount: countWords(cleanText),
+            },
+          ];
+        }
 
         // If there is only 1 session and its text is empty, populate it with cleanText
-        if (rawSessions.length === 1 && (!rawSessions[0].text || rawSessions[0].text.trim() === '')) {
+        if (rawSessions.length === 1 && (!rawSessions[0].text || rawSessions[0].text.trim() === '') && cleanText.trim() !== '') {
           rawSessions[0] = {
             ...rawSessions[0],
             text: cleanText,
@@ -492,7 +488,7 @@ export const createPersistenceSlice: StateCreator<
           outboxCount: 0,
           lastPrintedCharIndex: loadedManifest.lastPrintedCharIndex ?? 0,
           printedPagesCount: loadedManifest.printedPagesCount ?? 0,
-          activeSessionId: loadedManifest.activeSessionId || normalizedSessions[normalizedSessions.length - 1].id,
+          activeSessionId: loadedManifest.activeSessionId || (normalizedSessions.length > 0 ? normalizedSessions[normalizedSessions.length - 1].id : ''),
           sessionCount: normalizedSessions.length,
           totalWordCount: countWords(cleanText),
           createdAt: loadedManifest.createdAt || new Date().toISOString(),
@@ -527,18 +523,20 @@ export const createPersistenceSlice: StateCreator<
           }
         }
 
-        // Prune stale pages from IndexedDB and sync valid pages
-        await pruneStalePagesForManuscript(loadedManifest.id, partitioned.currentPageNumber);
-        for (const hp of partitioned.historicalPages) {
-          savePage(hp).catch(console.error);
+        if (cleanText.trim() !== '' || (pages && pages.length > 0)) {
+          // Prune stale pages from IndexedDB and sync valid pages
+          await pruneStalePagesForManuscript(loadedManifest.id, partitioned.currentPageNumber);
+          for (const hp of partitioned.historicalPages) {
+            savePage(hp).catch(console.error);
+          }
+          savePage({
+            id: `${loadedManifest.id}-page-${partitioned.currentPageNumber}`,
+            manuscriptId: loadedManifest.id,
+            pageNumber: partitioned.currentPageNumber,
+            lines: partitioned.currentPageLines,
+            completedAt: null,
+          }).catch(console.error);
         }
-        savePage({
-          id: `${loadedManifest.id}-page-${partitioned.currentPageNumber}`,
-          manuscriptId: loadedManifest.id,
-          pageNumber: partitioned.currentPageNumber,
-          lines: partitioned.currentPageLines,
-          completedAt: null,
-        }).catch(console.error);
 
         set({
           manifest: updatedManifest,

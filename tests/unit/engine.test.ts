@@ -1359,12 +1359,12 @@ describe('Typing Engine & State Machine Invariants', () => {
       const store = useTypingStore.getState();
       await store.newProject();
 
+      // Type text in session 1 to initialize it lazily
+      for (const c of 'Hello session 1') store.insertChar(c);
+
       const initialSessionId = useTypingStore.getState().manifest.activeSessionId;
       expect(initialSessionId).toBeTruthy();
       expect(useTypingStore.getState().activeSessions).toHaveLength(1);
-
-      // Type some text in session 1
-      for (const c of 'Hello session 1') store.insertChar(c);
 
       // Start new session
       await store.startNewSession();
@@ -1451,6 +1451,7 @@ describe('Typing Engine & State Machine Invariants', () => {
     it('resets session start time without creating a new session if current session is empty', async () => {
       const store = useTypingStore.getState();
       await store.newProject();
+      store.insertChar(' '); // starts active session with 0 words
 
       const originalSessions = useTypingStore.getState().activeSessions;
       expect(originalSessions).toHaveLength(1);
@@ -2557,7 +2558,7 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(useTypingStore.getState().manifest.sessionWordTarget).toBeUndefined();
     });
 
-    it('preserves Session 1 with completedAt: null when loading an empty project', async () => {
+    it('does not create active session when loading an empty project until typed', async () => {
       const store = useTypingStore.getState();
       const emptyId = `empty-proj-${Date.now()}`;
       await db.manuscripts.put({
@@ -2588,9 +2589,13 @@ describe('Typing Engine & State Machine Invariants', () => {
 
       const state = useTypingStore.getState();
       expect(state.manifest.id).toBe(emptyId);
-      expect(state.activeSessions).toHaveLength(1);
-      expect(state.activeSessions[0].completedAt).toBeNull();
-      expect(state.activeSessions[0].sessionNumber).toBe(1);
+      expect(state.activeSessions).toHaveLength(0);
+
+      // Typing first character lazily creates session 1
+      store.insertChar('A');
+      expect(useTypingStore.getState().activeSessions).toHaveLength(1);
+      expect(useTypingStore.getState().activeSessions[0].completedAt).toBeNull();
+      expect(useTypingStore.getState().activeSessions[0].sessionNumber).toBe(1);
     });
 
     it('does not resurrect a deleted project when deleting the sole remaining project', async () => {
@@ -2914,6 +2919,95 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(stateA.currentPageLines[0].cells).toHaveLength(0);
       expect(stateA.activeLineIndex).toBe(0);
       expect(stateA.activeColIndex).toBe(0);
+    });
+  });
+
+  describe('v0.9.7.1 Aperture Setting Persistence & Lazy Active Session Creation', () => {
+    it('persists aperture height across store updates and project loads', async () => {
+      const store = useTypingStore.getState();
+      await store.newProject();
+
+      store.setApertureHeight(5);
+      expect(useTypingStore.getState().manifest.activeApertureHeight).toBe(5);
+
+      const sync = readSynchronousSettings();
+      expect(sync?.activeApertureHeight).toBe(5);
+
+      // Rehydrate
+      await useTypingStore.getState().rehydrate();
+      expect(useTypingStore.getState().manifest.activeApertureHeight).toBe(5);
+
+      // Create new project and verify aperture height persists
+      await store.newProject();
+      expect(useTypingStore.getState().manifest.activeApertureHeight).toBe(5);
+    });
+
+    it('restores preferred aperture height when switching to notecard mode and back to scroll', async () => {
+      const store = useTypingStore.getState();
+      await store.newProject();
+      store.setPageMode('scroll');
+
+      store.setApertureHeight(4);
+      expect(useTypingStore.getState().manifest.activeApertureHeight).toBe(4);
+      expect(useTypingStore.getState().manifest.preferredApertureHeight).toBe(4);
+
+      // Switch to notecard: locked to 10
+      store.setPageMode('notecard');
+      expect(useTypingStore.getState().manifest.activeApertureHeight).toBe(10);
+
+      // Switch back to scroll: restores 4
+      store.setPageMode('scroll');
+      expect(useTypingStore.getState().manifest.activeApertureHeight).toBe(4);
+    });
+
+    it('does not create or save sessions when creating or opening an empty project', async () => {
+      const store = useTypingStore.getState();
+      await store.newProject();
+      const projId = useTypingStore.getState().manifest.id;
+
+      // In-memory activeSessions must be empty
+      expect(useTypingStore.getState().activeSessions).toHaveLength(0);
+      expect(useTypingStore.getState().manifest.sessionCount).toBe(0);
+
+      // DB must contain zero session records for this project
+      const sessionsInDb = await db.sessions.where('projectId').equals(projId).toArray();
+      expect(sessionsInDb).toHaveLength(0);
+
+      // Switch away to another new project
+      await store.newProject();
+      const proj2Id = useTypingStore.getState().manifest.id;
+      expect(proj2Id).not.toBe(projId);
+
+      // Switch back to empty project
+      await store.loadProject(projId);
+      expect(useTypingStore.getState().manifest.id).toBe(projId);
+      expect(useTypingStore.getState().activeSessions).toHaveLength(0);
+      expect(useTypingStore.getState().manifest.sessionCount).toBe(0);
+
+      const sessionsInDbAfterLoad = await db.sessions.where('projectId').equals(projId).toArray();
+      expect(sessionsInDbAfterLoad).toHaveLength(0);
+    });
+
+    it('lazily initializes session 1 only when user types the first character in an empty project', async () => {
+      const store = useTypingStore.getState();
+      await store.newProject();
+      const projId = useTypingStore.getState().manifest.id;
+
+      expect(useTypingStore.getState().activeSessions).toHaveLength(0);
+
+      // Type first character
+      store.insertChar('H');
+
+      const stateAfterTyping = useTypingStore.getState();
+      expect(stateAfterTyping.activeSessions).toHaveLength(1);
+      expect(stateAfterTyping.activeSessions[0].sessionNumber).toBe(1);
+      expect(stateAfterTyping.activeSessions[0].completedAt).toBeNull();
+      expect(stateAfterTyping.manifest.sessionCount).toBe(1);
+
+      // Verify session 1 is in DB
+      const sessionsInDb = await db.sessions.where('projectId').equals(projId).toArray();
+      expect(sessionsInDb).toHaveLength(1);
+      expect(sessionsInDb[0].sessionNumber).toBe(1);
     });
   });
 });

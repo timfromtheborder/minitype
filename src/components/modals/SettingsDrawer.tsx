@@ -9,7 +9,6 @@ import {
 } from '@/types';
 import { X, Sliders, Volume2, VolumeX } from 'lucide-react';
 import { typewriterAudio } from '@/lib/sound';
-import { persistSettings } from '@/stores/typingStore';
 
 interface SettingsDrawerProps {
   isOpen: boolean;
@@ -46,9 +45,6 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   const showSessionTargetTracker = manifest.showSessionTargetTracker ?? true;
 
   const handleClose = () => {
-    try {
-      persistSettings(manifest);
-    } catch (e) {}
     onClose();
   };
 
@@ -109,13 +105,11 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   if (manifest.pageMode === 'notecard') return;
                   const val = Number(e.target.value) as ApertureHeight;
                   onUpdateHeight(val);
-                  onUpdateManifest({ activeApertureHeight: val });
                 }}
                 onInput={(e) => {
                   if (manifest.pageMode === 'notecard') return;
                   const val = Number(e.currentTarget.value) as ApertureHeight;
                   onUpdateHeight(val);
-                  onUpdateManifest({ activeApertureHeight: val });
                 }}
                 className={`w-full square-slider ${
                   manifest.pageMode === 'notecard' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
@@ -370,7 +364,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.7
+              Minitype v0.9.7.1
             </span>
           </div>
         </div>

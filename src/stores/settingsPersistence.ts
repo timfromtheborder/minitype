@@ -3,6 +3,7 @@ import { saveGlobalSettingsToDb } from '@/db';
 
 export const SETTING_KEYS = [
   'activeApertureHeight',
+  'preferredApertureHeight',
   'wrapMode',
   'pageSize',
   'pageMode',
@@ -26,6 +27,7 @@ export const DEFAULT_MANIFEST: ManuscriptManifest = {
   lastPrintedCharIndex: 0,
   printedPagesCount: 0,
   activeApertureHeight: 1,
+  preferredApertureHeight: 1,
   wrapMode: 'soft',
   pageSize: 999999,
   pageMode: 'scroll',
@@ -36,7 +38,7 @@ export const DEFAULT_MANIFEST: ManuscriptManifest = {
   showSessionTargetTracker: true,
   sessionWordTarget: undefined,
   doubleSpaceLinebreaks: false,
-  sessionCount: 1,
+  sessionCount: 0,
   totalWordCount: 0,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',

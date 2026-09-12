@@ -35,7 +35,10 @@ export function applyPageModeTransition(
   const targetApertureHeight =
     targetMode === 'notecard'
       ? 10
-      : (manifestOverrides.activeApertureHeight ?? state.manifest.activeApertureHeight);
+      : (manifestOverrides.activeApertureHeight ??
+          (state.manifest.pageMode === 'notecard'
+            ? (state.manifest.preferredApertureHeight ?? 1)
+            : state.manifest.activeApertureHeight));
 
   if (targetMode === currentMode) {
     const updatedManifest: ManuscriptManifest = {
@@ -44,6 +47,7 @@ export function applyPageModeTransition(
       pageMode: targetMode,
       pageSize: targetPageSize,
       activeApertureHeight: targetApertureHeight,
+      ...(targetMode !== 'notecard' ? { preferredApertureHeight: targetApertureHeight } : {}),
     };
     persistSettings(updatedManifest);
     if (updatedManifest.mode === 'local') {
@@ -89,6 +93,7 @@ export function applyPageModeTransition(
       pageMode: 'scroll',
       pageSize: 999999,
       activeApertureHeight: targetApertureHeight,
+      preferredApertureHeight: targetApertureHeight,
       outboxCount: 0,
     };
 
@@ -169,6 +174,10 @@ export function applyPageModeTransition(
     const updatedManifest: ManuscriptManifest = {
       ...state.manifest,
       ...manifestOverrides,
+      preferredApertureHeight:
+        state.manifest.pageMode !== 'notecard'
+          ? state.manifest.activeApertureHeight
+          : (state.manifest.preferredApertureHeight ?? 1),
       pageMode: 'notecard',
       pageSize: 10,
       activeApertureHeight: 10,
@@ -211,6 +220,7 @@ export function applyPageModeTransition(
     pageMode: targetMode,
     pageSize: targetPageSize,
     activeApertureHeight: targetApertureHeight,
+    preferredApertureHeight: targetApertureHeight,
   };
 
   persistSettings(updatedManifest);

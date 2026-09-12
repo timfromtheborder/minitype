@@ -26,6 +26,7 @@ export interface ManuscriptManifest {
   lastPrintedCharIndex: number;
   printedPagesCount: number;
   activeApertureHeight: ApertureHeight;
+  preferredApertureHeight?: ApertureHeight;
   wrapMode: WrapMode;
   pageSize: PageSize;
   pageMode: PageMode;
