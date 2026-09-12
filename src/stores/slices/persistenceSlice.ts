@@ -165,9 +165,15 @@ export async function finalizeAndSaveCurrentProject(get: any, set: any): Promise
       sessions.splice(lastIdx, 1);
     } else if (!last.completedAt) {
       // Finalize the active session with completed timestamp
+      const target = freshState.manifest.sessionWordTarget;
+      const isTargetReached = Boolean(
+        last.targetReached ||
+        (target && target > 0 && (last.wordCount || 0) >= target)
+      );
       const finalized = {
         ...last,
         completedAt: new Date().toISOString(),
+        targetReached: isTargetReached,
       };
       sessions[lastIdx] = finalized;
       await saveSession(finalized).catch(console.error);

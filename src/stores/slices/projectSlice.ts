@@ -124,6 +124,7 @@ export function ensureActiveSessionOnTyping(
     completedAt: null,
     text: '',
     wordCount: 0,
+    targetReached: false,
   };
 
   const updatedSessions = [...normalizedPruned, newSession];
@@ -743,11 +744,18 @@ export const createProjectSlice: StateCreator<
     // 1. Finalize the current active session
     if (activeSessions.length > 0) {
       const lastSession = activeSessions[activeSessions.length - 1];
+      const target = state.manifest.sessionWordTarget;
+      const finalWords = currentWordCount || lastSession.wordCount || 0;
+      const isTargetReached = Boolean(
+        lastSession.targetReached ||
+        (target && target > 0 && finalWords >= target)
+      );
       const updatedLastSession: SessionRecord = {
         ...lastSession,
         completedAt: now,
         text: currentSessionText || lastSession.text || '',
-        wordCount: currentWordCount || lastSession.wordCount || 0,
+        wordCount: finalWords,
+        targetReached: isTargetReached,
       };
       activeSessions[activeSessions.length - 1] = updatedLastSession;
       await saveSession(updatedLastSession).catch(console.error);
@@ -763,6 +771,7 @@ export const createProjectSlice: StateCreator<
       completedAt: null,
       text: '',
       wordCount: 0,
+      targetReached: false,
     };
     activeSessions.push(newSession);
     await saveSession(newSession).catch(console.error);
@@ -845,11 +854,16 @@ export const createProjectSlice: StateCreator<
       const { currentSessionWords } = resolveActiveSessionStats(sessions, docTotalWords);
       const priorSessions = sessions.slice(0, lastIdx);
       const activeText = getActiveSessionText(text, priorSessions);
+      const target = state.manifest.sessionWordTarget;
+      const targetReached = Boolean(
+        target && target > 0 && currentSessionWords >= target
+      );
 
       sessions[lastIdx] = {
         ...last,
         text: activeText,
         wordCount: currentSessionWords,
+        targetReached,
       };
 
       const updatedManifest = {

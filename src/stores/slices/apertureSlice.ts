@@ -75,18 +75,28 @@ export const createApertureSlice: StateCreator<
     // 1. If currently in highlight mode, any keystroke immediately strikes out highlighted text:
     // Converts all 'highlighted' cells to 'struck', permanently marks isStruck: true, clears highlight mode, and snaps cursor.
     if (isHighlighting) {
-      lines = lines.map((line, idx) => ({
-        ...line,
-        wrapType:
+      lines = lines.map((line, idx) => {
+        const hasHighlighted = line.cells.some((c) => c.state === 'highlighted');
+        const isSpanned =
           idx < activeLineIndex &&
-          (line.cells.some((c) => c.state === 'highlighted') ||
-            (highlightHead && highlightHead.lineIndex <= idx))
-            ? 'soft'
-            : line.wrapType,
-        cells: line.cells.map((cell) =>
+          (hasHighlighted || (highlightHead && highlightHead.lineIndex <= idx));
+
+        let mappedCells = line.cells.map((cell) =>
           cell.state === 'highlighted' ? { ...cell, state: 'struck' as const, isStruck: true } : cell
-        ),
-      }));
+        );
+        if (hasHighlighted || isSpanned) {
+          const lastPrintable = getLastPrintableCellIndex(mappedCells);
+          if (lastPrintable >= 0 && lastPrintable < mappedCells.length - 1) {
+            mappedCells = mappedCells.slice(0, lastPrintable + 1);
+          }
+        }
+
+        return {
+          ...line,
+          wrapType: isSpanned ? 'soft' : line.wrapType,
+          cells: mappedCells,
+        };
+      });
       isHighlighting = false;
       highlightHead = null;
     }
@@ -318,9 +328,10 @@ export const createApertureSlice: StateCreator<
         if (prevLine) {
           const prevPrintableIndex = getLastPrintableCellIndex(prevLine.cells);
           if (prevPrintableIndex >= 0) {
+            const trimmedCells = prevLine.cells.slice(0, prevPrintableIndex + 1);
             lines[prevLineIndex] = {
               ...prevLine,
-              cells: prevLine.cells.map((c, idx) =>
+              cells: trimmedCells.map((c, idx) =>
                 idx === prevPrintableIndex
                   ? { ...c, state: 'highlighted' as const, isStruck: c.isStruck || c.state === 'struck' }
                   : c
@@ -417,10 +428,11 @@ export const createApertureSlice: StateCreator<
         if (prevLine) {
           const prevPrintableIndex = getLastPrintableCellIndex(prevLine.cells);
           if (prevPrintableIndex >= 0) {
-            const cell = prevLine.cells[prevPrintableIndex];
+            const trimmedCells = prevLine.cells.slice(0, prevPrintableIndex + 1);
+            const cell = trimmedCells[prevPrintableIndex];
             lines[prevLineIndex] = {
               ...prevLine,
-              cells: prevLine.cells.map((c, idx) =>
+              cells: trimmedCells.map((c, idx) =>
                 idx === prevPrintableIndex
                   ? { ...c, state: 'highlighted' as const, isStruck: c.isStruck || c.state === 'struck' }
                   : c
@@ -522,18 +534,28 @@ export const createApertureSlice: StateCreator<
       // Converts all 'highlighted' cells to 'struck', permanently marks isStruck: true, clears selection,
       // snaps cursor to end of active line without creating a newline.
       // If the highlight spanned into preceding lines, those carriage returns were struck out (wrapType = 'soft').
-      lines = lines.map((line, idx) => ({
-        ...line,
-        wrapType:
+      lines = lines.map((line, idx) => {
+        const hasHighlighted = line.cells.some((c) => c.state === 'highlighted');
+        const isSpanned =
           idx < state.activeLineIndex &&
-          (line.cells.some((c) => c.state === 'highlighted') ||
-            (state.highlightHead && state.highlightHead.lineIndex <= idx))
-            ? 'soft'
-            : line.wrapType,
-        cells: line.cells.map((cell) =>
+          (hasHighlighted || (state.highlightHead && state.highlightHead.lineIndex <= idx));
+
+        let mappedCells = line.cells.map((cell) =>
           cell.state === 'highlighted' ? { ...cell, state: 'struck' as const, isStruck: true } : cell
-        ),
-      }));
+        );
+        if (hasHighlighted || isSpanned) {
+          const lastPrintable = getLastPrintableCellIndex(mappedCells);
+          if (lastPrintable >= 0 && lastPrintable < mappedCells.length - 1) {
+            mappedCells = mappedCells.slice(0, lastPrintable + 1);
+          }
+        }
+
+        return {
+          ...line,
+          wrapType: isSpanned ? 'soft' : line.wrapType,
+          cells: mappedCells,
+        };
+      });
 
       if (state.manifest.mode === 'local') {
         debounceSavePage({

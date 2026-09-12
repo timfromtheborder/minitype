@@ -82,6 +82,11 @@ export function sanitizeLine(line: LineRecord): string {
       if (nextIsStruck && !hasSubsequentValidText && !hasPriorValidText && line.wrapType !== 'soft') {
         continue;
       }
+
+      // 6. Collapse redundant spaces flanking struck sequences (e.g. valid + struck + valid)
+      if (chars.length > 0 && chars[chars.length - 1] === ' ' && (prevIsStruck || nextIsStruck)) {
+        continue;
+      }
     }
 
     chars.push(cell.char);

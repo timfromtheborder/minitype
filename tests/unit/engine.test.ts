@@ -7,7 +7,7 @@ import {
   pruneZeroContentSessions,
 } from '@/stores/typingStore';
 import { LineRecord, PageRecord } from '@/types';
-import { sanitizeManuscript, calculatePrintDelayMs } from '@/lib/sanitize';
+import { sanitizeManuscript, sanitizeLine, calculatePrintDelayMs } from '@/lib/sanitize';
 import { wrapLine, MAX_COLUMNS } from '@/lib/wrap';
 import {
   serializeProjectFile,
@@ -3053,6 +3053,112 @@ describe('Typing Engine & State Machine Invariants', () => {
       // Verify rehydrate preserves 8
       await useTypingStore.getState().rehydrate();
       expect(useTypingStore.getState().manifest.activeApertureHeight).toBe(8);
+    });
+
+    it('v0.9.7.4.4: soft-wrap boundary backspacing over struck text trims trailing soft padding without ghost spaces', () => {
+      const store = useTypingStore.getState();
+      useTypingStore.setState({
+        currentPageLines: [{
+          id: 'p1-line-0',
+          lineIndex: 0,
+          cells: [],
+          isCommitted: false,
+        }],
+        activeLineIndex: 0,
+        activeColIndex: 0,
+        isHighlighting: false,
+        highlightHead: null,
+        historicalPages: [],
+        activeColumnLimit: 20,
+      });
+
+      // 1. Type "hello bad "
+      for (const ch of 'hello bad ') store.insertChar(ch);
+      // Highlight "bad "
+      store.handleBackspace({ byWord: true });
+      store.handleBackspace();
+      // Strike "bad "
+      store.handleEnter();
+
+      // 2. Type "wrapping wordhere" to soft-wrap onto line 1
+      for (const ch of 'wrapping wordhere') store.insertChar(ch);
+
+      const stateAfterWrap = useTypingStore.getState();
+      expect(stateAfterWrap.currentPageLines.length).toBe(2);
+      expect(stateAfterWrap.currentPageLines[0].wrapType).toBe('soft');
+
+      // 3. Backspace from line 1 all the way into line 0, traversing over "wordhere", "wrapping", and struck "bad "
+      for (let i = 0; i < 25; i++) {
+        store.handleBackspace();
+      }
+
+      // Verify line 0 has no trailing soft padding cells lingering after cursor/strikeout
+      const stateDuringHighlight = useTypingStore.getState();
+      const line0Cells = stateDuringHighlight.currentPageLines[0].cells;
+      expect(line0Cells.some((c) => c.isSoftPadding)).toBe(false);
+
+      // 4. Strike out by typing 'X'
+      store.insertChar('X');
+
+      const stateAfterStrike = useTypingStore.getState();
+      const finalLine0Cells = stateAfterStrike.currentPageLines[0].cells;
+      // Ensure no trailing soft padding cell exists at the end of line 0
+      expect(finalLine0Cells.some((c) => c.isSoftPadding)).toBe(false);
+
+      const compiled = sanitizeManuscript([{
+        pageNumber: 1,
+        lines: stateAfterStrike.currentPageLines,
+        completedAt: null,
+      }]);
+      expect(compiled).toBe('he X');
+    });
+
+    it('v0.9.7.4.4: sanitizeLine collapses redundant whitespace flanking struck text', () => {
+      // Test line with: "hello " + struck("bad") + " " + "world"
+      const line: LineRecord = {
+        id: 'test-line',
+        lineIndex: 0,
+        isCommitted: false,
+        cells: [
+          ...Array.from('hello').map((char, i) => ({ id: `c-${i}`, char, state: 'standard' as const, colIndex: i, lineIndex: 0 })),
+          { id: 'space-1', char: ' ', state: 'standard' as const, colIndex: 5, lineIndex: 0 },
+          ...Array.from('bad').map((char, i) => ({ id: `s-${i}`, char, state: 'struck' as const, colIndex: 6 + i, lineIndex: 0, isStruck: true })),
+          { id: 'space-2', char: ' ', state: 'standard' as const, colIndex: 9, lineIndex: 0 },
+          ...Array.from('world').map((char, i) => ({ id: `w-${i}`, char, state: 'standard' as const, colIndex: 10 + i, lineIndex: 0 })),
+        ],
+      };
+
+      expect(sanitizeLine(line)).toBe('hello world');
+    });
+
+    it('v0.9.7.4.4: Session word count target reached bolding and persistence contract', async () => {
+      const store = useTypingStore.getState();
+      await store.newProject();
+      store.setManifest({ sessionWordTarget: 5 });
+
+      // Active session starts with 0 words
+      expect(useTypingStore.getState().manifest.sessionWordTarget).toBe(5);
+
+      // Type 6 words
+      for (const ch of 'one two three four five six ') {
+        store.insertChar(ch);
+      }
+      store.syncSessionStats();
+
+      const activeSession = useTypingStore.getState().activeSessions[0];
+      expect(activeSession.wordCount).toBe(6);
+      expect(activeSession.targetReached).toBe(true);
+
+      // Start new session
+      await store.startNewSession();
+
+      // Prior session should be finalized with targetReached: true
+      const sessions = useTypingStore.getState().activeSessions;
+      expect(sessions.length).toBe(2);
+      expect(sessions[0].completedAt).not.toBeNull();
+      expect(sessions[0].targetReached).toBe(true);
+      expect(sessions[1].wordCount).toBe(0);
+      expect(sessions[1].targetReached).toBe(false);
     });
   });
 });

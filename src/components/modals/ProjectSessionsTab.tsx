@@ -1,6 +1,6 @@
 import React from 'react';
 import { SessionRecord } from '@/types';
-import { Clock, Sparkles } from 'lucide-react';
+import { Clock, Sparkles, Plus } from 'lucide-react';
 import { countWords, getActiveSessionText, resolveActiveSessionStats } from '@/lib/projectSerializer';
 import { useTypingStore } from '@/stores/typingStore';
 
@@ -182,17 +182,21 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
         className="flex-1 min-h-0 overflow-y-auto square-scrollbar border border-border/80 bg-background text-foreground p-2 sm:p-3 space-y-2 rounded-[2px]"
       >
         {resolvedSessions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 p-4 text-center gap-2 text-muted-foreground">
+          <div className="flex flex-col items-center justify-center h-36 p-4 text-center gap-2 text-muted-foreground">
             <Clock className="w-8 h-8 opacity-40" />
             <p className="text-xs font-medium">No sessions recorded yet for this project.</p>
             <p className="text-[11px] opacity-70">
-              Start typing in the aperture to initiate your first drafting session.
+              Start typing in the aperture or start a new session below.
             </p>
           </div>
         ) : (
           resolvedSessions.map((session, index) => {
             const isLatest = index === resolvedSessions.length - 1;
             const isActive = isLatest && !session.completedAt;
+            const isTargetMet = isActive
+              ? Boolean(sessionWordTarget && sessionWordTarget > 0 && session.wordCount >= sessionWordTarget)
+              : Boolean(session.targetReached || (sessionWordTarget && sessionWordTarget > 0 && session.wordCount >= sessionWordTarget));
+
             let timeRange: string;
             if (session.isImported) {
               const dt = formatSessionDateTime(session.importedAt || session.startedAt);
@@ -214,7 +218,13 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
                   <span className="font-semibold text-foreground truncate">
                     {timeRange}
                   </span>
-                  <span className="text-muted-foreground font-medium shrink-0 text-right ml-auto">
+                  <span
+                    className={`shrink-0 text-right ml-auto ${
+                      isTargetMet
+                        ? 'font-bold text-foreground'
+                        : 'font-medium text-muted-foreground'
+                    }`}
+                  >
                     {session.wordCount.toLocaleString()} words
                   </span>
                 </div>
@@ -229,6 +239,21 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
             );
           })
         )}
+
+        {/* Always on the bottom: Start New Session Button Card */}
+        <button
+          type="button"
+          onClick={async () => {
+            await useTypingStore.getState().startNewSession();
+          }}
+          className="w-full flex items-center justify-center gap-2 p-2.5 sm:p-3 border border-dashed border-border/80 hover:border-primary/60 bg-muted/15 hover:bg-muted/30 text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none rounded-[2px] font-mono text-[11px] sm:text-xs"
+          title="Start a new drafting session"
+        >
+          <Plus className="w-3.5 h-3.5 text-primary" />
+          <span className="font-semibold tracking-wider uppercase text-[10px] sm:text-[11px]">
+            Start New Session
+          </span>
+        </button>
       </div>
     </div>
   );
