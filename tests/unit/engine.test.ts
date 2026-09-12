@@ -1690,6 +1690,7 @@ describe('Typing Engine & State Machine Invariants', () => {
       document.documentElement.setAttribute('data-aperture-height', '7');
       document.documentElement.setAttribute('data-page-mode', 'scroll');
       document.documentElement.setAttribute('data-text-size', 'xl');
+      document.documentElement.setAttribute('data-updated-at', String(Date.now()));
 
       const sync = readSynchronousSettings();
       expect(sync).not.toBeNull();

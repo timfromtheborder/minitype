@@ -161,12 +161,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   type="button"
                   onClick={() => {
                     const pageSize = mode === 'scroll' ? 999999 : mode === 'notecard' ? 10 : 9999;
-                    if (mode === 'notecard') {
-                      onUpdateHeight(10);
-                      onUpdateManifest({ pageMode: mode, pageSize, activeApertureHeight: 10 });
-                    } else {
-                      onUpdateManifest({ pageMode: mode, pageSize });
-                    }
+                    onUpdateManifest({ pageMode: mode, pageSize });
                   }}
                   className={`py-1.5 px-0.5 rounded-[2px] border text-center transition-all cursor-pointer capitalize text-[10px] sm:text-xs truncate ${
                     (manifest.pageMode || 'scroll') === mode
@@ -359,7 +354,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.7.2
+              Minitype v0.9.7.3
             </span>
           </div>
         </div>

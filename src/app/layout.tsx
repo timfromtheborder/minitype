@@ -49,8 +49,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      data-theme="typewriter"
-      data-page-mode="scroll"
       className={`${interTight.variable} ${courierPrime.variable} h-full antialiased font-sans`}
     >
       <head>

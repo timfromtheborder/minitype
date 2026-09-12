@@ -122,17 +122,18 @@ export function readSynchronousSettings(): (Partial<ManuscriptManifest> & { _upd
 
   // Tier 5: Document element fallback if set by layout script
   if (typeof document !== 'undefined') {
-    const theme = document.documentElement.getAttribute('data-theme') as any;
-    const textSize = document.documentElement.getAttribute('data-text-size') as any;
-    const apertureHeight = document.documentElement.getAttribute('data-aperture-height');
-    const pageMode = document.documentElement.getAttribute('data-page-mode') as any;
-    const pageSize = document.documentElement.getAttribute('data-page-size');
-    const showStats = document.documentElement.getAttribute('data-show-stats');
-    const doubleSpace = document.documentElement.getAttribute('data-double-space');
     const updatedAt = document.documentElement.getAttribute('data-updated-at');
+    // Only accept Tier 5 if data-updated-at is present (confirming the inline script actually found and set saved user settings)
+    if (updatedAt) {
+      const theme = document.documentElement.getAttribute('data-theme') as any;
+      const textSize = document.documentElement.getAttribute('data-text-size') as any;
+      const apertureHeight = document.documentElement.getAttribute('data-aperture-height');
+      const pageMode = document.documentElement.getAttribute('data-page-mode') as any;
+      const pageSize = document.documentElement.getAttribute('data-page-size');
+      const showStats = document.documentElement.getAttribute('data-show-stats');
+      const doubleSpace = document.documentElement.getAttribute('data-double-space');
 
-    if (theme || textSize || apertureHeight || pageMode || pageSize) {
-      const fallback: any = {};
+      const fallback: any = { _updatedAt: parseInt(updatedAt, 10) };
       if (theme) fallback.colorScheme = theme;
       if (textSize) fallback.textSize = textSize;
       if (apertureHeight) fallback.activeApertureHeight = parseInt(apertureHeight, 10);
@@ -140,7 +141,6 @@ export function readSynchronousSettings(): (Partial<ManuscriptManifest> & { _upd
       if (pageSize) fallback.pageSize = parseInt(pageSize, 10);
       if (showStats !== null && showStats !== undefined) fallback.showStats = showStats === 'true';
       if (doubleSpace !== null && doubleSpace !== undefined) fallback.doubleSpaceLinebreaks = doubleSpace === 'true';
-      if (updatedAt) fallback._updatedAt = parseInt(updatedAt, 10);
       return fallback;
     }
   }
