@@ -373,7 +373,6 @@ export const PrintModal: React.FC<PrintModalProps> = ({
               <ProjectFilesTab
                 activeManuscriptId={manifest.id}
                 onCloseModal={onClose}
-                onSelectDocumentTab={() => setActiveTab('document')}
               />
             </div>
           </div>

@@ -22,7 +22,6 @@ import {
 interface ProjectFilesTabProps {
   activeManuscriptId: string;
   onCloseModal: () => void;
-  onSelectDocumentTab: () => void;
 }
 
 type SortField = 'modified' | 'created' | 'name';
@@ -31,7 +30,6 @@ type SortDirection = 'asc' | 'desc';
 export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
   activeManuscriptId,
   onCloseModal: _onCloseModal,
-  onSelectDocumentTab,
 }) => {
   const [files, setFiles] = useState<ManuscriptManifest[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -89,7 +87,6 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
       await useTypingStore.getState().loadProject(id);
     }
     await refreshFiles();
-    onSelectDocumentTab();
   };
 
   const handleDeleteProject = async (id: string) => {
