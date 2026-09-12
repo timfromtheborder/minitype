@@ -195,7 +195,7 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
             const isActive = isLatest && !session.completedAt;
             const isTargetMet = isActive
               ? Boolean(sessionWordTarget && sessionWordTarget > 0 && session.wordCount >= sessionWordTarget)
-              : Boolean(session.targetReached || (sessionWordTarget && sessionWordTarget > 0 && session.wordCount >= sessionWordTarget));
+              : Boolean(session.targetReached);
 
             let timeRange: string;
             if (session.isImported) {
@@ -212,6 +212,7 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
             return (
               <div
                 key={session.id}
+                data-session-card="true"
                 className="flex items-center justify-between p-2.5 sm:p-3 border border-border/60 bg-muted/30 text-foreground select-none gap-3 font-mono text-[11px] sm:text-xs rounded-[2px]"
               >
                 <div className="flex items-center justify-between gap-3 min-w-0 flex-1">

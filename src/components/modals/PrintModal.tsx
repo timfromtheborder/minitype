@@ -96,11 +96,13 @@ export const PrintModal: React.FC<PrintModalProps> = ({
     storeCurrentPageLines,
   ]);
 
-  // Restore scroll position specifically for the currently open document
+  // Restore scroll position specifically for the currently open document with safe boundary clamping
   useEffect(() => {
     if (isOpen && activeTab === 'document' && previewScrollRef.current) {
-      const savedPos = documentScrollPositions.get(manifest.id) ?? 0;
-      previewScrollRef.current.scrollTop = savedPos;
+      const el = previewScrollRef.current;
+      const maxScroll = Math.max(0, el.scrollHeight - el.clientHeight);
+      const savedPos = Math.min(documentScrollPositions.get(manifest.id) ?? 0, maxScroll);
+      el.scrollTop = savedPos;
     }
   }, [isOpen, activeTab, manifest.id, sanitizedFullText]);
 
@@ -255,15 +257,21 @@ export const PrintModal: React.FC<PrintModalProps> = ({
               onScroll={(e) => {
                 documentScrollPositions.set(manifest.id, e.currentTarget.scrollTop);
               }}
-              className="relative w-full flex-1 min-h-0 p-3 sm:p-5 rounded-[2px] border border-border/80 bg-card text-card-foreground font-mono text-xs sm:text-sm leading-[1.3] overflow-y-auto square-scrollbar whitespace-pre-wrap select-text shadow-inner"
+              style={{ overflowAnchor: 'none' }}
+              className="relative w-full flex-1 min-h-0 rounded-[2px] border border-border/80 bg-card text-card-foreground overflow-y-auto square-scrollbar shadow-inner [overflow-anchor:none]"
             >
-              {sanitizedFullText.length > 0 ? (
-                sanitizedFullText
-              ) : (
-                <span className="text-muted-foreground/40 italic">
-                  No drafted text to preview. Type in the aperture to begin.
-                </span>
-              )}
+              <div
+                key={`${manifest.id}-${manifest.doubleSpaceLinebreaks ? 'double' : 'single'}`}
+                className="p-3 sm:p-5 font-mono text-xs sm:text-sm leading-relaxed whitespace-pre-wrap select-text"
+              >
+                {sanitizedFullText.length > 0 ? (
+                  sanitizedFullText
+                ) : (
+                  <span className="text-muted-foreground/40 italic">
+                    No drafted text to preview. Type in the aperture to begin.
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Document Tab Bottom Actions Row */}
@@ -291,7 +299,13 @@ export const PrintModal: React.FC<PrintModalProps> = ({
                     type="button"
                     onClick={() => {
                       const isDouble = manifest.doubleSpaceLinebreaks ?? false;
-                      useTypingStore.getState().setManifest({ doubleSpaceLinebreaks: !isDouble });
+                      const nextDouble = !isDouble;
+                      if (!nextDouble) {
+                        // Rescale scroll position from double-space to single-space
+                        const currentPos = documentScrollPositions.get(manifest.id) ?? 0;
+                        documentScrollPositions.set(manifest.id, Math.floor(currentPos / 2));
+                      }
+                      useTypingStore.getState().setManifest({ doubleSpaceLinebreaks: nextDouble });
                     }}
                     className={`flex items-center gap-1.5 px-2 py-1 rounded-[2px] border transition-colors cursor-pointer text-[clamp(10px,0.8em,12px)] font-sans ${
                       manifest.doubleSpaceLinebreaks
