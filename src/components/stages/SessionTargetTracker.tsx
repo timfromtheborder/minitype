@@ -11,6 +11,7 @@ export const SessionTargetTracker: React.FC = React.memo(function SessionTargetT
   const historicalPages = useTypingStore((state) => state.historicalPages);
   const currentPageNumber = useTypingStore((state) => state.currentPageNumber);
   const activeSessions = useTypingStore((state) => state.activeSessions);
+  const activeColumnLimit = useTypingStore((state) => state.activeColumnLimit);
 
   const { currentSessionWords } = useMemo(() => {
     const allPages = [
@@ -67,7 +68,7 @@ export const SessionTargetTracker: React.FC = React.memo(function SessionTargetT
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [activeColumnLimit]);
 
   useEffect(() => {
     if (filledCount > prevFilledRef.current) {

@@ -62,22 +62,24 @@ export default function Home() {
       {/* Exactly Centered Monospace Aperture */}
       <section className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
         <div className="relative flex flex-col items-center">
-          {/* Session Target Tracking Graphic (rendered directly touching top edge of platen) */}
-          {engine.manifest.showSessionTargetTracker !== false && (engine.manifest.sessionWordTarget ?? 0) > 0 && (
-            <div className="absolute bottom-full -mb-[1px] left-0 right-0 pointer-events-none">
-              <SessionTargetTracker />
-            </div>
-          )}
+          {/* Platen Container with anchored Target Tracker */}
+          <div className="relative">
+            {engine.manifest.showSessionTargetTracker !== false && (engine.manifest.sessionWordTarget ?? 0) > 0 && (
+              <div className="absolute bottom-full -mb-[1px] left-0 right-0 pointer-events-none">
+                <SessionTargetTracker />
+              </div>
+            )}
 
-          <ApertureFrame
-            lines={engine.currentPageLines}
-            activeLineIndex={engine.activeLineIndex}
-            activeColIndex={engine.activeColIndex}
-            height={engine.manifest.activeApertureHeight}
-            isLocked={engine.isLocked}
-            isHighlighting={engine.isHighlighting}
-            isPaused={isPrintOpen || isSettingsOpen}
-          />
+            <ApertureFrame
+              lines={engine.currentPageLines}
+              activeLineIndex={engine.activeLineIndex}
+              activeColIndex={engine.activeColIndex}
+              height={engine.manifest.activeApertureHeight}
+              isLocked={engine.isLocked}
+              isHighlighting={engine.isHighlighting}
+              isPaused={isPrintOpen || isSettingsOpen}
+            />
+          </div>
 
           {/* Live Drafting Metadata and Right-Justified Save Checkbox */}
           <DocumentStats />
@@ -86,7 +88,7 @@ export default function Home() {
 
       {/* UTILITY DECK: Viewport Base, centered */}
       <footer className="absolute bottom-0 left-0 right-0 flex justify-center items-center pb-[max(0.75rem,env(safe-area-inset-bottom))] px-2.5 sm:px-6 select-none text-xs">
-        <div className="relative flex items-center justify-center gap-2 sm:gap-3">
+        <div className="flex items-center justify-center gap-2 sm:gap-3">
           {/* Project Button */}
           <button
             type="button"
@@ -119,9 +121,9 @@ export default function Home() {
             <span>Settings</span>
           </button>
 
-          {/* Save Status Icon: positioned to the right of Settings with matching gap, vertically centered, while buttons stay dead-center */}
+          {/* Save Status Icon: centered together with bottom buttons */}
           <div
-            className="absolute left-[calc(100%+0.5rem)] sm:left-[calc(100%+0.75rem)] top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none select-none text-muted-foreground"
+            className="flex items-center justify-center pointer-events-none select-none text-muted-foreground w-4 h-4 ml-0.5"
             aria-hidden="true"
           >
             {engine.persistenceError || engine.saveState === 'error' ? (
