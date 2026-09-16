@@ -716,28 +716,51 @@ export const createProjectSlice: StateCreator<
     const priorSessions = activeSessions.slice(0, -1);
     const currentSessionText = getActiveSessionText(fullText, priorSessions);
 
-    // Requirement: If the current session is empty, reset the session time but don't start a new session
+    // Requirement: If the current session is empty, reset the session time or seed session 1
     if (currentWordCount === 0 && currentSessionText.length === 0) {
-      if (activeSessions.length > 0) {
-        const lastSession = activeSessions[activeSessions.length - 1];
-        const updatedSession: SessionRecord = {
-          ...lastSession,
+      if (activeSessions.length === 0) {
+        const newSession: SessionRecord = {
+          id: `${projectId}-session-1`,
+          projectId,
+          sessionNumber: 1,
           startedAt: now,
           completedAt: null,
           text: '',
           wordCount: 0,
+          targetReached: false,
         };
-        activeSessions[activeSessions.length - 1] = updatedSession;
-        await saveSession(updatedSession).catch(console.error);
-        const updatedManifest = {
+        activeSessions.push(newSession);
+        await saveSession(newSession).catch(console.error);
+        const updatedManifest: ManuscriptManifest = {
           ...state.manifest,
           outboxCount: 0,
+          activeSessionId: newSession.id,
+          sessionCount: 1,
         };
         if (state.manifest.mode === 'local') {
           await saveManuscript(updatedManifest).catch(console.error);
         }
         set({ activeSessions, manifest: updatedManifest });
+        return;
       }
+      const lastSession = activeSessions[activeSessions.length - 1];
+      const updatedSession: SessionRecord = {
+        ...lastSession,
+        startedAt: now,
+        completedAt: null,
+        text: '',
+        wordCount: 0,
+      };
+      activeSessions[activeSessions.length - 1] = updatedSession;
+      await saveSession(updatedSession).catch(console.error);
+      const updatedManifest = {
+        ...state.manifest,
+        outboxCount: 0,
+      };
+      if (state.manifest.mode === 'local') {
+        await saveManuscript(updatedManifest).catch(console.error);
+      }
+      set({ activeSessions, manifest: updatedManifest });
       return;
     }
 
@@ -776,53 +799,49 @@ export const createProjectSlice: StateCreator<
     activeSessions.push(newSession);
     await saveSession(newSession).catch(console.error);
 
-    // 3. Advance to a fresh linebreak in the aperture if current line has content
+    // 3. Advance to a fresh linebreak in the aperture, insert session divider line
     let lines = [...state.currentPageLines];
     const currentLine = lines[state.activeLineIndex];
     if (currentLine && currentLine.cells.length > 0) {
       lines[state.activeLineIndex] = { ...currentLine, isCommitted: true, wrapType: 'hard' };
-      const nextIdx = state.activeLineIndex + 1;
-      lines.push(createEmptyLine(state.currentPageNumber, nextIdx));
-
-      const updatedManifest: ManuscriptManifest = {
-        ...state.manifest,
-        outboxCount: 0,
-        activeSessionId: newSession.id,
-        sessionCount: activeSessions.length,
-        totalWordCount: countWords(fullText),
-      };
-      await saveManuscript(updatedManifest).catch(console.error);
-      await savePage({
-        id: `${state.manifest.id}-page-${state.currentPageNumber}`,
-        manuscriptId: state.manifest.id,
-        pageNumber: state.currentPageNumber,
-        lines,
-        completedAt: null,
-      }).catch(console.error);
-
-      set({
-        currentPageLines: lines,
-        activeLineIndex: nextIdx,
-        activeColIndex: 0,
-        activeSessions,
-        manifest: updatedManifest,
-        sessionCommittedLines: 0,
-      });
-    } else {
-      const updatedManifest: ManuscriptManifest = {
-        ...state.manifest,
-        outboxCount: 0,
-        activeSessionId: newSession.id,
-        sessionCount: activeSessions.length,
-        totalWordCount: countWords(fullText),
-      };
-      await saveManuscript(updatedManifest).catch(console.error);
-      set({
-        activeSessions,
-        manifest: updatedManifest,
-        sessionCommittedLines: 0,
-      });
     }
+
+    const dividerIdx = lines.length;
+    lines.push({
+      id: `${state.manifest.id}-divider-${nextSessionNum}`,
+      lineIndex: dividerIdx,
+      cells: [],
+      isCommitted: true,
+      isSessionDivider: true,
+    });
+
+    const nextDraftingIdx = lines.length;
+    lines.push(createEmptyLine(state.currentPageNumber, nextDraftingIdx));
+
+    const updatedManifest: ManuscriptManifest = {
+      ...state.manifest,
+      outboxCount: 0,
+      activeSessionId: newSession.id,
+      sessionCount: activeSessions.length,
+      totalWordCount: countWords(fullText),
+    };
+    await saveManuscript(updatedManifest).catch(console.error);
+    await savePage({
+      id: `${state.manifest.id}-page-${state.currentPageNumber}`,
+      manuscriptId: state.manifest.id,
+      pageNumber: state.currentPageNumber,
+      lines,
+      completedAt: null,
+    }).catch(console.error);
+
+    set({
+      currentPageLines: lines,
+      activeLineIndex: nextDraftingIdx,
+      activeColIndex: 0,
+      activeSessions,
+      manifest: updatedManifest,
+      sessionCommittedLines: 0,
+    });
   },
 
   syncSessionStats: (fullText?: string, words?: number) => {

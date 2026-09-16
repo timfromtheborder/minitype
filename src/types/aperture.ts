@@ -17,4 +17,5 @@ export interface LineRecord {
   isCommitted: boolean;
   wrapType?: 'soft' | 'hard';
   explicitTrailingWhitespace?: boolean;
+  isSessionDivider?: boolean;
 }

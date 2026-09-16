@@ -193,7 +193,7 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = React.memo(function A
           <span className="flex-1 text-[0.625rem] text-center overflow-hidden whitespace-nowrap truncate tracking-widest text-muted-foreground/25 opacity-70 px-1">
             · · · · · · · · · · · · ·
           </span>
-          <span className="text-[0.625rem] font-semibold text-muted-foreground/60 px-1 shrink-0">35</span>
+          <span className="text-[0.625rem] font-semibold text-muted-foreground/45 px-1 shrink-0">35</span>
           <span className="flex-1 text-[0.625rem] text-center overflow-hidden whitespace-nowrap truncate tracking-widest text-muted-foreground/25 opacity-70 px-1">
             · · · · · · · · · · · · ·
           </span>
@@ -220,7 +220,7 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = React.memo(function A
                   key={line.id}
                   className="h-[1.25rem] flex items-center justify-end text-[0.625rem] font-semibold text-muted-foreground/45 font-mono leading-none tabular-nums"
                 >
-                  {actualIndex + 1}
+                  {line.isSessionDivider ? '' : actualIndex + 1}
                 </div>
               );
             })}
@@ -237,6 +237,17 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = React.memo(function A
           {visibleLines.map((line, idx) => {
             const actualIndex = startIdx + idx;
             const isActive = actualIndex === activeLineIndex;
+
+            if (line.isSessionDivider) {
+              return (
+                <div
+                  key={line.id}
+                  className="relative w-full h-[1.25rem] flex items-center justify-center select-none pointer-events-none"
+                >
+                  <div className="w-full border-t border-dashed border-foreground/30" />
+                </div>
+              );
+            }
 
             // A line is at the topmost spot of the aperture window ONLY when the aperture is completely
             // full to capacity (visibleLines.length === height) and this line occupies the 0th (topmost) slot.

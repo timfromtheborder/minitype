@@ -116,6 +116,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                   if (finalS.doubleSpaceLinebreaks !== undefined) {
                     document.documentElement.setAttribute('data-double-space', String(finalS.doubleSpaceLinebreaks));
                   }
+                  if (finalS.allowStrikeout !== undefined) {
+                    document.documentElement.setAttribute('data-allow-strikeout', String(finalS.allowStrikeout));
+                  }
                   if (candidates[0] && candidates[0].t) {
                     document.documentElement.setAttribute('data-updated-at', String(candidates[0].t));
                   }

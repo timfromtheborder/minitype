@@ -496,6 +496,8 @@ export const createPersistenceSlice: StateCreator<
           outboxCount: 0,
           lastPrintedCharIndex: loadedManifest.lastPrintedCharIndex ?? 0,
           printedPagesCount: loadedManifest.printedPagesCount ?? 0,
+          sessionWordTarget: loadedManifest.sessionWordTarget ?? currentManifest.sessionWordTarget,
+          showSessionTargetTracker: loadedManifest.showSessionTargetTracker ?? currentManifest.showSessionTargetTracker,
           activeSessionId: loadedManifest.activeSessionId || (normalizedSessions.length > 0 ? normalizedSessions[normalizedSessions.length - 1].id : ''),
           sessionCount: normalizedSessions.length,
           totalWordCount: countWords(cleanText),

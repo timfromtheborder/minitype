@@ -106,6 +106,19 @@ export const PrintModal: React.FC<PrintModalProps> = ({
     }
   }, [isOpen, activeTab, manifest.id, sanitizedFullText]);
 
+  // Escape key dismisses modal
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleDownloadTxt = () => {
@@ -243,11 +256,11 @@ export const PrintModal: React.FC<PrintModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex items-center gap-1 px-2 py-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent hover:border-border/60 transition-colors cursor-pointer text-[clamp(11px,0.85em,14px)]"
+                className="flex items-center gap-1 px-2 py-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-border/60 transition-colors cursor-pointer text-xs"
                 title="Return to writing in aperture"
               >
                 <CornerUpLeft className="w-4 h-4 shrink-0" />
-                <span className="hidden sm:inline font-sans font-semibold">Return</span>
+                <span className="hidden sm:inline font-sans text-xs font-semibold">Return</span>
               </button>
             </div>
 
@@ -268,7 +281,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
                   sanitizedFullText
                 ) : (
                   <span className="text-muted-foreground/40 italic">
-                    No drafted text to preview. Type in the aperture to begin.
+                    No preview available.
                   </span>
                 )}
               </div>
@@ -387,11 +400,11 @@ export const PrintModal: React.FC<PrintModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex items-center gap-1 px-2 py-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent hover:border-border/60 transition-colors cursor-pointer text-xs"
+                className="flex items-center gap-1 px-2 py-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-border/60 transition-colors cursor-pointer text-xs"
                 title="Return to writing in aperture"
               >
                 <CornerUpLeft className="w-4 h-4 shrink-0" />
-                <span className="hidden sm:inline font-sans text-[11px] font-semibold">Return</span>
+                <span className="hidden sm:inline font-sans text-xs font-semibold">Return</span>
               </button>
             </div>
 
@@ -441,11 +454,11 @@ export const PrintModal: React.FC<PrintModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex items-center gap-1 px-2 py-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent hover:border-border/60 transition-colors cursor-pointer text-xs"
+                className="flex items-center gap-1 px-2 py-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-border/60 transition-colors cursor-pointer text-xs"
                 title="Return to writing in aperture"
               >
                 <CornerUpLeft className="w-4 h-4 shrink-0" />
-                <span className="hidden sm:inline font-sans text-[11px] font-semibold">Return</span>
+                <span className="hidden sm:inline font-sans text-xs font-semibold">Return</span>
               </button>
             </div>
 

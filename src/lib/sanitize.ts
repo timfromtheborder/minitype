@@ -134,6 +134,9 @@ export function sanitizeManuscript(
 
     for (let i = 0; i < pageLines.length; i++) {
       const line = pageLines[i];
+      if (line.isSessionDivider) {
+        continue;
+      }
 
       const rawLine = sanitizeLine(line);
       const lineText = rawLine.trimEnd();

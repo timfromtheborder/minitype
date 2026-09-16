@@ -68,9 +68,20 @@ export function useTypingEngine(options?: UseTypingEngineOptions) {
       // 4. Backspace Trigger
       if (e.key === 'Backspace') {
         e.preventDefault();
-        typewriterAudio.playBackspace();
-        const byWord = e.ctrlKey || e.metaKey;
-        state.handleBackspace({ byWord });
+        const allowStrikeout = state.manifest.allowStrikeout !== false;
+        const curLine = state.currentPageLines[state.activeLineIndex];
+        const prevLine = state.activeLineIndex > 0 ? state.currentPageLines[state.activeLineIndex - 1] : null;
+        const isCarriageReturnCancel =
+          state.activeLineIndex > 0 &&
+          (!curLine || curLine.cells.length === 0) &&
+          prevLine?.wrapType === 'hard' &&
+          !prevLine?.isSessionDivider;
+
+        if (allowStrikeout || isCarriageReturnCancel) {
+          typewriterAudio.playBackspace();
+          const byWord = e.ctrlKey || e.metaKey;
+          state.handleBackspace({ byWord });
+        }
         return;
       }
 

@@ -269,14 +269,39 @@ export const createApertureSlice: StateCreator<
 
     const lines = [...state.currentPageLines];
     const activeLineIndex = state.activeLineIndex;
-    const minVisibleLine = Math.max(0, activeLineIndex - state.manifest.activeApertureHeight + 1);
+
+    let lastDividerIndex = -1;
+    for (let i = lines.length - 1; i >= 0; i--) {
+      if (lines[i]?.isSessionDivider) {
+        lastDividerIndex = i;
+        break;
+      }
+    }
+    const minSessionLine = lastDividerIndex !== -1 ? lastDividerIndex + 1 : 0;
+    const minVisibleLine = Math.max(minSessionLine, activeLineIndex - state.manifest.activeApertureHeight + 1);
+
+    const allowStrikeout = state.manifest.allowStrikeout !== false;
+    const currentLine = lines[activeLineIndex];
+    const prevLine = activeLineIndex > minSessionLine ? lines[activeLineIndex - 1] : null;
+    const isCarriageReturnCancel =
+      activeLineIndex > minSessionLine &&
+      (!currentLine || currentLine.cells.length === 0) &&
+      prevLine?.wrapType === 'hard' &&
+      !prevLine?.isSessionDivider;
+
+    if (!allowStrikeout && !isCarriageReturnCancel) {
+      return;
+    }
+
+    if (activeLineIndex < minSessionLine) {
+      return;
+    }
 
     let isHighlighting = state.isHighlighting;
     let head = state.highlightHead;
 
     if (!isHighlighting) {
       // Enter Highlight Mode: traverse backward from the active typing head
-      const currentLine = lines[activeLineIndex];
       const printableIndex = currentLine ? getLastPrintableCellIndex(currentLine.cells) : -1;
 
       // If active line has printable characters, highlight the last one
@@ -292,12 +317,11 @@ export const createApertureSlice: StateCreator<
 
         isHighlighting = true;
         head = { lineIndex: activeLineIndex, colIndex: printableIndex };
-      } else if (activeLineIndex > 0) {
+      } else if (activeLineIndex > minSessionLine) {
         // If active line is empty and was created by Enter (prevLine has wrapType === 'hard'):
         // Backspace strikes out the carriage return!
         const prevLineIndex = activeLineIndex - 1;
-        const prevLine = lines[prevLineIndex];
-        if (prevLine && prevLine.wrapType === 'hard') {
+        if (prevLine && prevLine.wrapType === 'hard' && !prevLine.isSessionDivider) {
           prevLine.wrapType = 'soft';
           prevLine.isCommitted = false;
           lines.pop();
@@ -325,7 +349,7 @@ export const createApertureSlice: StateCreator<
         }
 
         // If prevLine was soft-wrapped, traverse back to highlight its last printable char
-        if (prevLine) {
+        if (prevLine && !prevLine.isSessionDivider) {
           const prevPrintableIndex = getLastPrintableCellIndex(prevLine.cells);
           if (prevPrintableIndex >= 0) {
             const trimmedCells = prevLine.cells.slice(0, prevPrintableIndex + 1);
@@ -342,11 +366,20 @@ export const createApertureSlice: StateCreator<
             head = { lineIndex: prevLineIndex, colIndex: prevPrintableIndex };
           }
         }
-      } else if (activeLineIndex === 0 && (!currentLine || currentLine.cells.length === 0) && state.historicalPages.length > 0) {
+      } else if (
+        activeLineIndex === 0 &&
+        minSessionLine === 0 &&
+        (!currentLine || currentLine.cells.length === 0) &&
+        state.historicalPages.length > 0
+      ) {
         // If active line is at index 0, empty, and a previous completed page exists:
         // Strike out paragraph carriage return and restore previous page
         const historical = [...state.historicalPages];
-        const prevPage = historical.pop()!;
+        const prevPage = historical[historical.length - 1];
+        if (prevPage && prevPage.lines.some((l) => l.isSessionDivider)) {
+          return;
+        }
+        historical.pop();
         const restoredLines = [...prevPage.lines];
         const lastLineIndex = Math.max(0, restoredLines.length - 1);
         const lastLine = restoredLines[lastLineIndex];

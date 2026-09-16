@@ -3161,6 +3161,167 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(sessions[1].targetReached).toBe(false);
     });
   });
+
+  describe('v0.9.7.5: Pass A - Mechanical & Session Polish, Strikeout Lockout & Session Boundary', () => {
+    it('restores sessionWordTarget and showSessionTargetTracker during rehydrate', async () => {
+      const store = useTypingStore.getState();
+      await store.newProject();
+      const projId = useTypingStore.getState().manifest.id;
+
+      // Set sessionWordTarget and persist
+      store.setManifest({ sessionWordTarget: 250, showSessionTargetTracker: false });
+      expect(useTypingStore.getState().manifest.sessionWordTarget).toBe(250);
+      expect(useTypingStore.getState().manifest.showSessionTargetTracker).toBe(false);
+
+      // Save to IndexedDB
+      await db.manuscripts.put(useTypingStore.getState().manifest);
+
+      // Rehydrate
+      await useTypingStore.getState().rehydrate();
+      const rehydratedManifest = useTypingStore.getState().manifest;
+      expect(rehydratedManifest.id).toBe(projId);
+      expect(rehydratedManifest.sessionWordTarget).toBe(250);
+      expect(rehydratedManifest.showSessionTargetTracker).toBe(false);
+    });
+
+    it('suppresses character strikeout when allowStrikeout is false, but allows carriage return striking', () => {
+      const store = useTypingStore.getState();
+      store.setManifest({ allowStrikeout: false });
+
+      // Type "hello"
+      for (const ch of 'hello') {
+        store.insertChar(ch);
+      }
+      expect(useTypingStore.getState().currentPageLines[0].cells.length).toBe(5);
+
+      // Backspace should be suppressed
+      store.handleBackspace();
+      let state = useTypingStore.getState();
+      expect(state.isHighlighting).toBe(false);
+      expect(state.currentPageLines[0].cells[4].state).toBe('standard');
+
+      // Now press Enter to create a new empty line
+      store.handleEnter();
+      state = useTypingStore.getState();
+      expect(state.activeLineIndex).toBe(1);
+      expect(state.currentPageLines).toHaveLength(2);
+      expect(state.currentPageLines[0].wrapType).toBe('hard');
+
+      // Backspace on empty line created by Enter strikes out the carriage return
+      store.handleBackspace();
+      state = useTypingStore.getState();
+      expect(state.activeLineIndex).toBe(0);
+      expect(state.currentPageLines).toHaveLength(1);
+      expect(state.currentPageLines[0].wrapType).toBe('soft');
+    });
+
+    it('skips session divider lines during sanitizeManuscript', () => {
+      const pages: PageRecord[] = [
+        {
+          pageNumber: 1,
+          completedAt: null,
+          lines: [
+            {
+              id: 'line-0',
+              lineIndex: 0,
+              isCommitted: true,
+              wrapType: 'hard',
+              cells: [
+                { id: 'c0', char: 'F', state: 'standard', colIndex: 0, lineIndex: 0 },
+                { id: 'c1', char: 'i', state: 'standard', colIndex: 1, lineIndex: 0 },
+                { id: 'c2', char: 'r', state: 'standard', colIndex: 2, lineIndex: 0 },
+                { id: 'c3', char: 's', state: 'standard', colIndex: 3, lineIndex: 0 },
+                { id: 'c4', char: 't', state: 'standard', colIndex: 4, lineIndex: 0 },
+              ],
+            },
+            {
+              id: 'divider-1',
+              lineIndex: 1,
+              isCommitted: true,
+              isSessionDivider: true,
+              cells: [],
+            },
+            {
+              id: 'line-2',
+              lineIndex: 2,
+              isCommitted: false,
+              cells: [
+                { id: 'c5', char: 'S', state: 'standard', colIndex: 0, lineIndex: 2 },
+                { id: 'c6', char: 'e', state: 'standard', colIndex: 1, lineIndex: 2 },
+                { id: 'c7', char: 'c', state: 'standard', colIndex: 2, lineIndex: 2 },
+                { id: 'c8', char: 'o', state: 'standard', colIndex: 3, lineIndex: 2 },
+                { id: 'c9', char: 'n', state: 'standard', colIndex: 4, lineIndex: 2 },
+                { id: 'c10', char: 'd', state: 'standard', colIndex: 5, lineIndex: 2 },
+              ],
+            },
+          ],
+        },
+      ];
+
+      const sanitized = sanitizeManuscript(pages);
+      expect(sanitized).toBe('First\nSecond');
+      expect(sanitized).not.toContain('divider');
+    });
+
+    it('clamps backspace to session boundary and does not cross session divider into old session', async () => {
+      const store = useTypingStore.getState();
+      await store.newProject();
+
+      // Write in Session 1
+      for (const ch of 'First session text') {
+        store.insertChar(ch);
+      }
+      store.syncSessionStats();
+
+      // Start Session 2 -> inserts divider line
+      await store.startNewSession();
+
+      const stateAfterNewSession = useTypingStore.getState();
+      const lines = stateAfterNewSession.currentPageLines;
+      const activeIdx = stateAfterNewSession.activeLineIndex;
+
+      // Verify divider line exists before active line
+      expect(lines.some((l) => l.isSessionDivider)).toBe(true);
+      expect(lines[activeIdx - 1]?.isSessionDivider).toBe(true);
+
+      // Active line is empty in Session 2. Backspacing should NOT delete or cross the session divider
+      store.handleBackspace();
+      const stateAfterBackspace = useTypingStore.getState();
+      expect(stateAfterBackspace.activeLineIndex).toBe(activeIdx);
+      expect(stateAfterBackspace.currentPageLines.length).toBe(lines.length);
+
+      // Type a character in Session 2
+      store.insertChar('A');
+      expect(useTypingStore.getState().activeColIndex).toBe(1);
+
+      // Backspace enters highlight mode on 'A'
+      store.handleBackspace();
+      expect(useTypingStore.getState().isHighlighting).toBe(true);
+      expect(useTypingStore.getState().highlightHead?.lineIndex).toBe(activeIdx);
+
+      // Additional backspace cannot step past column 0 into the divider or session 1
+      store.handleBackspace();
+      expect(useTypingStore.getState().highlightHead?.lineIndex).toBe(activeIdx);
+      expect(useTypingStore.getState().highlightHead?.colIndex).toBe(0);
+    });
+
+    it('seeds Session 1 immediately on brand-new empty project in startNewSession', async () => {
+      const store = useTypingStore.getState();
+      await store.newProject();
+
+      // Brand new project starts with 0 active sessions
+      expect(useTypingStore.getState().activeSessions.length).toBe(0);
+
+      // Calling startNewSession immediately seeds Session 1
+      await store.startNewSession();
+      const sessions = useTypingStore.getState().activeSessions;
+      expect(sessions.length).toBe(1);
+      expect(sessions[0].sessionNumber).toBe(1);
+      expect(sessions[0].completedAt).toBeNull();
+      expect(sessions[0].wordCount).toBe(0);
+      expect(useTypingStore.getState().manifest.activeSessionId).toBe(sessions[0].id);
+    });
+  });
 });
 
 

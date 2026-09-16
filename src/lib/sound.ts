@@ -7,6 +7,8 @@ class TypewriterAudio {
   private backspaceBuffers: AudioBuffer[] = [];
   private strikeBuffers: AudioBuffer[] = [];
   private duckUntil: number = 0;
+  private masterGain: GainNode | null = null;
+  private compressor: DynamicsCompressorNode | null = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -27,6 +29,7 @@ class TypewriterAudio {
           const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
           if (AudioCtx) {
             this.ctx = new AudioCtx();
+            this.initAudioPipeline(this.ctx);
             this.initNoisePools(this.ctx);
           }
         }
@@ -39,6 +42,29 @@ class TypewriterAudio {
       window.addEventListener('pointerdown', unlock, { once: true, passive: true });
       window.addEventListener('keydown', unlock, { once: true });
     }
+  }
+
+  private initAudioPipeline(ctx: AudioContext) {
+    if (this.masterGain && this.compressor) return;
+    try {
+      this.compressor = ctx.createDynamicsCompressor();
+      this.compressor.threshold.setValueAtTime(-12, ctx.currentTime);
+      this.compressor.knee.setValueAtTime(30, ctx.currentTime);
+      this.compressor.ratio.setValueAtTime(8, ctx.currentTime);
+      this.compressor.attack.setValueAtTime(0.003, ctx.currentTime);
+      this.compressor.release.setValueAtTime(0.05, ctx.currentTime);
+
+      this.masterGain = ctx.createGain();
+      this.masterGain.gain.setValueAtTime(0.9, ctx.currentTime);
+
+      this.masterGain.connect(this.compressor);
+      this.compressor.connect(ctx.destination);
+    } catch {}
+  }
+
+  private getMasterBus(ctx: AudioContext): AudioNode {
+    this.initAudioPipeline(ctx);
+    return this.masterGain ?? ctx.destination;
   }
 
   private initNoisePools(ctx: AudioContext) {
@@ -91,6 +117,7 @@ class TypewriterAudio {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (AudioCtx) {
         this.ctx = new AudioCtx();
+        this.initAudioPipeline(this.ctx);
         this.initNoisePools(this.ctx);
       }
     }
@@ -147,7 +174,7 @@ class TypewriterAudio {
 
       noise.connect(filter);
       filter.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(this.getMasterBus(ctx));
 
       noise.start(t);
     } catch {}
@@ -182,7 +209,7 @@ class TypewriterAudio {
 
       noise.connect(filter);
       filter.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(this.getMasterBus(ctx));
 
       noise.start(t);
     } catch {}
@@ -217,7 +244,7 @@ class TypewriterAudio {
 
       noise.connect(filter);
       filter.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(this.getMasterBus(ctx));
 
       noise.start(t);
     } catch {}
@@ -255,7 +282,7 @@ class TypewriterAudio {
 
       noise.connect(filter);
       filter.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(this.getMasterBus(ctx));
 
       noise.start(t);
     } catch {}
@@ -304,7 +331,7 @@ class TypewriterAudio {
 
       zipSource.connect(zipFilter);
       zipFilter.connect(zipGain);
-      zipGain.connect(ctx.destination);
+      zipGain.connect(this.getMasterBus(ctx));
       zipSource.start(t);
 
       // 2. The "Clunk" (margin stop impact - softened and de-bassed)
@@ -321,7 +348,7 @@ class TypewriterAudio {
       thudGain.gain.exponentialRampToValueAtTime(0.001, clunkTime + 0.045);
 
       thudOsc.connect(thudGain);
-      thudGain.connect(ctx.destination);
+      thudGain.connect(this.getMasterBus(ctx));
       thudOsc.start(clunkTime);
       thudOsc.stop(clunkTime + 0.045);
 
@@ -345,7 +372,7 @@ class TypewriterAudio {
 
       metalSource.connect(metalFilter);
       metalFilter.connect(metalGain);
-      metalGain.connect(ctx.destination);
+      metalGain.connect(this.getMasterBus(ctx));
       metalSource.start(clunkTime);
     } catch {}
   }
@@ -392,7 +419,7 @@ class TypewriterAudio {
 
       source.connect(filter);
       filter.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(this.getMasterBus(ctx));
       source.start(t);
 
       // Stepper motor feed click at end of line (0.18s)
@@ -405,7 +432,7 @@ class TypewriterAudio {
       stepGain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
 
       stepOsc.connect(stepGain);
-      stepGain.connect(ctx.destination);
+      stepGain.connect(this.getMasterBus(ctx));
       stepOsc.start(t + 0.18);
       stepOsc.stop(t + 0.22);
     } catch {}
@@ -449,7 +476,7 @@ class TypewriterAudio {
 
       puffSource.connect(puffFilter);
       puffFilter.connect(puffGain);
-      puffGain.connect(ctx.destination);
+      puffGain.connect(this.getMasterBus(ctx));
       puffSource.start(t);
 
       // 2. Dull cardstock body pop (snappy lower-mid pitch sweep, no sub-bass)
@@ -465,7 +492,7 @@ class TypewriterAudio {
       oscGain.gain.exponentialRampToValueAtTime(0.001, t + thwupDuration);
 
       osc.connect(oscGain);
-      oscGain.connect(ctx.destination);
+      oscGain.connect(this.getMasterBus(ctx));
 
       osc.start(t);
       osc.stop(t + thwupDuration);

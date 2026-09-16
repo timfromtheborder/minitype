@@ -37,6 +37,7 @@ export interface ManuscriptManifest {
   showSessionTargetTracker?: boolean;
   sessionWordTarget?: number;
   doubleSpaceLinebreaks?: boolean;
+  allowStrikeout?: boolean;
   activeSessionId?: string;
   sessionCount?: number;
   totalWordCount?: number;

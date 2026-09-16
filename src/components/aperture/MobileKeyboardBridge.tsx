@@ -18,13 +18,13 @@ export const MobileKeyboardBridge = forwardRef<
   MobileKeyboardBridgeProps
 >(function MobileKeyboardBridge({ isPaused = false }, ref) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const store = useTypingStore();
+  const isLocked = useTypingStore((state) => state.isLocked);
 
   useImperativeHandle(
     ref,
     () => ({
       focus: () => {
-        if (!isPaused && !store.isLocked) {
+        if (!isPaused && !isLocked) {
           inputRef.current?.focus();
         }
       },
@@ -32,7 +32,7 @@ export const MobileKeyboardBridge = forwardRef<
         inputRef.current?.blur();
       },
     }),
-    [isPaused, store.isLocked]
+    [isPaused, isLocked]
   );
 
   // Auto-blur when typing is paused (e.g., modals open)
@@ -61,7 +61,7 @@ export const MobileKeyboardBridge = forwardRef<
         timeoutId = setTimeout(() => {
           window.scrollTo(0, 0);
           document.body.scrollTop = 0;
-          if (!isPaused && !store.isLocked) {
+          if (!isPaused && !useTypingStore.getState().isLocked) {
             inputRef.current?.focus();
           }
         }, 350);
@@ -76,7 +76,7 @@ export const MobileKeyboardBridge = forwardRef<
       window.removeEventListener('orientationchange', handleOrientationChange);
       screen.orientation?.removeEventListener?.('change', handleOrientationChange);
     };
-  }, [isPaused, store.isLocked]);
+  }, [isPaused]);
 
   // Prevent any accidental page offset drifting
   useEffect(() => {
@@ -95,7 +95,8 @@ export const MobileKeyboardBridge = forwardRef<
 
   const handleBeforeInput = (e: React.FormEvent<HTMLInputElement>) => {
     const nativeEvent = e.nativeEvent as InputEvent;
-    if (isPaused || store.isLocked) {
+    const s = useTypingStore.getState();
+    if (isPaused || s.isLocked) {
       e.preventDefault();
       return;
     }
@@ -114,14 +115,14 @@ export const MobileKeyboardBridge = forwardRef<
           }
           lastHandledInputRef.current = { token: char, time: now };
 
-          if (store.isHighlighting) {
+          if (s.isHighlighting) {
             typewriterAudio.playStrike();
           } else if (char === ' ') {
             typewriterAudio.playSpace();
           } else {
             typewriterAudio.playKeyClick();
           }
-          store.insertChar(char);
+          s.insertChar(char);
         }
       }
     } else if (inputType === 'deleteContentBackward') {
@@ -131,8 +132,19 @@ export const MobileKeyboardBridge = forwardRef<
         return;
       }
       lastHandledInputRef.current = { token: 'Backspace', time: now };
-      typewriterAudio.playBackspace();
-      store.handleBackspace();
+      const allowStrikeout = s.manifest.allowStrikeout !== false;
+      const curLine = s.currentPageLines[s.activeLineIndex];
+      const prevLine = s.activeLineIndex > 0 ? s.currentPageLines[s.activeLineIndex - 1] : null;
+      const isCarriageReturnCancel =
+        s.activeLineIndex > 0 &&
+        (!curLine || curLine.cells.length === 0) &&
+        prevLine?.wrapType === 'hard' &&
+        !prevLine?.isSessionDivider;
+
+      if (allowStrikeout || isCarriageReturnCancel) {
+        typewriterAudio.playBackspace();
+        s.handleBackspace();
+      }
     } else if (inputType === 'insertParagraph' || inputType === 'insertLineBreak') {
       e.preventDefault();
       e.stopPropagation();
@@ -140,15 +152,15 @@ export const MobileKeyboardBridge = forwardRef<
         return;
       }
       lastHandledInputRef.current = { token: 'Enter', time: now };
-      if (store.isHighlighting) {
+      if (s.isHighlighting) {
         typewriterAudio.playStrike();
       } else {
-        const isCompletingNotecard = store.manifest.pageMode === 'notecard' && store.activeLineIndex >= 9;
+        const isCompletingNotecard = s.manifest.pageMode === 'notecard' && s.activeLineIndex >= 9;
         if (!isCompletingNotecard) {
           typewriterAudio.playCarriageReturn();
         }
       }
-      store.handleEnter();
+      s.handleEnter();
     }
 
     if (inputRef.current) {
@@ -157,7 +169,8 @@ export const MobileKeyboardBridge = forwardRef<
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (isPaused || store.isLocked) return;
+    const s = useTypingStore.getState();
+    if (isPaused || s.isLocked) return;
     const now = Date.now();
 
     // Direct key resolution for virtual or hardware keyboards attached to mobile or desktop
@@ -168,8 +181,19 @@ export const MobileKeyboardBridge = forwardRef<
         return;
       }
       lastHandledInputRef.current = { token: 'Backspace', time: now };
-      typewriterAudio.playBackspace();
-      store.handleBackspace();
+      const allowStrikeout = s.manifest.allowStrikeout !== false;
+      const curLine = s.currentPageLines[s.activeLineIndex];
+      const prevLine = s.activeLineIndex > 0 ? s.currentPageLines[s.activeLineIndex - 1] : null;
+      const isCarriageReturnCancel =
+        s.activeLineIndex > 0 &&
+        (!curLine || curLine.cells.length === 0) &&
+        prevLine?.wrapType === 'hard' &&
+        !prevLine?.isSessionDivider;
+
+      if (allowStrikeout || isCarriageReturnCancel) {
+        typewriterAudio.playBackspace();
+        s.handleBackspace();
+      }
     } else if (e.key === 'Enter') {
       e.preventDefault();
       e.stopPropagation();
@@ -177,15 +201,15 @@ export const MobileKeyboardBridge = forwardRef<
         return;
       }
       lastHandledInputRef.current = { token: 'Enter', time: now };
-      if (store.isHighlighting) {
+      if (s.isHighlighting) {
         typewriterAudio.playStrike();
       } else {
-        const isCompletingNotecard = store.manifest.pageMode === 'notecard' && store.activeLineIndex >= 9;
+        const isCompletingNotecard = s.manifest.pageMode === 'notecard' && s.activeLineIndex >= 9;
         if (!isCompletingNotecard) {
           typewriterAudio.playCarriageReturn();
         }
       }
-      store.handleEnter();
+      s.handleEnter();
     } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
       e.preventDefault();
       e.stopPropagation();
@@ -193,14 +217,14 @@ export const MobileKeyboardBridge = forwardRef<
         return;
       }
       lastHandledInputRef.current = { token: e.key, time: now };
-      if (store.isHighlighting) {
+      if (s.isHighlighting) {
         typewriterAudio.playStrike();
       } else if (e.key === ' ') {
         typewriterAudio.playSpace();
       } else {
         typewriterAudio.playKeyClick();
       }
-      store.insertChar(e.key);
+      s.insertChar(e.key);
     }
   };
 

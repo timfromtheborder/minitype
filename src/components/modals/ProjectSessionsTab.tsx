@@ -108,6 +108,8 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
     }
   }, [resolvedSessions.length]);
 
+  const [isPulsingActive, setIsPulsingActive] = React.useState(false);
+
   return (
     <div className="flex-1 min-h-0 flex flex-col gap-2.5 sm:gap-3 overflow-hidden font-sans">
       {/* Overview Banner */}
@@ -185,9 +187,6 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
           <div className="flex flex-col items-center justify-center h-36 p-4 text-center gap-2 text-muted-foreground">
             <Clock className="w-8 h-8 opacity-40" />
             <p className="text-xs font-medium">No sessions recorded yet for this project.</p>
-            <p className="text-[11px] opacity-70">
-              Start typing in the aperture or start a new session below.
-            </p>
           </div>
         ) : (
           resolvedSessions.map((session, index) => {
@@ -213,7 +212,11 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
               <div
                 key={session.id}
                 data-session-card="true"
-                className="flex items-center justify-between p-2.5 sm:p-3 border border-border/60 bg-muted/30 text-foreground select-none gap-3 font-mono text-[11px] sm:text-xs rounded-[2px]"
+                className={`flex items-center justify-between p-2.5 sm:p-3 border text-foreground select-none gap-3 font-mono text-[11px] sm:text-xs rounded-[2px] transition-all duration-300 ${
+                  isActive && isPulsingActive
+                    ? 'border-primary bg-primary/15 shadow-xs'
+                    : 'border-border/60 bg-muted/30'
+                }`}
               >
                 <div className="flex items-center justify-between gap-3 min-w-0 flex-1">
                   <span className="font-semibold text-foreground truncate">
@@ -245,6 +248,13 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
         <button
           type="button"
           onClick={async () => {
+            const hasEmptyActive = resolvedSessions.some(
+              (s, idx) => idx === resolvedSessions.length - 1 && !s.completedAt && s.wordCount === 0
+            );
+            if (hasEmptyActive) {
+              setIsPulsingActive(true);
+              setTimeout(() => setIsPulsingActive(false), 600);
+            }
             await useTypingStore.getState().startNewSession();
           }}
           className="w-full flex items-center justify-center gap-2 p-2.5 sm:p-3 border border-dashed border-border/80 hover:border-primary/60 bg-muted/15 hover:bg-muted/30 text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none rounded-[2px] font-mono text-[11px] sm:text-xs"

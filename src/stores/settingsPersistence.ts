@@ -13,6 +13,7 @@ export const SETTING_KEYS = [
   'showStats',
   'showSessionTargetTracker',
   'doubleSpaceLinebreaks',
+  'allowStrikeout',
 ] as const;
 
 export const SETTINGS_KEY = 'minitype_global_settings';
@@ -38,6 +39,7 @@ export const DEFAULT_MANIFEST: ManuscriptManifest = {
   showSessionTargetTracker: true,
   sessionWordTarget: undefined,
   doubleSpaceLinebreaks: false,
+  allowStrikeout: true,
   sessionCount: 0,
   totalWordCount: 0,
   createdAt: '2026-01-01T00:00:00.000Z',
@@ -132,6 +134,7 @@ export function readSynchronousSettings(): (Partial<ManuscriptManifest> & { _upd
       const pageSize = document.documentElement.getAttribute('data-page-size');
       const showStats = document.documentElement.getAttribute('data-show-stats');
       const doubleSpace = document.documentElement.getAttribute('data-double-space');
+      const allowStrikeout = document.documentElement.getAttribute('data-allow-strikeout');
 
       const fallback: any = { _updatedAt: parseInt(updatedAt, 10) };
       if (theme) fallback.colorScheme = theme;
@@ -141,6 +144,7 @@ export function readSynchronousSettings(): (Partial<ManuscriptManifest> & { _upd
       if (pageSize) fallback.pageSize = parseInt(pageSize, 10);
       if (showStats !== null && showStats !== undefined) fallback.showStats = showStats === 'true';
       if (doubleSpace !== null && doubleSpace !== undefined) fallback.doubleSpaceLinebreaks = doubleSpace === 'true';
+      if (allowStrikeout !== null && allowStrikeout !== undefined) fallback.allowStrikeout = allowStrikeout === 'true';
       return fallback;
     }
   }
@@ -236,6 +240,9 @@ export function persistSettings(manifest: Partial<ManuscriptManifest>): void {
       }
       if (merged.doubleSpaceLinebreaks !== undefined) {
         document.documentElement.setAttribute('data-double-space', String(merged.doubleSpaceLinebreaks));
+      }
+      if (merged.allowStrikeout !== undefined) {
+        document.documentElement.setAttribute('data-allow-strikeout', String(merged.allowStrikeout));
       }
       if (merged._updatedAt) {
         document.documentElement.setAttribute('data-updated-at', String(merged._updatedAt));

@@ -34,6 +34,19 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
     }
   }, [isOpen]);
 
+  // Escape key dismisses settings drawer
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleToggleMute = () => {
@@ -43,6 +56,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
 
   const showStats = manifest.showStats ?? true;
   const showSessionTargetTracker = manifest.showSessionTargetTracker ?? true;
+  const allowStrikeout = manifest.allowStrikeout ?? true;
 
   const handleClose = () => {
     onClose();
@@ -70,7 +84,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           <button
             type="button"
             onClick={handleClose}
-            className="p-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            className="p-1 rounded-[2px] border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
             title="Close"
           >
             <X className="w-4 h-4" />
@@ -323,6 +337,33 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
               </button>
             </div>
 
+            {/* Allow backspace strikeout */}
+            <div
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => onUpdateManifest({ allowStrikeout: !allowStrikeout })}
+            >
+              <span className="text-muted-foreground">Allow backspace strikeout</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={allowStrikeout}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUpdateManifest({ allowStrikeout: !allowStrikeout });
+                }}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[2px] border transition-colors duration-150 ease-in-out focus:outline-hidden ${
+                  allowStrikeout ? 'bg-primary border-primary' : 'bg-muted/70 border-border/80'
+                }`}
+                title="Allow backspace strikeout"
+              >
+                <span
+                  className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-[1px] shadow-xs transition-transform duration-150 ease-in-out ${
+                    allowStrikeout ? 'translate-x-4 bg-primary-foreground' : 'translate-x-0.5 bg-muted-foreground/70'
+                  }`}
+                />
+              </button>
+            </div>
+
             {/* Typing sounds */}
             <div
               className="flex items-center justify-between cursor-pointer"
@@ -354,7 +395,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.7.4.6
+              Minitype v0.9.7.5
             </span>
           </div>
         </div>
