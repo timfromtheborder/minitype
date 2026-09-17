@@ -63,11 +63,11 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
   const viewMode = manifest.documentViewMode || 'typewriter';
   const showDividers = manifest.showSessionDividers !== false;
   const [isPulsingActive, setIsPulsingActive] = useState<boolean>(false);
-  const [showExportConfirm, setShowExportConfirm] = useState<boolean>(false);
-  const showExportConfirmRef = useRef<boolean>(false);
+  const [isConfirmingCloseExport, setIsConfirmingCloseExport] = useState<boolean>(false);
+  const isConfirmingCloseExportRef = useRef<boolean>(false);
   useEffect(() => {
-    showExportConfirmRef.current = showExportConfirm;
-  }, [showExportConfirm]);
+    isConfirmingCloseExportRef.current = isConfirmingCloseExport;
+  }, [isConfirmingCloseExport]);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -107,6 +107,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
       useTypingStore.getState().syncSessionStats(fullClean, computedTotalWords);
     } else {
       prevIsOpenRef.current = false;
+      setIsConfirmingCloseExport(false);
     }
   }, [
     isOpen,
@@ -130,8 +131,8 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        if (showExportConfirmRef.current) {
-          setShowExportConfirm(false);
+        if (isConfirmingCloseExportRef.current) {
+          setIsConfirmingCloseExport(false);
           return;
         }
         onClose();
@@ -261,6 +262,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
   };
 
   const handleCloseActiveSession = async () => {
+    setIsConfirmingCloseExport(false);
     await useTypingStore.getState().closeActiveSession();
   };
 
@@ -278,7 +280,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
   };
 
   const executeExport = async (shouldCloseSession: boolean) => {
-    setShowExportConfirm(false);
+    setIsConfirmingCloseExport(false);
     if (shouldCloseSession) {
       await useTypingStore.getState().closeActiveSession();
     }
@@ -300,10 +302,19 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
 
   const handleExportClick = () => {
     if (hasActiveSession) {
-      setShowExportConfirm(true);
+      setIsConfirmingCloseExport(true);
     } else {
       executeExport(false);
     }
+  };
+
+  const handleConfirmCloseAndExport = async () => {
+    await executeExport(true);
+  };
+
+  const handleModalClose = () => {
+    setIsConfirmingCloseExport(false);
+    onClose();
   };
 
   return (
@@ -312,7 +323,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
       aria-modal="true"
       aria-label="Document"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-2 sm:p-4 animate-in fade-in duration-150"
-      onClick={onClose}
+      onClick={handleModalClose}
     >
       <div
         ref={modalRef}
@@ -356,7 +367,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleModalClose}
             className="flex items-center gap-1 px-2 py-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-border/60 transition-colors cursor-pointer text-xs"
             title="Return to writing in aperture"
           >
@@ -637,7 +648,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
         </div>
 
         {/* Bottom Action Bar */}
-        <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/60 text-xs font-sans shrink-0">
+        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 pt-2 border-t border-border/60 text-xs font-sans shrink-0">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -661,63 +672,38 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={handleExportClick}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] border border-border/80 bg-muted/40 hover:bg-muted hover:border-foreground/40 text-foreground transition-colors cursor-pointer text-xs font-medium shrink-0"
-            title="Export document as plaintext (.txt)"
-          >
-            <Download className="w-3.5 h-3.5 opacity-70" />
-            <span>Export Document</span>
-          </button>
-        </div>
-
-        {/* Export with Active Session Confirmation Dialog */}
-        {showExportConfirm && (
-          <div
-            className="absolute inset-0 z-30 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-100"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowExportConfirm(false);
-            }}
-          >
-            <div
-              className="border border-border bg-card text-card-foreground p-5 rounded-[2px] shadow-2xl max-w-sm w-full flex flex-col gap-3 font-sans select-none"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-                <Download className="w-4 h-4 text-primary" />
-                <span>Export Document</span>
-              </div>
-              <p className="text-xs text-card-foreground/75 leading-relaxed">
-                You have an active drafting session with text. Would you like to close the session before exporting?
-              </p>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-2 border-t border-border/60 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setShowExportConfirm(false)}
-                  className="px-2.5 py-1.5 rounded-[2px] border border-border/80 hover:bg-muted text-card-foreground/70 hover:text-card-foreground transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => executeExport(false)}
-                  className="px-2.5 py-1.5 rounded-[2px] border border-border/80 bg-card-foreground/5 hover:bg-card-foreground/10 text-card-foreground transition-colors cursor-pointer font-medium"
-                >
-                  Export Without Closing
-                </button>
-                <button
-                  type="button"
-                  onClick={() => executeExport(true)}
-                  className="px-3 py-1.5 rounded-[2px] border border-primary bg-primary text-primary-foreground transition-colors cursor-pointer font-semibold shadow-xs"
-                >
-                  Close & Export
-                </button>
-              </div>
+          {isConfirmingCloseExport ? (
+            <div className="flex items-center gap-1.5 animate-in fade-in duration-150 shrink-0">
+              <button
+                type="button"
+                onClick={handleConfirmCloseAndExport}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] border border-primary bg-primary text-primary-foreground font-semibold shadow-xs hover:opacity-90 transition-all cursor-pointer text-xs shrink-0"
+                title="Close active drafting session and export document"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Close active session and export</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsConfirmingCloseExport(false)}
+                className="px-2 py-1.5 rounded-[2px] border border-border/80 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer text-xs"
+                title="Cancel"
+              >
+                Cancel
+              </button>
             </div>
-          </div>
-        )}
+          ) : (
+            <button
+              type="button"
+              onClick={handleExportClick}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] border border-border/80 bg-muted/40 hover:bg-muted hover:border-foreground/40 text-foreground transition-colors cursor-pointer text-xs font-medium shrink-0"
+              title="Export document as plaintext (.txt)"
+            >
+              <Download className="w-3.5 h-3.5 opacity-70" />
+              <span>Export Document</span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

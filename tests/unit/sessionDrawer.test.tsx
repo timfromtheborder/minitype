@@ -861,7 +861,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     container.remove();
   });
 
-  it('exports plaintext directly when no active session with text, but prompts to close session when active text exists', async () => {
+  it('exports plaintext directly when no active session with text, but expands button with confirmation when active text exists', async () => {
     (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
     if (!window.URL.createObjectURL) {
       window.URL.createObjectURL = vi.fn().mockReturnValue('blob:mock');
@@ -901,9 +901,9 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
     });
 
-    // Should download directly without confirmation modal
+    // Should download directly without expanding confirmation
     expect(clickSpy).toHaveBeenCalled();
-    expect(container.textContent).not.toContain('You have an active drafting session with text');
+    expect(container.textContent).not.toContain('Close active session and export');
 
     await act(async () => {
       root.unmount();
@@ -951,17 +951,102 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     );
     expect(exportBtn2).not.toBeUndefined();
 
-    // Click Export Document -> must show prompt asking if user wants to close session
+    // Click Export Document -> button expands and text says 'Close active session and export'
     await act(async () => {
       exportBtn2?.click();
     });
 
-    expect(container.textContent).toContain('You have an active drafting session with text');
-    expect(container.textContent).toContain('Close & Export');
+    expect(container.textContent).toContain('Close active session and export');
+    expect(container.textContent).toContain('Cancel');
 
-    // Click Close & Export
+    // Test reversion 1: Cancel reverts button back to 'Export Document'
+    const cancelBtn = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Cancel')
+    );
+    expect(cancelBtn).not.toBeUndefined();
+
+    await act(async () => {
+      cancelBtn?.click();
+    });
+    expect(container.textContent).not.toContain('Close active session and export');
+    expect(container.textContent).toContain('Export Document');
+
+    // Expand button again
+    const exportBtn3 = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Export Document')
+    );
+    await act(async () => {
+      exportBtn3?.click();
+    });
+    expect(container.textContent).toContain('Close active session and export');
+
+    // Test reversion 2: If 'Close Session' button is pressed, the button reverts
+    const closeSessionBtn = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Close Session')
+    );
+    expect(closeSessionBtn).not.toBeUndefined();
+
+    await act(async () => {
+      closeSessionBtn?.click();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    expect(closeSessionSpy).toHaveBeenCalled();
+    expect(container.textContent).not.toContain('Close active session and export');
+    expect(container.textContent).toContain('Export Document');
+
+    // Test reversion 3: If the modal is closed, the button reverts
+    // Set up active session with text again
+    await act(async () => {
+      useTypingStore.setState({
+        activeSessions: [
+          {
+            id: 'export-session-2',
+            projectId: 'current',
+            sessionNumber: 2,
+            startedAt: now,
+            completedAt: null,
+            text: 'More active words.',
+            wordCount: 3,
+          },
+        ],
+      });
+    });
+
+    // Re-render and expand
+    await act(async () => {
+      root2.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
+    });
+    const exportBtn4 = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Export Document')
+    );
+    await act(async () => {
+      exportBtn4?.click();
+    });
+    expect(container.textContent).toContain('Close active session and export');
+
+    // Close modal (isOpen: false)
+    await act(async () => {
+      root2.render(<SessionDrawer isOpen={false} onClose={() => {}} />);
+    });
+    // Open modal again (isOpen: true)
+    await act(async () => {
+      root2.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
+    });
+    // The button must have reverted to 'Export Document'
+    expect(container.textContent).not.toContain('Close active session and export');
+    expect(container.textContent).toContain('Export Document');
+
+    // Test execution: Clicking 'Close active session and export'
+    const exportBtn5 = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Export Document')
+    );
+    await act(async () => {
+      exportBtn5?.click();
+    });
+
     const closeAndExportBtn = Array.from(container.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Close & Export')
+      b.textContent?.includes('Close active session and export')
     );
     expect(closeAndExportBtn).not.toBeUndefined();
 
@@ -970,7 +1055,8 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
     });
 
-    expect(closeSessionSpy).toHaveBeenCalled();
+    expect(closeSessionSpy).toHaveBeenCalledTimes(2);
+    expect(container.textContent).not.toContain('Close active session and export');
 
     await act(async () => {
       root2.unmount();
