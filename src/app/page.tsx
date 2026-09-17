@@ -90,19 +90,18 @@ export default function Home() {
       suppressHydrationWarning
       className="relative w-full h-[100dvh] max-h-[100dvh] overflow-hidden p-2.5 sm:p-6 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] bg-background text-foreground font-sans select-none"
     >
+      {/* Chrono Suite: Halfway between the platen (at 50dvh) and top of the screen (0dvh) */}
+      <div className="absolute top-[25dvh] left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+        <ChronoSuite
+          showClock={manifest.showClock}
+          typeface={manifest.typeface}
+          isPaused={isPrintOpen || isSettingsOpen}
+        />
+      </div>
+
       {/* Exactly Centered Monospace Aperture */}
       <section className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
         <div className="relative flex flex-col items-center">
-          {/* Chrono Suite (Digital Clock & Session Timer) */}
-          <div className="mb-2.5">
-            <ChronoSuite
-              showClock={manifest.showClock}
-              clockFormat={manifest.clockFormat}
-              typeface={manifest.typeface}
-              isPaused={isPrintOpen || isSettingsOpen}
-            />
-          </div>
-
           {/* Platen Container with anchored Target Tracker */}
           <div className="relative">
             {showSessionTargetTracker !== false && (sessionWordTarget ?? 0) > 0 && (

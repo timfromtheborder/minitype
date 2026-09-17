@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ChronoSuite, formatClockTime } from '@/components/aperture/ChronoSuite';
+import { ChronoSuite, formatClockTime, formatStartTime } from '@/components/aperture/ChronoSuite';
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -19,26 +19,23 @@ describe('ChronoSuite & Clock Formatter', () => {
     document.body.removeChild(container);
   });
 
-  describe('formatClockTime', () => {
-    it('formats 12-hour time with AM/PM', () => {
-      const morningDate = new Date(2026, 8, 17, 9, 5, 0); // 9:05 AM
-      expect(formatClockTime(morningDate, '12h', true)).toBe('9:05 AM');
-
-      const eveningDate = new Date(2026, 8, 17, 21, 30, 0); // 9:30 PM
-      expect(formatClockTime(eveningDate, '12h', true)).toBe('9:30 PM');
+  describe('formatClockTime & formatStartTime', () => {
+    it('formats clock time according to system time', () => {
+      const testDate = new Date(2026, 8, 17, 9, 5, 0);
+      const formatted = formatClockTime(testDate);
+      expect(formatted).toMatch(/9:05/);
     });
 
-    it('formats 12-hour time without AM/PM for badges', () => {
+    it('formats start time compactly for badges', () => {
       const afternoonDate = new Date(2026, 8, 17, 14, 45, 0);
-      expect(formatClockTime(afternoonDate, '12h', false)).toBe('2:45');
+      const formatted = formatStartTime(afternoonDate);
+      expect(formatted).toMatch(/(2:45|14:45)/);
+      expect(formatted).not.toMatch(/[ap]\.?m\.?/i);
     });
 
-    it('formats 24-hour time with padded hours', () => {
-      const morningDate = new Date(2026, 8, 17, 8, 7, 0);
-      expect(formatClockTime(morningDate, '24h')).toBe('08:07');
-
-      const eveningDate = new Date(2026, 8, 17, 23, 59, 0);
-      expect(formatClockTime(eveningDate, '24h')).toBe('23:59');
+    it('supports explicit hour12 override if provided', () => {
+      const afternoonDate = new Date(2026, 8, 17, 14, 30, 0);
+      expect(formatClockTime(afternoonDate, { hour12: false })).toContain('14:30');
     });
   });
 
@@ -52,30 +49,33 @@ describe('ChronoSuite & Clock Formatter', () => {
       expect(container.children.length).toBe(0);
     });
 
-    it('renders clock time and updates on timer intervals', async () => {
+    it('renders clock time 100% larger and updates on timer intervals', async () => {
       vi.setSystemTime(new Date(2026, 8, 17, 10, 15, 0));
 
       const root = createRoot(container);
       await act(async () => {
-        root.render(<ChronoSuite showClock={true} clockFormat="12h" />);
+        root.render(<ChronoSuite showClock={true} />);
       });
 
-      expect(container.textContent).toContain('10:15 AM');
+      const clockBtn = container.querySelector('button[title*="clock"]');
+      expect(clockBtn).not.toBeNull();
+      expect(clockBtn?.className).toContain('text-xl');
+      expect(container.textContent).toMatch(/10:15/);
 
       // Advance 1 minute
       await act(async () => {
         vi.advanceTimersByTime(60000);
       });
 
-      expect(container.textContent).toContain('10:16 AM');
+      expect(container.textContent).toMatch(/10:16/);
     });
 
-    it('stamps session timer on clock click and calculates elapsed minutes', async () => {
+    it('stamps session timer on clock click and positions badge absolutely above clock', async () => {
       vi.setSystemTime(new Date(2026, 8, 17, 14, 0, 0));
 
       const root = createRoot(container);
       await act(async () => {
-        root.render(<ChronoSuite showClock={true} clockFormat="12h" />);
+        root.render(<ChronoSuite showClock={true} />);
       });
 
       const clockBtn = container.querySelector('button[title*="clock"]');
@@ -88,7 +88,12 @@ describe('ChronoSuite & Clock Formatter', () => {
 
       // Now badge should appear with initial "+0m"
       expect(container.textContent).toContain('+0m');
-      expect(container.textContent).toContain('2:00');
+
+      const badgeBtn = container.querySelector('button[title*="elapsed"]');
+      expect(badgeBtn).not.toBeNull();
+      // Verify non-shifting absolute positioning above clock
+      expect(badgeBtn?.className).toContain('absolute');
+      expect(badgeBtn?.className).toContain('bottom-full');
 
       // Advance time by 25 minutes
       await act(async () => {
@@ -98,9 +103,6 @@ describe('ChronoSuite & Clock Formatter', () => {
       expect(container.textContent).toContain('+25m');
 
       // Clicking the badge dismisses the timer
-      const badgeBtn = container.querySelector('button[title*="elapsed"]');
-      expect(badgeBtn).not.toBeNull();
-
       await act(async () => {
         badgeBtn?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       });

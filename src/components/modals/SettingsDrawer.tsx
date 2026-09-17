@@ -7,7 +7,6 @@ import {
   TextSize,
   ManuscriptManifest,
   PhosphorColor,
-  ClockFormat,
 } from '@/types';
 import { X, Sliders, Volume2, VolumeX } from 'lucide-react';
 import { typewriterAudio } from '@/lib/sound';
@@ -35,7 +34,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
     amber: '#FFB000',
     green: '#33FF33',
     blue: '#00E5FF',
-    red: '#FF3B30',
+    red: '#ff1a0d',
   };
   const currentPhosphorHex = phosphorHexMap[manifest.phosphorColor || 'amber'] || '#FFB000';
 
@@ -292,99 +291,101 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
               ].map((scheme) => {
                 const isSelected = manifest.colorScheme === scheme.id;
                 return (
-                  <button
-                    key={scheme.id}
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (scheme.id === 'dark-amber') {
-                        if (isSelected) {
-                          setIsPhosphorPickerOpen((prev) => !prev);
+                  <div key={scheme.id} className="relative">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (scheme.id === 'dark-amber') {
+                          if (isSelected) {
+                            setIsPhosphorPickerOpen((prev) => !prev);
+                          } else {
+                            onUpdateManifest({ colorScheme: 'dark-amber' });
+                            setIsPhosphorPickerOpen(false);
+                          }
                         } else {
-                          onUpdateManifest({ colorScheme: 'dark-amber' });
+                          onUpdateManifest({ colorScheme: scheme.id as ColorScheme });
                           setIsPhosphorPickerOpen(false);
                         }
-                      } else {
-                        onUpdateManifest({ colorScheme: scheme.id as ColorScheme });
-                        setIsPhosphorPickerOpen(false);
-                      }
-                    }}
-                    className={`py-2 px-3 rounded-[2px] border text-left flex items-center justify-between transition-colors duration-100 cursor-pointer ${
-                      isSelected
-                        ? 'border-primary ring-1 ring-primary bg-primary/10 text-foreground font-semibold shadow-xs'
-                        : 'border-border/80 hover:bg-muted/60 text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="w-4 h-4 rounded-[2px] border shadow-xs flex items-center justify-center text-[8px] font-mono font-bold shrink-0"
-                        style={{
-                          backgroundColor: scheme.bg,
-                          color: scheme.fg,
-                          borderColor: scheme.border,
-                        }}
-                      >
-                        Aa
-                      </span>
-                      <span className="truncate">{scheme.label}</span>
-                    </div>
-
-                    {/* Functional Square Radio Button Indicator */}
-                    <div
-                      className={`w-3.5 h-3.5 rounded-[2px] border flex items-center justify-center transition-colors duration-100 shrink-0 ml-1.5 ${
+                      }}
+                      className={`w-full py-2 px-3 rounded-[2px] border text-left flex items-center justify-between transition-colors duration-100 cursor-pointer ${
                         isSelected
-                          ? 'border-primary bg-primary'
-                          : 'border-muted-foreground/40 bg-transparent'
+                          ? 'border-primary ring-1 ring-primary bg-primary/10 text-foreground font-semibold shadow-xs'
+                          : 'border-border/80 hover:bg-muted/60 text-muted-foreground hover:text-foreground'
                       }`}
                     >
-                      {isSelected && (
-                        <div className="w-1.5 h-1.5 rounded-[2px] bg-background" />
-                      )}
-                    </div>
-                  </button>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="w-4 h-4 rounded-[2px] border shadow-xs flex items-center justify-center text-[8px] font-mono font-bold shrink-0"
+                          style={{
+                            backgroundColor: scheme.bg,
+                            color: scheme.fg,
+                            borderColor: scheme.border,
+                          }}
+                        >
+                          Aa
+                        </span>
+                        <span className="truncate">{scheme.label}</span>
+                      </div>
+
+                      {/* Functional Square Radio Button Indicator */}
+                      <div
+                        className={`w-3.5 h-3.5 rounded-[2px] border flex items-center justify-center transition-colors duration-100 shrink-0 ml-1.5 ${
+                          isSelected
+                            ? 'border-primary bg-primary'
+                            : 'border-muted-foreground/40 bg-transparent'
+                        }`}
+                      >
+                        {isSelected && (
+                          <div className="w-1.5 h-1.5 rounded-[2px] bg-background" />
+                        )}
+                      </div>
+                    </button>
+
+                    {/* Terminal Multi-Phosphor Pop-over directly over the Terminal button */}
+                    {scheme.id === 'dark-amber' && isPhosphorPickerOpen && (
+                      <div
+                        className="absolute inset-0 z-20 rounded-[2px] border border-primary bg-card/95 backdrop-blur-xs flex items-center justify-around px-1.5 shadow-lg animate-in fade-in zoom-in-95 duration-100 select-none"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {(
+                          [
+                            { id: 'amber', label: 'Amber', hex: '#FFB000' },
+                            { id: 'green', label: 'Green', hex: '#33FF33' },
+                            { id: 'blue', label: 'Blue', hex: '#00E5FF' },
+                            { id: 'red', label: 'Red', hex: '#ff1a0d' },
+                          ] as const
+                        ).map((swatch) => {
+                          const isCurrent = (manifest.phosphorColor || 'amber') === swatch.id;
+                          return (
+                            <button
+                              key={swatch.id}
+                              type="button"
+                              title={swatch.label}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onUpdateManifest({ phosphorColor: swatch.id });
+                                setIsPhosphorPickerOpen(false);
+                              }}
+                              className={`w-5 h-5 sm:w-6 sm:h-6 rounded-[2px] border flex items-center justify-center transition-all cursor-pointer ${
+                                isCurrent
+                                  ? 'ring-2 ring-foreground ring-offset-1 ring-offset-background border-transparent scale-105'
+                                  : 'border-border/80 hover:scale-105 opacity-85 hover:opacity-100'
+                              }`}
+                              style={{ backgroundColor: swatch.hex }}
+                            >
+                              {isCurrent && (
+                                <div className="w-1.5 h-1.5 rounded-[1px] bg-black" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
-
-            {/* Terminal Multi-Phosphor Easter Egg Popover */}
-            {manifest.colorScheme === 'dark-amber' && isPhosphorPickerOpen && (
-              <div
-                className="mt-1 p-2 rounded-[2px] border border-border bg-muted/40 flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top-1 duration-150"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <span className="text-[11px] text-muted-foreground font-mono">Phosphor:</span>
-                <div className="flex items-center gap-2">
-                  {(
-                    [
-                      { id: 'amber', label: 'Amber', hex: '#FFB000' },
-                      { id: 'green', label: 'Green', hex: '#33FF33' },
-                      { id: 'blue', label: 'Blue', hex: '#00E5FF' },
-                      { id: 'red', label: 'Red', hex: '#FF3B30' },
-                    ] as const
-                  ).map((swatch) => {
-                    const isCurrent = (manifest.phosphorColor || 'amber') === swatch.id;
-                    return (
-                      <button
-                        key={swatch.id}
-                        type="button"
-                        title={swatch.label}
-                        onClick={() => onUpdateManifest({ phosphorColor: swatch.id })}
-                        className={`w-6 h-6 rounded-[2px] border flex items-center justify-center transition-all cursor-pointer ${
-                          isCurrent
-                            ? 'ring-2 ring-primary ring-offset-1 ring-offset-background scale-105 border-transparent'
-                            : 'border-border/80 hover:scale-105 opacity-80 hover:opacity-100'
-                        }`}
-                        style={{ backgroundColor: swatch.hex }}
-                      >
-                        {isCurrent && (
-                          <div className="w-1.5 h-1.5 rounded-[1px] bg-black" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Settings Switches (Document Stats, Double-space paragraphs, Typing Sounds) */}
@@ -498,57 +499,30 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
             </div>
 
             {/* Clock */}
-            <div className="flex flex-col gap-2">
-              <div
-                className="flex items-center justify-between cursor-pointer"
-                onClick={() => onUpdateManifest({ showClock: !manifest.showClock })}
+            <div
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => onUpdateManifest({ showClock: !manifest.showClock })}
+            >
+              <span className="text-muted-foreground">Clock</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={manifest.showClock ?? false}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUpdateManifest({ showClock: !manifest.showClock });
+                }}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[2px] border transition-colors duration-150 ease-in-out focus:outline-hidden ${
+                  manifest.showClock ? 'bg-primary border-primary' : 'bg-muted/70 border-border/80'
+                }`}
+                title="Show clock"
               >
-                <span className="text-muted-foreground">Clock</span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={manifest.showClock ?? false}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onUpdateManifest({ showClock: !manifest.showClock });
-                  }}
-                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[2px] border transition-colors duration-150 ease-in-out focus:outline-hidden ${
-                    manifest.showClock ? 'bg-primary border-primary' : 'bg-muted/70 border-border/80'
+                <span
+                  className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-[1px] shadow-xs transition-transform duration-150 ease-in-out ${
+                    manifest.showClock ? 'translate-x-4 bg-primary-foreground' : 'translate-x-0.5 bg-muted-foreground/70'
                   }`}
-                  title="Show clock"
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-[1px] shadow-xs transition-transform duration-150 ease-in-out ${
-                      manifest.showClock ? 'translate-x-4 bg-primary-foreground' : 'translate-x-0.5 bg-muted-foreground/70'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              {manifest.showClock && (
-                <div className="flex items-center justify-between pl-2">
-                  <span className="text-muted-foreground/80 text-[11px]">Format:</span>
-                  <div className="flex rounded-[2px] border border-border/80 overflow-hidden text-[11px] font-mono">
-                    {(['12h', '24h'] as ClockFormat[]).map((fmt) => {
-                      const isFmtSelected = (manifest.clockFormat || '12h') === fmt;
-                      return (
-                        <button
-                          key={fmt}
-                          type="button"
-                          onClick={() => onUpdateManifest({ clockFormat: fmt })}
-                          className={`px-2 py-0.5 transition-colors cursor-pointer ${
-                            isFmtSelected
-                              ? 'bg-primary text-primary-foreground font-bold'
-                              : 'hover:bg-muted/60 text-muted-foreground'
-                          }`}
-                        >
-                          {fmt}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+                />
+              </button>
             </div>
           </div>
 

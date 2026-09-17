@@ -160,27 +160,27 @@
 
 [data-theme="dark-amber"][data-phosphor="red"] {
   --background: #121212;
-  --foreground: #FF3B30;
+  --foreground: #ff1a0d;
   --card: #1A1010;
-  --card-foreground: #FF3B30;
+  --card-foreground: #ff1a0d;
   --popover: #180E0E;
-  --popover-foreground: #FF3B30;
-  --primary: #FF3B30;
+  --popover-foreground: #ff1a0d;
+  --primary: #ff1a0d;
   --primary-foreground: #121212;
   --secondary: #261010;
-  --secondary-foreground: #FF3B30;
+  --secondary-foreground: #ff1a0d;
   --muted: #240D0D;
   --muted-foreground: #B3241C;
   --accent: #330808;
-  --accent-foreground: #FF3B30;
+  --accent-foreground: #ff1a0d;
   --destructive: #FF8077;
   --border: #3D0B0B;
   --input: #3D0B0B;
-  --ring: #FF3B30;
+  --ring: #ff1a0d;
   --highlight-bg: #4A0000;
   --highlight-text: #FFA39E;
   --struck-color: #FF8077;
-  --cursor-color: #FF3B30;
+  --cursor-color: #ff1a0d;
 }
 
 /* 3. Spotlight Theme: very dark gray bg, light-gray box, black font */

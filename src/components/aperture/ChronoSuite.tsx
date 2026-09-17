@@ -10,24 +10,40 @@ export interface ChronoSuiteProps {
   isPaused?: boolean;
 }
 
-export function formatClockTime(date: Date, format: ClockFormat = '12h', includePeriod: boolean = true): string {
-  let hours = date.getHours();
-  const minutes = date.getMinutes().toString().padStart(2, '0');
-
-  if (format === '24h') {
-    const hh = hours.toString().padStart(2, '0');
-    return `${hh}:${minutes}`;
+export function formatClockTime(date: Date, options?: { hour12?: boolean }): string {
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: options?.hour12,
+    }).format(date);
+  } catch (e) {
+    let hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const period = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12;
+    return `${hours}:${minutes} ${period}`;
   }
+}
 
-  // 12-hour format
-  const period = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12 || 12;
-  return includePeriod ? `${hours}:${minutes} ${period}` : `${hours}:${minutes}`;
+export function formatStartTime(date: Date): string {
+  try {
+    const formatted = new Intl.DateTimeFormat(undefined, {
+      hour: 'numeric',
+      minute: '2-digit',
+    }).format(date);
+    // Strip trailing/leading AM/PM for a compact badge display (e.g. "4:30")
+    return formatted.replace(/\s*[ap]\.?m\.?/i, '').trim();
+  } catch (e) {
+    let hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    hours = hours % 12 || 12;
+    return `${hours}:${minutes}`;
+  }
 }
 
 export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
   showClock = true,
-  clockFormat = '12h',
   typeface = 'courier-prime',
   isPaused = false,
 }) => {
@@ -63,9 +79,9 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
     return null;
   }
 
-  const formattedCurrentTime = formatClockTime(now, clockFormat, true);
+  const formattedCurrentTime = formatClockTime(now);
   const formattedStartTime = timerStartTime
-    ? formatClockTime(new Date(timerStartTime), clockFormat, false)
+    ? formatStartTime(new Date(timerStartTime))
     : '';
 
   const fontClass =
@@ -78,13 +94,13 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
           : 'font-mono';
 
   return (
-    <div className={`flex flex-col items-center justify-center select-none ${fontClass}`}>
-      {/* Session Timer Badge (Slides in above the clock when active) */}
+    <div className={`relative flex flex-col items-center justify-center select-none ${fontClass}`}>
+      {/* Session Timer Badge: anchored absolutely above the clock without shifting clock position */}
       {timerStartTime !== null && (
         <button
           type="button"
           onClick={handleTimerBadgeClick}
-          className="mb-1 px-2 py-0.5 rounded-[2px] border border-border/60 bg-muted/60 hover:bg-destructive/15 hover:border-destructive/40 text-muted-foreground hover:text-destructive text-[10px] sm:text-xs font-mono font-medium transition-all cursor-pointer active:scale-95 animate-in fade-in slide-in-from-bottom-1 duration-150 flex items-center gap-1 shadow-xs"
+          className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-[2px] border border-border/60 bg-muted/80 hover:bg-destructive/15 hover:border-destructive/40 text-muted-foreground hover:text-destructive text-xs font-mono font-medium transition-all cursor-pointer active:scale-95 animate-in fade-in slide-in-from-bottom-1 duration-150 flex items-center gap-1.5 shadow-xs whitespace-nowrap z-20"
           title="Session elapsed timer (click to dismiss)"
           aria-label={`Session timer started at ${formattedStartTime}, elapsed ${elapsedMinutes} minutes. Click to dismiss.`}
         >
@@ -93,11 +109,11 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
         </button>
       )}
 
-      {/* Clock Display */}
+      {/* Clock Display: 100% larger (text-xl sm:text-2xl) */}
       <button
         type="button"
         onClick={handleClockClick}
-        className="text-[11px] sm:text-xs text-foreground/45 hover:text-foreground/80 transition-opacity cursor-pointer tracking-widest uppercase focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-[2px] px-1 py-0.5"
+        className="text-xl sm:text-2xl text-foreground/40 hover:text-foreground/80 transition-opacity cursor-pointer tracking-widest font-mono uppercase focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-[2px] px-2 py-0.5 whitespace-nowrap"
         title="Session clock (click to stamp timer)"
         aria-label={`Current time: ${formattedCurrentTime}. Click to start session timer.`}
       >
