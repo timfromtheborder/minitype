@@ -9,19 +9,24 @@ import { DocumentStats } from '@/components/aperture/DocumentStats';
 import { ChronoSuite } from '@/components/aperture/ChronoSuite';
 import { SessionTargetTracker } from '@/components/stages/SessionTargetTracker';
 import { SettingsDrawer } from '@/components/modals/SettingsDrawer';
-import { PrintModal } from '@/components/modals/PrintModal';
+import { SessionDrawer } from '@/components/modals/SessionDrawer';
+import { ProjectFilesModal } from '@/components/modals/ProjectFilesModal';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { Settings, FileText, Check, Loader2 } from 'lucide-react';
+import { Settings, FolderOpen, Layers, Check, Loader2 } from 'lucide-react';
 
 export default function Home() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isPrintOpen, setIsPrintOpen] = useState(false);
-  useTypingEngine({ isPaused: isPrintOpen || isSettingsOpen });
+  const [isSessionOpen, setIsSessionOpen] = useState(false);
+  const [isProjectOpen, setIsProjectOpen] = useState(false);
+  const isAnyModalOpen = isSessionOpen || isProjectOpen || isSettingsOpen;
+
+  useTypingEngine({ isPaused: isAnyModalOpen });
 
   useKeyboardShortcuts({
-    isPaused: isPrintOpen || isSettingsOpen,
+    isPaused: isAnyModalOpen,
     onToggleSettings: () => setIsSettingsOpen((p) => !p),
-    onToggleProject: () => setIsPrintOpen((p) => !p),
+    onToggleProject: () => setIsProjectOpen((p) => !p),
+    onToggleSession: () => setIsSessionOpen((p) => !p),
   });
 
   const colorScheme = useTypingStore((s) => s.manifest.colorScheme);
@@ -42,7 +47,8 @@ export default function Home() {
   useWakeLock();
 
   const handleCloseSettings = React.useCallback(() => setIsSettingsOpen(false), []);
-  const handleClosePrint = React.useCallback(() => setIsPrintOpen(false), []);
+  const handleCloseSession = React.useCallback(() => setIsSessionOpen(false), []);
+  const handleCloseProject = React.useCallback(() => setIsProjectOpen(false), []);
 
   // Sync active palette data-theme, data-text-size, data-aperture-height, and data-page-mode attribute with document root
   useEffect(() => {
@@ -96,7 +102,7 @@ export default function Home() {
           showClock={manifest.showClock}
           typeface={manifest.typeface}
           colorScheme={colorScheme}
-          isPaused={isPrintOpen || isSettingsOpen}
+          isPaused={isAnyModalOpen}
         />
       </div>
 
@@ -113,7 +119,7 @@ export default function Home() {
 
             <ApertureFrame
               height={activeApertureHeight}
-              isPaused={isPrintOpen || isSettingsOpen}
+              isPaused={isAnyModalOpen}
             />
           </div>
 
@@ -125,10 +131,26 @@ export default function Home() {
       {/* UTILITY DECK: Viewport Base, centered */}
       <footer className="absolute bottom-0 left-0 right-0 flex justify-center items-center pb-[max(0.75rem,env(safe-area-inset-bottom))] px-2.5 sm:px-6 select-none text-xs">
         <div className="flex items-center justify-center gap-2 sm:gap-3">
+          {/* Session Button */}
+          <button
+            type="button"
+            onClick={() => setIsSessionOpen(true)}
+            className={`flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
+              isSpotlight
+                ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground active:bg-card active:text-card-foreground'
+                : 'border-border/70 bg-card hover:bg-muted text-card-foreground active:bg-muted'
+            }`}
+            title="Session"
+            aria-label="Session"
+          >
+            <Layers className="w-3.5 h-3.5 opacity-70 shrink-0" />
+            <span>Session</span>
+          </button>
+
           {/* Project Button */}
           <button
             type="button"
-            onClick={() => setIsPrintOpen(true)}
+            onClick={() => setIsProjectOpen(true)}
             className={`flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
               isSpotlight
                 ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground active:bg-card active:text-card-foreground'
@@ -137,7 +159,7 @@ export default function Home() {
             title="Project"
             aria-label="Project"
           >
-            <FileText className="w-3.5 h-3.5 opacity-70 shrink-0" />
+            <FolderOpen className="w-3.5 h-3.5 opacity-70 shrink-0" />
             <span>Project</span>
           </button>
 
@@ -185,13 +207,21 @@ export default function Home() {
         />
       )}
 
-      {/* Project Modal */}
-      {isPrintOpen && (
-        <PrintModal
-          isOpen={isPrintOpen}
-          onClose={handleClosePrint}
+      {/* Unified Session Drawer */}
+      {isSessionOpen && (
+        <SessionDrawer
+          isOpen={isSessionOpen}
+          onClose={handleCloseSession}
           onPrintedComplete={handlePrintedComplete}
           onClearText={clearText}
+        />
+      )}
+
+      {/* Project Files Modal */}
+      {isProjectOpen && (
+        <ProjectFilesModal
+          isOpen={isProjectOpen}
+          onClose={handleCloseProject}
         />
       )}
     </main>

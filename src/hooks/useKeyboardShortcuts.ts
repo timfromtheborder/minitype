@@ -8,12 +8,14 @@ export interface UseKeyboardShortcutsOptions {
   isPaused?: boolean;
   onToggleSettings?: () => void;
   onToggleProject?: () => void;
+  onToggleSession?: () => void;
 }
 
 export function useKeyboardShortcuts(options?: UseKeyboardShortcutsOptions) {
   const isPaused = options?.isPaused ?? false;
   const onToggleSettings = options?.onToggleSettings;
   const onToggleProject = options?.onToggleProject;
+  const onToggleSession = options?.onToggleSession;
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -34,7 +36,7 @@ export function useKeyboardShortcuts(options?: UseKeyboardShortcutsOptions) {
         return;
       }
 
-      // 1. Modal Toggles
+      // 1. Modal / Drawer Toggles
       // Cmd/Ctrl + , (Settings Drawer)
       if (e.key === ',' && !e.shiftKey) {
         e.preventDefault();
@@ -42,10 +44,17 @@ export function useKeyboardShortcuts(options?: UseKeyboardShortcutsOptions) {
         return;
       }
 
-      // Cmd/Ctrl + P (Project / Print Modal)
+      // Cmd/Ctrl + P (Project Files Modal)
       if (e.key.toLowerCase() === 'p' && !e.shiftKey) {
         e.preventDefault();
         onToggleProject?.();
+        return;
+      }
+
+      // Cmd/Ctrl + S or Cmd/Ctrl + E (Session Drawer)
+      if ((e.key.toLowerCase() === 's' || e.key.toLowerCase() === 'e') && !e.shiftKey) {
+        e.preventDefault();
+        onToggleSession?.();
         return;
       }
 
@@ -89,7 +98,7 @@ export function useKeyboardShortcuts(options?: UseKeyboardShortcutsOptions) {
         return;
       }
     },
-    [isPaused, onToggleSettings, onToggleProject]
+    [isPaused, onToggleSettings, onToggleProject, onToggleSession]
   );
 
   useEffect(() => {

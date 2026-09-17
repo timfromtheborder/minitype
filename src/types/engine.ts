@@ -54,6 +54,8 @@ export interface TypingEngineActions {
   deleteProject: (id: string) => Promise<void>;
   renameProject: (id: string, newTitle: string) => Promise<void>;
   startNewSession: () => Promise<void>;
+  closeActiveSession: () => Promise<void>;
+  deleteSession: (sessionId: string) => Promise<void>;
   syncSessionStats: (fullText?: string, words?: number) => void;
   flushSave: () => Promise<void>;
   toggleStats: (show?: boolean) => void;

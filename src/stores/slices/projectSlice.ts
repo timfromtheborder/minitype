@@ -130,6 +130,8 @@ export interface ProjectSlice {
   exportFullBackup: () => Promise<MinitypeBackupArchive>;
   restoreFullBackup: (archive: MinitypeBackupArchive, mode?: 'merge' | 'replace') => Promise<{ projectCount: number; sessionCount: number }>;
   startNewSession: () => Promise<void>;
+  closeActiveSession: () => Promise<void>;
+  deleteSession: (sessionId: string) => Promise<void>;
   syncSessionStats: (fullText?: string, words?: number) => void;
 }
 
@@ -776,6 +778,89 @@ export const createProjectSlice: StateCreator<
       sessionCommittedLines: 0,
       committedDocWords: countWords(fullText),
     });
+  },
+
+  closeActiveSession: async () => {
+    markProjectDirty(set, get);
+    await flushPendingSave();
+    const state = get();
+    const activeSessions = [...state.activeSessions];
+    const now = new Date().toISOString();
+
+    if (activeSessions.length === 0) return;
+    const lastSession = activeSessions[activeSessions.length - 1];
+    if (lastSession.completedAt !== null) return;
+
+    const allPages = [
+      ...state.historicalPages,
+      {
+        pageNumber: state.currentPageNumber,
+        lines: state.currentPageLines,
+        completedAt: null,
+      },
+    ];
+    const fullText = sanitizeManuscript(allPages, {
+      doubleSpaceLinebreaks: false,
+      pageMode: state.manifest.pageMode,
+    });
+    const docTotalWords = countWords(fullText);
+    const { currentSessionWords: currentWordCount } = resolveActiveSessionStats(activeSessions, docTotalWords);
+    const priorSessions = activeSessions.slice(0, -1);
+    const currentSessionText = getActiveSessionText(fullText, priorSessions);
+
+    const target = state.manifest.sessionWordTarget;
+    const finalWords = currentWordCount || lastSession.wordCount || 0;
+    const isTargetReached = Boolean(
+      lastSession.targetReached ||
+      (target && target > 0 && finalWords >= target)
+    );
+    const updatedLastSession: SessionRecord = {
+      ...lastSession,
+      completedAt: now,
+      text: currentSessionText || lastSession.text || '',
+      wordCount: finalWords,
+      targetReached: isTargetReached,
+    };
+    activeSessions[activeSessions.length - 1] = updatedLastSession;
+    await saveSession(updatedLastSession).catch(console.error);
+
+    const updatedManifest: ManuscriptManifest = {
+      ...state.manifest,
+      activeSessionId: undefined,
+      sessionCount: activeSessions.length,
+      totalWordCount: docTotalWords,
+    };
+    if (state.manifest.mode === 'local') {
+      await saveManuscript(updatedManifest).catch(console.error);
+    }
+    set({ activeSessions, manifest: updatedManifest });
+  },
+
+  deleteSession: async (sessionId: string) => {
+    markProjectDirty(set, get);
+    await flushPendingSave();
+    const state = get();
+    const filtered = state.activeSessions.filter((s) => s.id !== sessionId);
+    await deleteSession(sessionId).catch(console.error);
+
+    const renumbered = filtered.map((s, idx) => ({
+      ...s,
+      sessionNumber: idx + 1,
+    }));
+    await saveSessions(renumbered).catch(console.error);
+
+    const updatedManifest: ManuscriptManifest = {
+      ...state.manifest,
+      sessionCount: renumbered.length,
+      activeSessionId:
+        renumbered.length > 0 && !renumbered[renumbered.length - 1].completedAt
+          ? renumbered[renumbered.length - 1].id
+          : undefined,
+    };
+    if (state.manifest.mode === 'local') {
+      await saveManuscript(updatedManifest).catch(console.error);
+    }
+    set({ activeSessions: renumbered, manifest: updatedManifest });
   },
 
   syncSessionStats: (fullText?: string, words?: number) => {

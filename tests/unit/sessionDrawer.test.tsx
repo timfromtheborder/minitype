@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { PrintModal } from '@/components/modals/PrintModal';
+import { SessionDrawer } from '@/components/modals/SessionDrawer';
+import { ProjectFilesModal } from '@/components/modals/ProjectFilesModal';
 import { useTypingStore } from '@/stores/typingStore';
 
-describe('PrintModal Title Deletion and Restoration Invariants', () => {
+describe('SessionDrawer and ProjectFilesModal Invariants', () => {
   let container: HTMLDivElement;
 
   beforeEach(() => {
@@ -31,15 +32,16 @@ describe('PrintModal Title Deletion and Restoration Invariants', () => {
       historicalPages: [],
       currentPageNumber: 1,
       currentPageLines: [],
+      activeSessions: [],
     });
   });
 
-  it('allows deleting title completely down to empty string without snapping back while editing', async () => {
+  it('allows deleting title completely down to empty string without snapping back while editing in SessionDrawer', async () => {
     (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
     const root = createRoot(container);
 
     await act(async () => {
-      root.render(<PrintModal isOpen={true} onClose={() => {}} />);
+      root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
     });
 
     const input = container.querySelector('input[data-modal-input="true"]') as HTMLInputElement;
@@ -56,7 +58,7 @@ describe('PrintModal Title Deletion and Restoration Invariants', () => {
       input.dispatchEvent(new Event('input', { bubbles: true }));
     });
 
-    // The input value must remain empty and NOT snap back to "Untitled Manuscript" or previous title
+    // The input value must remain empty and NOT snap back to "Untitled Project" or previous title
     expect(input.value).toBe('');
     expect(useTypingStore.getState().manifest.title).toBe('');
 
@@ -75,45 +77,39 @@ describe('PrintModal Title Deletion and Restoration Invariants', () => {
     container.remove();
   });
 
-  it('renaming title in the top box immediately updates the filesystem view in Projects tab', async () => {
+  it('allows deleting title completely down to empty string without snapping back while editing in ProjectFilesModal', async () => {
     (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
     const root = createRoot(container);
 
     await act(async () => {
-      root.render(<PrintModal isOpen={true} onClose={() => {}} />);
+      root.render(<ProjectFilesModal isOpen={true} onClose={() => {}} />);
     });
 
-    // Switch to Projects tab
-    const projectsTabButton = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.title && b.title.includes('Projects')
-    );
-    expect(projectsTabButton).toBeDefined();
+    const input = container.querySelector('input[data-modal-input="true"]') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    expect(input.value).toBe('My Great Novel');
 
-    await act(async () => {
-      projectsTabButton?.click();
-    });
-
-    // Top box input on Projects tab
-    const inputs = container.querySelectorAll('input[data-modal-input="true"]');
-    expect(inputs.length).toBeGreaterThan(0);
-    const topInput = inputs[0] as HTMLInputElement;
-
-    // Simulate user renaming project in the top box
+    // Simulate user editing title to empty string
     await act(async () => {
       const nativeSetter = Object.getOwnPropertyDescriptor(
         window.HTMLInputElement.prototype,
         'value'
       )?.set;
-      nativeSetter?.call(topInput, 'Brand New Masterpiece');
-      topInput.dispatchEvent(new Event('input', { bubbles: true }));
+      nativeSetter?.call(input, '');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
     });
 
-    expect(useTypingStore.getState().manifest.title).toBe('Brand New Masterpiece');
+    expect(input.value).toBe('');
+    expect(useTypingStore.getState().manifest.title).toBe('');
 
-    // Verify active project in the filesystem list view immediately shows the new title
-    const activeProjectSpan = container.querySelector('.group\\/title span');
-    expect(activeProjectSpan).not.toBeNull();
-    expect(activeProjectSpan?.textContent).toBe('Brand New Masterpiece');
+    // On blur, fallback restored
+    await act(async () => {
+      input.focus();
+      input.blur();
+    });
+
+    expect(input.value).toBe('Untitled Project');
+    expect(useTypingStore.getState().manifest.title).toBe('Untitled Project');
 
     await act(async () => {
       root.unmount();
@@ -121,51 +117,7 @@ describe('PrintModal Title Deletion and Restoration Invariants', () => {
     container.remove();
   });
 
-  it('renaming title on Document tab immediately updates the filesystem view when navigating to Projects tab', async () => {
-    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
-    const root = createRoot(container);
-
-    await act(async () => {
-      root.render(<PrintModal isOpen={true} onClose={() => {}} />);
-    });
-
-    // We start on Document tab by default. Edit title input.
-    const docInput = container.querySelector('input[data-modal-input="true"]') as HTMLInputElement;
-    expect(docInput).not.toBeNull();
-
-    await act(async () => {
-      const nativeSetter = Object.getOwnPropertyDescriptor(
-        window.HTMLInputElement.prototype,
-        'value'
-      )?.set;
-      nativeSetter?.call(docInput, 'Document Tab Title Update');
-      docInput.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-
-    expect(useTypingStore.getState().manifest.title).toBe('Document Tab Title Update');
-
-    // Switch to Projects tab
-    const projectsTabButton = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.title && b.title.includes('Projects')
-    );
-    expect(projectsTabButton).toBeDefined();
-
-    await act(async () => {
-      projectsTabButton?.click();
-    });
-
-    // The active project in the filesystem list view must show the updated title
-    const activeProjectSpan = container.querySelector('.group\\/title span');
-    expect(activeProjectSpan).not.toBeNull();
-    expect(activeProjectSpan?.textContent).toBe('Document Tab Title Update');
-
-    await act(async () => {
-      root.unmount();
-    });
-    container.remove();
-  });
-
-  it('v0.9.7.4.5: toggling double-space on and off retains identical clean text without line duplication', async () => {
+  it('toggling double-space on and off retains identical clean text without line duplication', async () => {
     (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
     const root = createRoot(container);
 
@@ -221,14 +173,10 @@ describe('PrintModal Title Deletion and Restoration Invariants', () => {
     });
 
     await act(async () => {
-      root.render(<PrintModal isOpen={true} onClose={() => {}} />);
+      root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
     });
 
-    const previewContainer = container.querySelector('.square-scrollbar') as HTMLDivElement;
-    expect(previewContainer).not.toBeNull();
-    expect(previewContainer.style.overflowAnchor).toBe('none');
-
-    const innerPreview = previewContainer.querySelector('.whitespace-pre-wrap') as HTMLDivElement;
+    const innerPreview = container.querySelector('.whitespace-pre-wrap') as HTMLDivElement;
     expect(innerPreview).not.toBeNull();
     const initialText = innerPreview.textContent;
     expect(initialText).toBe('First paragraph sentence.\nSecond paragraph sentence.\nFinal paragraph sentence.');
@@ -256,7 +204,6 @@ describe('PrintModal Title Deletion and Restoration Invariants', () => {
 
     expect(useTypingStore.getState().manifest.doubleSpaceLinebreaks).toBe(false);
     const restoredPreview = container.querySelector('.whitespace-pre-wrap') as HTMLDivElement;
-    // Must be strictly identical to initial text, with no duplicated final paragraph
     expect(restoredPreview.textContent).toBe(initialText);
 
     // Count occurrences of the final sentence
@@ -334,17 +281,7 @@ describe('PrintModal Title Deletion and Restoration Invariants', () => {
     });
 
     await act(async () => {
-      root.render(<PrintModal isOpen={true} onClose={() => {}} />);
-    });
-
-    // Switch to Sessions tab
-    const sessionsTabBtn = Array.from(container.querySelectorAll('button')).find((b) =>
-      b.title?.includes('Sessions')
-    );
-    expect(sessionsTabBtn).toBeDefined();
-
-    await act(async () => {
-      sessionsTabBtn?.click();
+      root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
     });
 
     // Helper to query session word count spans
@@ -368,8 +305,7 @@ describe('PrintModal Title Deletion and Restoration Invariants', () => {
     expect(sessionSpans[2].isBold).toBe(false);
 
     // Now CHANGE sessionWordTarget to 2 (drastically lower target)
-    // In buggy code: Session 2 (4 words) would turn bold because 4 >= 2!
-    // In fixed code: Session 2 MUST REMAIN NOT BOLD because historical targetReached is false!
+    // Historical targetReached must stay invariant
     const targetInput = container.querySelector('input[type="number"]') as HTMLInputElement;
     expect(targetInput).not.toBeNull();
 
@@ -417,6 +353,124 @@ describe('PrintModal Title Deletion and Restoration Invariants', () => {
     });
     container.remove();
   });
+
+  it('supports toggling between Typewriter and Manuscript views', async () => {
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+    const root = createRoot(container);
+
+    const now = new Date().toISOString();
+    useTypingStore.setState({
+      activeSessions: [
+        {
+          id: 'doc-1-session-1',
+          projectId: 'doc-1',
+          sessionNumber: 1,
+          startedAt: now,
+          completedAt: null,
+          text: 'Drafting text here.',
+          wordCount: 3,
+        },
+      ],
+      manifest: {
+        ...useTypingStore.getState().manifest,
+        title: 'View Mode Test',
+      },
+    });
+
+    await act(async () => {
+      root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
+    });
+
+    // Initially typewriter mode
+    let textPreview = container.querySelector('.whitespace-pre-wrap');
+    expect(textPreview?.className).toContain('font-mono');
+
+    // Click Manuscript button
+    const buttons = Array.from(container.querySelectorAll('button'));
+    const manuscriptBtn = buttons.find((b) => b.textContent?.includes('Manuscript'));
+    expect(manuscriptBtn).toBeDefined();
+
+    await act(async () => {
+      manuscriptBtn?.click();
+    });
+
+    textPreview = container.querySelector('.whitespace-pre-wrap');
+    expect(textPreview?.className).toContain('font-serif-clock');
+
+    // Click Typewriter button
+    const typewriterBtn = buttons.find((b) => b.textContent?.includes('Typewriter'));
+    expect(typewriterBtn).toBeDefined();
+
+    await act(async () => {
+      typewriterBtn?.click();
+    });
+
+    textPreview = container.querySelector('.whitespace-pre-wrap');
+    expect(textPreview?.className).toContain('font-mono');
+
+    await act(async () => {
+      root.unmount();
+    });
+    container.remove();
+  });
+
+  it('supports collapsing and expanding session cards', async () => {
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+    const root = createRoot(container);
+
+    const now = new Date().toISOString();
+    useTypingStore.setState({
+      activeSessions: [
+        {
+          id: 'doc-1-session-1',
+          projectId: 'doc-1',
+          sessionNumber: 1,
+          startedAt: now,
+          completedAt: now,
+          text: 'First session text content.',
+          wordCount: 4,
+        },
+      ],
+      manifest: {
+        ...useTypingStore.getState().manifest,
+      },
+    });
+
+    await act(async () => {
+      root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
+    });
+
+    // Card body is visible initially
+    expect(container.querySelector('.whitespace-pre-wrap')).not.toBeNull();
+
+    // Toggle Collapse All button
+    const buttons = Array.from(container.querySelectorAll('button'));
+    const collapseAllBtn = buttons.find((b) => b.textContent?.includes('Collapse All'));
+    expect(collapseAllBtn).toBeDefined();
+
+    await act(async () => {
+      collapseAllBtn?.click();
+    });
+
+    // Card body is collapsed
+    expect(container.querySelector('.whitespace-pre-wrap')).toBeNull();
+
+    // Toggle Expand All
+    const expandAllBtn = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Expand All')
+    );
+    expect(expandAllBtn).toBeDefined();
+
+    await act(async () => {
+      expandAllBtn?.click();
+    });
+
+    // Card body is restored
+    expect(container.querySelector('.whitespace-pre-wrap')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+    });
+    container.remove();
+  });
 });
-
-
