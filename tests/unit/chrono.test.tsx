@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ChronoSuite, formatClockTime, formatStartTime, formatElapsedTime } from '@/components/aperture/ChronoSuite';
+import { ChronoSuite, formatClockTime, formatStartTime, formatElapsedTime, formatPomodoroTime } from '@/components/aperture/ChronoSuite';
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -59,6 +59,18 @@ describe('ChronoSuite & Clock Formatter', () => {
       expect(formatElapsedTime(66)).toBe('+66');
       expect(formatElapsedTime(90)).toBe('+90');
       expect(formatElapsedTime(120)).toBe('+120');
+    });
+  });
+
+  describe('formatPomodoroTime', () => {
+    it('formats remaining seconds as mm:ss', () => {
+      expect(formatPomodoroTime(1500)).toBe('25:00');
+      expect(formatPomodoroTime(300)).toBe('05:00');
+      expect(formatPomodoroTime(65)).toBe('01:05');
+      expect(formatPomodoroTime(59)).toBe('00:59');
+      expect(formatPomodoroTime(5)).toBe('00:05');
+      expect(formatPomodoroTime(0)).toBe('00:00');
+      expect(formatPomodoroTime(-10)).toBe('00:00');
     });
   });
 
@@ -201,6 +213,77 @@ describe('ChronoSuite & Clock Formatter', () => {
       });
       expect(wrapper?.className).toContain('font-mono');
       expect(wrapper?.className).not.toContain('font-serif-clock');
+    });
+
+    it('handles pomodoro timer countdown, warning flash, break inversion, and dismissal', async () => {
+      const root = createRoot(container);
+      await act(async () => {
+        root.render(<ChronoSuite showClock={true} timerStyle="pomodoro" />);
+      });
+
+      const clockBtn = container.querySelector('button[aria-label*="time"]');
+      expect(clockBtn).not.toBeNull();
+
+      // Initially no pomodoro badge
+      expect(container.querySelector('button[aria-label*="Pomodoro countdown"]')).toBeNull();
+
+      // Click clock to start Pomodoro timer (starts at 25:00)
+      await act(async () => {
+        clockBtn?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      });
+
+      let badgeBtn = container.querySelector('button[aria-label*="Pomodoro countdown"]');
+      expect(badgeBtn).not.toBeNull();
+      expect(badgeBtn?.textContent).toBe('25:00');
+
+      // Advance 100 seconds -> should be 23:20
+      await act(async () => {
+        vi.advanceTimersByTime(100 * 1000);
+      });
+      expect(badgeBtn?.textContent).toBe('23:20');
+
+      // Advance to 1 minute left (total 24 minutes elapsed = 1440s)
+      await act(async () => {
+        vi.advanceTimersByTime(1340 * 1000);
+      });
+      // 60 seconds left -> should be in warning state with animate-pulse
+      expect(badgeBtn?.textContent).toBe('01:00');
+      expect(badgeBtn?.className).toContain('animate-pulse');
+      expect(badgeBtn?.className).toContain('font-bold');
+
+      // Advance 60 seconds to reach zero and trigger 5-minute break
+      await act(async () => {
+        vi.advanceTimersByTime(60 * 1000);
+      });
+
+      // Now in break mode: inverted styling (bg-foreground text-background)
+      badgeBtn = container.querySelector('button[aria-label*="Pomodoro break"]');
+      expect(badgeBtn).not.toBeNull();
+      expect(badgeBtn?.textContent).toBe('05:00');
+      expect(badgeBtn?.className).toContain('bg-foreground');
+      expect(badgeBtn?.className).toContain('text-background');
+
+      // Advance 1 minute into break -> pulses background
+      await act(async () => {
+        vi.advanceTimersByTime(60 * 1000);
+      });
+      expect(badgeBtn?.textContent).toBe('04:00');
+
+      // Clicking the clock restarts pomodoro at 25:00 work phase
+      await act(async () => {
+        clockBtn?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      });
+      badgeBtn = container.querySelector('button[aria-label*="Pomodoro countdown"]');
+      expect(badgeBtn).not.toBeNull();
+      expect(badgeBtn?.textContent).toBe('25:00');
+      expect(badgeBtn?.className).not.toContain('bg-foreground');
+
+      // Clicking badge dismisses pomodoro timer
+      await act(async () => {
+        badgeBtn?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      });
+      expect(container.querySelector('button[aria-label*="Pomodoro countdown"]')).toBeNull();
+      expect(container.querySelector('button[aria-label*="Pomodoro break"]')).toBeNull();
     });
   });
 });

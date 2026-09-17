@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ClockFormat, Typeface, ColorScheme } from '@/types';
+import { ClockFormat, Typeface, ColorScheme, TimerStyle } from '@/types';
 
 export interface ChronoSuiteProps {
   showClock?: boolean;
   clockFormat?: ClockFormat;
+  timerStyle?: TimerStyle;
   typeface?: Typeface;
   colorScheme?: ColorScheme;
   isPaused?: boolean;
@@ -51,25 +52,49 @@ export function formatElapsedTime(elapsedMinutes: number): string {
   return `+${elapsedMinutes}`;
 }
 
+export function formatPomodoroTime(totalSeconds: number): string {
+  const safeSeconds = Math.max(0, totalSeconds);
+  const minutes = Math.floor(safeSeconds / 60).toString().padStart(2, '0');
+  const seconds = (safeSeconds % 60).toString().padStart(2, '0');
+  return `${minutes}:${seconds}`;
+}
+
 export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
   showClock = true,
+  timerStyle = 'snapshot',
   typeface = 'courier-prime',
   colorScheme = 'typewriter',
   isPaused = false,
 }) => {
   const [now, setNow] = useState<Date>(() => new Date());
   const [timerStartTime, setTimerStartTime] = useState<number | null>(null);
+  const [pomodoroPhase, setPomodoroPhase] = useState<'work' | 'break'>('work');
+  const [pomodoroSeconds, setPomodoroSeconds] = useState<number>(25 * 60);
   const [isMounted, setIsMounted] = useState<boolean>(false);
 
-  // Update clock every second and sync on mount
+  // Update clock and countdown every second
   useEffect(() => {
     setIsMounted(true);
     setNow(new Date());
     const timer = setInterval(() => {
       setNow(new Date());
+      setPomodoroSeconds((prev) => {
+        if (timerStartTime === null || isPaused) return prev;
+        if (prev > 1) {
+          return prev - 1;
+        }
+        // At 0: transition between work (25m) and break (5m)
+        if (pomodoroPhase === 'work') {
+          setPomodoroPhase('break');
+          return 5 * 60;
+        } else {
+          setPomodoroPhase('work');
+          return 25 * 60;
+        }
+      });
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [timerStartTime, isPaused, pomodoroPhase]);
 
   const elapsedMinutes = useMemo(() => {
     if (!timerStartTime) return 0;
@@ -78,14 +103,20 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
 
   const handleClockClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    // Tapping clock stamps start time or starts a fresh run
+    // Tapping clock stamps start time in snapshot mode or restarts at 25:00 in pomodoro mode
     setTimerStartTime(Date.now());
-  }, []);
+    if (timerStyle === 'pomodoro') {
+      setPomodoroPhase('work');
+      setPomodoroSeconds(25 * 60);
+    }
+  }, [timerStyle]);
 
   const handleTimerBadgeClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     // Tapping timer badge dismisses/clears it
     setTimerStartTime(null);
+    setPomodoroPhase('work');
+    setPomodoroSeconds(25 * 60);
   }, []);
 
   if (!showClock) {
@@ -97,6 +128,7 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
     ? formatStartTime(new Date(timerStartTime))
     : '';
   const formattedElapsed = formatElapsedTime(elapsedMinutes);
+  const formattedPomodoro = formatPomodoroTime(pomodoroSeconds);
 
   const effectiveColorScheme = isMounted ? colorScheme : 'typewriter';
 
@@ -115,6 +147,13 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
           ? 'font-mono tracking-tight'
           : 'font-mono';
 
+  // Pomodoro styling:
+  // - Work phase: matches snapshot, flashes when <= 1 minute left
+  // - Break phase: inverted appearance (black text inside light bg box or white inside dark box), flashes background on minute boundary
+  const isPomodoroWarning = timerStyle === 'pomodoro' && pomodoroPhase === 'work' && pomodoroSeconds <= 60 && pomodoroSeconds > 0;
+  const isBreakPhase = timerStyle === 'pomodoro' && pomodoroPhase === 'break';
+  const isBreakMinuteFlash = isBreakPhase && pomodoroSeconds % 60 === 0;
+
   return (
     <div
       suppressHydrationWarning
@@ -123,15 +162,35 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
       {/* Session Timer: justified with the clock so numbers align vertically */}
       {timerStartTime !== null && (
         <button
-          key={timerStartTime}
+          key={`${timerStartTime}-${timerStyle}`}
           type="button"
           suppressHydrationWarning
           onClick={handleTimerBadgeClick}
-          className="absolute bottom-full mb-2 left-0 text-left text-xl sm:text-2xl uppercase tracking-widest text-foreground/45 hover:text-foreground/60 transition-colors cursor-pointer bg-transparent border-none p-0 shadow-none outline-none whitespace-nowrap animate-timer-slide-up select-none"
-          aria-label={`Session timer started at ${formattedStartTime}, elapsed ${elapsedMinutes} minutes. Click to dismiss.`}
+          className={`absolute bottom-full mb-2 left-0 text-left text-xl sm:text-2xl uppercase tracking-widest transition-all cursor-pointer border-none shadow-none outline-none whitespace-nowrap animate-timer-slide-up select-none ${
+            isBreakPhase
+              ? `bg-foreground text-background px-1.5 py-0.5 rounded-[2px] font-bold ${
+                  isBreakMinuteFlash ? 'opacity-50' : 'opacity-100'
+                }`
+              : isPomodoroWarning
+              ? 'text-foreground font-bold animate-pulse p-0'
+              : 'text-foreground/45 hover:text-foreground/60 p-0'
+          }`}
+          aria-label={
+            timerStyle === 'pomodoro'
+              ? pomodoroPhase === 'work'
+                ? `Pomodoro countdown: ${formattedPomodoro} remaining. Click to dismiss.`
+                : `Pomodoro break: ${formattedPomodoro} remaining. Click to dismiss.`
+              : `Session timer started at ${formattedStartTime}, elapsed ${elapsedMinutes} minutes. Click to dismiss.`
+          }
         >
-          <span suppressHydrationWarning>{formattedStartTime}</span>
-          <span suppressHydrationWarning className="ml-2.5">{formattedElapsed}</span>
+          {timerStyle === 'pomodoro' ? (
+            <span suppressHydrationWarning>{formattedPomodoro}</span>
+          ) : (
+            <>
+              <span suppressHydrationWarning>{formattedStartTime}</span>
+              <span suppressHydrationWarning className="ml-2.5">{formattedElapsed}</span>
+            </>
+          )}
         </button>
       )}
 
@@ -141,7 +200,11 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
         suppressHydrationWarning
         onClick={handleClockClick}
         className="text-left text-xl sm:text-2xl text-foreground/75 hover:text-foreground transition-colors cursor-pointer tracking-widest uppercase bg-transparent border-none p-0 shadow-none outline-none whitespace-nowrap select-none"
-        aria-label={`Current time: ${formattedCurrentTime}. Click to start session timer.`}
+        aria-label={
+          timerStyle === 'pomodoro'
+            ? `Current time: ${formattedCurrentTime}. Click to restart 25-minute Pomodoro timer.`
+            : `Current time: ${formattedCurrentTime}. Click to start session timer.`
+        }
       >
         <span suppressHydrationWarning>{formattedCurrentTime}</span>
       </button>

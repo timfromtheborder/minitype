@@ -11,14 +11,16 @@ import { SessionTargetTracker } from '@/components/stages/SessionTargetTracker';
 import { SettingsDrawer } from '@/components/modals/SettingsDrawer';
 import { SessionDrawer } from '@/components/modals/SessionDrawer';
 import { ProjectFilesModal } from '@/components/modals/ProjectFilesModal';
+import { HelpModal } from '@/components/modals/HelpModal';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { Sliders, FolderOpen, Layers, FileText, Check, Loader2 } from 'lucide-react';
+import { Sliders, FolderOpen, Layers, FileText, Check, Loader2, HelpCircle } from 'lucide-react';
 
 export default function Home() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSessionOpen, setIsSessionOpen] = useState(false);
   const [isProjectOpen, setIsProjectOpen] = useState(false);
-  const isAnyModalOpen = isSessionOpen || isProjectOpen || isSettingsOpen;
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const isAnyModalOpen = isSessionOpen || isProjectOpen || isSettingsOpen || isHelpOpen;
 
   useTypingEngine({ isPaused: isAnyModalOpen });
 
@@ -27,6 +29,7 @@ export default function Home() {
     onToggleSettings: () => setIsSettingsOpen((p) => !p),
     onToggleProject: () => setIsProjectOpen((p) => !p),
     onToggleSession: () => setIsSessionOpen((p) => !p),
+    onToggleHelp: () => setIsHelpOpen((p) => !p),
   });
 
   const colorScheme = useTypingStore((s) => s.manifest.colorScheme);
@@ -63,6 +66,7 @@ export default function Home() {
   const handleCloseSettings = React.useCallback(() => setIsSettingsOpen(false), []);
   const handleCloseSession = React.useCallback(() => setIsSessionOpen(false), []);
   const handleCloseProject = React.useCallback(() => setIsProjectOpen(false), []);
+  const handleCloseHelp = React.useCallback(() => setIsHelpOpen(false), []);
 
   // Sync active palette data-theme, data-text-size, data-aperture-height, and data-page-mode attribute with document root
   useEffect(() => {
@@ -114,6 +118,7 @@ export default function Home() {
       <div className="absolute top-[25dvh] left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
         <ChronoSuite
           showClock={manifest.showClock}
+          timerStyle={manifest.timerStyle}
           typeface={manifest.typeface}
           colorScheme={colorScheme}
           isPaused={isAnyModalOpen}
@@ -144,12 +149,12 @@ export default function Home() {
 
       {/* UTILITY DECK: Viewport Base, centered */}
       <footer className="absolute bottom-0 left-0 right-0 flex justify-center items-center pb-[max(0.75rem,env(safe-area-inset-bottom))] px-2.5 sm:px-6 select-none text-xs">
-        <div className="flex items-center justify-center gap-2 sm:gap-3">
+        <div className="flex items-center justify-center gap-1.5 sm:gap-2.5">
           {/* Document Button */}
           <button
             type="button"
             onClick={() => setIsSessionOpen(true)}
-            className={`flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
+            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
               isSpotlight
                 ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground active:bg-card active:text-card-foreground'
                 : 'border-border/70 bg-card hover:bg-muted text-card-foreground active:bg-muted'
@@ -165,7 +170,7 @@ export default function Home() {
           <button
             type="button"
             onClick={() => setIsProjectOpen(true)}
-            className={`flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
+            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
               isSpotlight
                 ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground active:bg-card active:text-card-foreground'
                 : 'border-border/70 bg-card hover:bg-muted text-card-foreground active:bg-muted'
@@ -181,7 +186,7 @@ export default function Home() {
           <button
             type="button"
             onClick={() => setIsSettingsOpen(true)}
-            className={`flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
+            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
               isSpotlight
                 ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground active:bg-card active:text-card-foreground'
                 : 'border-border/70 bg-card hover:bg-muted text-card-foreground active:bg-muted'
@@ -191,6 +196,22 @@ export default function Home() {
           >
             <Sliders className="w-3.5 h-3.5 opacity-70 shrink-0" />
             <span>Settings</span>
+          </button>
+
+          {/* Help Button */}
+          <button
+            type="button"
+            onClick={() => setIsHelpOpen(true)}
+            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
+              isSpotlight
+                ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground active:bg-card active:text-card-foreground'
+                : 'border-border/70 bg-card hover:bg-muted text-card-foreground active:bg-muted'
+            }`}
+            title="Help"
+            aria-label="Help"
+          >
+            <HelpCircle className="w-3.5 h-3.5 opacity-70 shrink-0" />
+            <span>Help</span>
           </button>
 
           {/* Save Status Icon: centered together with bottom buttons */}
@@ -236,6 +257,14 @@ export default function Home() {
         <ProjectFilesModal
           isOpen={isProjectOpen}
           onClose={handleCloseProject}
+        />
+      )}
+
+      {/* Help Modal */}
+      {isHelpOpen && (
+        <HelpModal
+          isOpen={isHelpOpen}
+          onClose={handleCloseHelp}
         />
       )}
     </main>

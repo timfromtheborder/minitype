@@ -7,6 +7,7 @@ import {
   TextSize,
   ManuscriptManifest,
   PhosphorColor,
+  TimerStyle,
 } from '@/types';
 import { CornerUpLeft, Sliders, Volume2, VolumeX } from 'lucide-react';
 import { typewriterAudio } from '@/lib/sound';
@@ -482,6 +483,34 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
               </button>
             </div>
 
+            {/* Timer Style (Visible only when Clock is enabled) */}
+            {manifest.showClock && (
+              <div className="flex flex-col gap-1.5 pl-2.5 border-l-2 border-border/70 ml-1 py-0.5 animate-in fade-in duration-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground text-xs">Timer Style</span>
+                  <span className="font-bold text-foreground capitalize text-xs">
+                    {manifest.timerStyle || 'snapshot'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {(['snapshot', 'pomodoro'] as TimerStyle[]).map((style) => (
+                    <button
+                      key={style}
+                      type="button"
+                      onClick={() => onUpdateManifest({ timerStyle: style })}
+                      className={`py-1 px-1 rounded-[2px] border text-center transition-all cursor-pointer capitalize text-[11px] ${
+                        (manifest.timerStyle || 'snapshot') === style
+                          ? 'border-primary bg-primary text-primary-foreground font-bold shadow-xs'
+                          : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground font-medium'
+                      }`}
+                    >
+                      {style}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Allow backspace */}
             <div
               className="flex items-center justify-between cursor-pointer"
@@ -540,7 +569,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.9.0 · by timfromtheborder
+              Minitype v0.9.9.1 · by timfromtheborder
             </span>
           </div>
         </div>

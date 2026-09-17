@@ -9,6 +9,7 @@ export interface UseKeyboardShortcutsOptions {
   onToggleSettings?: () => void;
   onToggleProject?: () => void;
   onToggleSession?: () => void;
+  onToggleHelp?: () => void;
 }
 
 export function useKeyboardShortcuts(options?: UseKeyboardShortcutsOptions) {
@@ -16,6 +17,7 @@ export function useKeyboardShortcuts(options?: UseKeyboardShortcutsOptions) {
   const onToggleSettings = options?.onToggleSettings;
   const onToggleProject = options?.onToggleProject;
   const onToggleSession = options?.onToggleSession;
+  const onToggleHelp = options?.onToggleHelp;
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -32,6 +34,14 @@ export function useKeyboardShortcuts(options?: UseKeyboardShortcutsOptions) {
 
       // Check modifier keys (Cmd on macOS, Ctrl on Windows/Linux)
       const hasModifier = e.ctrlKey || e.metaKey;
+
+      // F1 or Cmd/Ctrl + / or Cmd/Ctrl + ? (Help Modal)
+      if (e.key === 'F1' || ((e.key === '/' || e.key === '?') && hasModifier)) {
+        e.preventDefault();
+        onToggleHelp?.();
+        return;
+      }
+
       if (!hasModifier) {
         return;
       }
@@ -101,7 +111,7 @@ export function useKeyboardShortcuts(options?: UseKeyboardShortcutsOptions) {
         return;
       }
     },
-    [isPaused, onToggleSettings, onToggleProject, onToggleSession]
+    [isPaused, onToggleSettings, onToggleProject, onToggleSession, onToggleHelp]
   );
 
   useEffect(() => {

@@ -21,6 +21,7 @@ export type ManuscriptMode = 'local';
 export type ScreenWakeLockPolicy = 'always' | '5-min' | 'off';
 export type PhosphorColor = 'amber' | 'green' | 'blue' | 'red';
 export type ClockFormat = '12h' | '24h';
+export type TimerStyle = 'snapshot' | 'pomodoro';
 
 export interface ManuscriptManifest {
   id: string;
@@ -46,6 +47,7 @@ export interface ManuscriptManifest {
   keepScreenAwake?: ScreenWakeLockPolicy;
   showClock?: boolean;
   clockFormat?: ClockFormat;
+  timerStyle?: TimerStyle;
   phosphorColor?: PhosphorColor;
   documentViewMode?: 'typewriter' | 'manuscript';
   showSessionDividers?: boolean;

@@ -903,7 +903,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
       b.textContent?.includes('Return')
     );
     expect(settingsReturnBtn).not.toBeUndefined();
-    expect(container.textContent).toContain('Minitype v0.9.9.0 · by timfromtheborder');
+    expect(container.textContent).toMatch(/Minitype v\d+\.\d+\.\d+\.\d+ · by timfromtheborder/);
 
     await act(async () => {
       root.unmount();
