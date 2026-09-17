@@ -996,7 +996,7 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(typewriterAudio.getMuted()).toBe(true);
     });
 
-    it('plays paper feed sound when a page or card completes', async () => {
+    it('does not play paper feed sound when a card completes in platen', async () => {
       const { typewriterAudio } = await import('@/lib/sound');
       const spy = vi.spyOn(typewriterAudio, 'playPaperFeed');
       const store = useTypingStore.getState();
@@ -1004,7 +1004,7 @@ describe('Typing Engine & State Machine Invariants', () => {
       for (let i = 0; i < 10; i++) {
         store.handleEnter();
       }
-      expect(spy).toHaveBeenCalled();
+      expect(spy).not.toHaveBeenCalled();
       spy.mockRestore();
     });
   });

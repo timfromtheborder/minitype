@@ -335,16 +335,16 @@ class TypewriterAudio {
     try {
       const t = ctx.currentTime;
 
-      // 1. The "Zip" (softer ratchet wheel sliding from t to t + 0.10s)
-      const zipDuration = 0.10;
+      // 1. The "Zip" (fast, tight ratchet wheel slide: 40ms)
+      const zipDuration = 0.04;
       const zipBuffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * zipDuration), ctx.sampleRate);
       const zipData = zipBuffer.getChannelData(0);
       const zipSize = zipData.length;
 
-      // 7 rapid tooth clicks in the burst
+      // 4 rapid tooth clicks in a tight burst
       for (let i = 0; i < zipSize; i++) {
         const p = i / zipSize;
-        const tooth = Math.sin(p * Math.PI * 14);
+        const tooth = Math.sin(p * Math.PI * 8);
         const toothEnv = tooth > 0.6 ? 1 : 0.05;
         zipData[i] = (Math.random() * 2 - 1) * toothEnv * (0.5 + 0.5 * p);
       }
@@ -354,8 +354,8 @@ class TypewriterAudio {
 
       const zipFilter = ctx.createBiquadFilter();
       zipFilter.type = 'bandpass';
-      zipFilter.frequency.setValueAtTime(1800, t);
-      zipFilter.frequency.exponentialRampToValueAtTime(2800, t + zipDuration);
+      zipFilter.frequency.setValueAtTime(2000, t);
+      zipFilter.frequency.exponentialRampToValueAtTime(3000, t + zipDuration);
       zipFilter.Q.setValueAtTime(2.5, t);
 
       const zipGain = ctx.createGain();
@@ -370,49 +370,49 @@ class TypewriterAudio {
       zipSource.start(t);
       zipSource.stop(t + zipDuration + 0.005);
 
-      // 2. The "Clunk" (margin stop impact - softened and de-bassed)
-      const clunkTime = t + 0.095;
+      // 2. The "Clunk" (margin stop impact - fast, tight impact at 35ms)
+      const clunkTime = t + 0.035;
 
-      // Platen thud: lighter acoustic knock without heavy sub-bass
+      // Platen thud: snappy acoustic knock
       const thudOsc = ctx.createOscillator();
       const thudGain = ctx.createGain();
       thudOsc.type = 'triangle';
-      thudOsc.frequency.setValueAtTime(160, clunkTime);
-      thudOsc.frequency.exponentialRampToValueAtTime(80, clunkTime + 0.045);
+      thudOsc.frequency.setValueAtTime(170, clunkTime);
+      thudOsc.frequency.exponentialRampToValueAtTime(90, clunkTime + 0.03);
 
-      thudGain.gain.setValueAtTime(0.14, clunkTime);
-      thudGain.gain.exponentialRampToValueAtTime(0.001, clunkTime + 0.045);
+      thudGain.gain.setValueAtTime(0.15, clunkTime);
+      thudGain.gain.exponentialRampToValueAtTime(0.001, clunkTime + 0.03);
 
       thudOsc.connect(thudGain);
       thudGain.connect(this.getMasterBus(ctx));
       this.cleanupNodes(thudOsc, thudGain);
       thudOsc.start(clunkTime);
-      thudOsc.stop(clunkTime + 0.045);
+      thudOsc.stop(clunkTime + 0.035);
 
-      // Metallic stop latch impact (softened)
-      const metalBuffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.03), ctx.sampleRate);
+      // Metallic stop latch impact
+      const metalBuffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.02), ctx.sampleRate);
       const metalData = metalBuffer.getChannelData(0);
       for (let i = 0; i < metalData.length; i++) {
-        metalData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (metalData.length * 0.2));
+        metalData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (metalData.length * 0.25));
       }
       const metalSource = ctx.createBufferSource();
       metalSource.buffer = metalBuffer;
 
       const metalFilter = ctx.createBiquadFilter();
       metalFilter.type = 'bandpass';
-      metalFilter.frequency.setValueAtTime(1200, clunkTime);
+      metalFilter.frequency.setValueAtTime(1300, clunkTime);
       metalFilter.Q.setValueAtTime(3.0, clunkTime);
 
       const metalGain = ctx.createGain();
       metalGain.gain.setValueAtTime(0.20, clunkTime);
-      metalGain.gain.exponentialRampToValueAtTime(0.001, clunkTime + 0.03);
+      metalGain.gain.exponentialRampToValueAtTime(0.001, clunkTime + 0.025);
 
       metalSource.connect(metalFilter);
       metalFilter.connect(metalGain);
       metalGain.connect(this.getMasterBus(ctx));
       this.cleanupNodes(metalSource, metalFilter, metalGain);
       metalSource.start(clunkTime);
-      metalSource.stop(clunkTime + 0.035);
+      metalSource.stop(clunkTime + 0.03);
     } catch {}
   }
 
@@ -545,7 +545,8 @@ class TypewriterAudio {
   }
 
   /**
-   * Subtle alert beep for Pomodoro 1-minute warning.
+   * Crisp heart monitor / ECG style bleep for Pomodoro 1-minute warning.
+   * Pure medical C6 monitor tone with rapid attack and clean cutoff.
    */
   public playPomodoroBeep() {
     if (this.isMuted) return;
@@ -558,23 +559,26 @@ class TypewriterAudio {
       const gain = ctx.createGain();
 
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(880, t);
+      osc.frequency.setValueAtTime(1046.5, t); // C6 medical monitor tone
 
-      gain.gain.setValueAtTime(0.001, t);
-      gain.gain.exponentialRampToValueAtTime(0.12, t + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+      const duration = 0.065; // 65ms crisp bleep
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.linearRampToValueAtTime(0.16, t + 0.003); // Instant 3ms attack
+      gain.gain.setValueAtTime(0.16, t + 0.048); // Flat sustain
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + duration); // Clean 17ms cutoff
 
       osc.connect(gain);
       gain.connect(this.getMasterBus(ctx));
 
       this.cleanupNodes(osc, gain);
       osc.start(t);
-      osc.stop(t + 0.11);
+      osc.stop(t + duration + 0.01);
     } catch {}
   }
 
   /**
-   * Resonant typewriter/desk bell ding when Pomodoro hits 0 and transitions.
+   * Warm, solid desk bell ding when Pomodoro hits 0 and transitions.
+   * Clean mid-range A5 fundamental with natural decay and no resonant tail or warble.
    */
   public playPomodoroDing() {
     if (this.isMuted) return;
@@ -583,37 +587,24 @@ class TypewriterAudio {
 
     try {
       const t = ctx.currentTime;
-      const duration = 0.75;
+      const duration = 0.32; // Snappy, not overly resonant
 
-      const osc1 = ctx.createOscillator();
-      const gain1 = ctx.createGain();
-      osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(1760, t);
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
 
-      gain1.gain.setValueAtTime(0.24, t);
-      gain1.gain.exponentialRampToValueAtTime(0.001, t + duration);
+      // Warm, pleasing mid-range chime (880Hz A5) - not piercingly bright
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, t);
 
-      osc1.connect(gain1);
-      gain1.connect(this.getMasterBus(ctx));
+      gain.gain.setValueAtTime(0.22, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
 
-      const osc2 = ctx.createOscillator();
-      const gain2 = ctx.createGain();
-      osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(2637, t);
+      osc.connect(gain);
+      gain.connect(this.getMasterBus(ctx));
 
-      gain2.gain.setValueAtTime(0.11, t);
-      gain2.gain.exponentialRampToValueAtTime(0.001, t + duration * 0.6);
-
-      osc2.connect(gain2);
-      gain2.connect(this.getMasterBus(ctx));
-
-      this.cleanupNodes(osc1, gain1);
-      this.cleanupNodes(osc2, gain2);
-
-      osc1.start(t);
-      osc1.stop(t + duration + 0.02);
-      osc2.start(t);
-      osc2.stop(t + duration * 0.6 + 0.02);
+      this.cleanupNodes(osc, gain);
+      osc.start(t);
+      osc.stop(t + duration + 0.01);
     } catch {}
   }
 

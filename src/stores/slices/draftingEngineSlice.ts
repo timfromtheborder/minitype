@@ -261,9 +261,6 @@ export const createDraftingEngineSlice: StateCreator<
     const newTotalWords = newCommittedDocWords + nextLineWords;
 
     if (nextLineIndex >= pageLineLimit) {
-      if (state.manifest.pageMode === 'notecard') {
-        typewriterAudio.playPaperFeed();
-      }
       const completedPage: PageRecord = {
         id: `${state.manifest.id}-page-${state.currentPageNumber}`,
         manuscriptId: state.manifest.id,
@@ -725,9 +722,6 @@ export const createDraftingEngineSlice: StateCreator<
     const newOutbox = isScrollMode ? 0 : Math.floor(newSessionCommitted / 10);
 
     if (shouldCompletePage) {
-      if (state.manifest.pageMode === 'notecard') {
-        typewriterAudio.playPaperFeed();
-      }
       // Page completed on Enter
       const completedPage: PageRecord = {
         id: `${state.manifest.id}-page-${state.currentPageNumber}`,
@@ -967,8 +961,6 @@ export const createDraftingEngineSlice: StateCreator<
 
     notifyDraftingActivity(set, get);
     flushPendingSave();
-
-    typewriterAudio.playPaperFeed();
 
     const state = get();
     const lines = [...state.currentPageLines];
