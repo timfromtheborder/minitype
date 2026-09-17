@@ -455,12 +455,19 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     expect(card?.textContent).toContain('-----');
     expect(card?.textContent).toContain('4 words');
 
-    // Verify copy and delete buttons are removed
+    // Verify copy, delete, export, and print buttons are removed
     const buttons = Array.from(container.querySelectorAll('button'));
     const copyBtn = buttons.find((b) => b.title?.toLowerCase().includes('copy'));
     const deleteBtn = buttons.find((b) => b.title?.toLowerCase().includes('delete'));
+    const exportBtn = buttons.find((b) => b.title?.toLowerCase().includes('export') || b.textContent?.includes('Export'));
+    const printBtn = buttons.find((b) => b.title?.toLowerCase().includes('print'));
     expect(copyBtn).toBeUndefined();
     expect(deleteBtn).toBeUndefined();
+    expect(exportBtn).toBeUndefined();
+    expect(printBtn).toBeUndefined();
+
+    // Verify redundant "words total" at bottom right is removed
+    expect(container.textContent).not.toContain('words total');
 
     // Verify collapse all button is removed
     const collapseAllBtn = buttons.find((b) => b.textContent?.includes('Collapse All'));
@@ -472,7 +479,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     container.remove();
   });
 
-  it('supports hiding and showing session dividers via the Dividers toolbar button', async () => {
+  it('supports hiding and showing session dividers via the Show Sessions toolbar button', async () => {
     (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
     const root = createRoot(container);
 
@@ -502,13 +509,13 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     // Dividers exist initially
     expect(container.textContent).toContain('-----');
 
-    // Click Dividers button
+    // Click Show Sessions button
     const buttons = Array.from(container.querySelectorAll('button'));
-    const dividersBtn = buttons.find((b) => b.textContent?.includes('Dividers'));
-    expect(dividersBtn).toBeDefined();
+    const showSessionsBtn = buttons.find((b) => b.textContent?.includes('Show Sessions'));
+    expect(showSessionsBtn).toBeDefined();
 
     await act(async () => {
-      dividersBtn?.click();
+      showSessionsBtn?.click();
     });
 
     expect(useTypingStore.getState().manifest.showSessionDividers).toBe(false);
@@ -517,9 +524,9 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     // Content is still present and continuous
     expect(container.textContent).toContain('First session content.');
 
-    // Click Dividers button again to restore
+    // Click Show Sessions button again to restore
     await act(async () => {
-      dividersBtn?.click();
+      showSessionsBtn?.click();
     });
 
     expect(useTypingStore.getState().manifest.showSessionDividers).toBe(true);

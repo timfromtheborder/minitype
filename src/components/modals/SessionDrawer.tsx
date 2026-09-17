@@ -5,8 +5,6 @@ import { PageRecord, ManuscriptManifest, SessionRecord } from '@/types';
 import { sanitizeManuscript } from '@/lib/sanitize';
 import { useTypingStore } from '@/stores/typingStore';
 import {
-  Printer,
-  Download,
   CornerUpLeft,
   Plus,
   CheckCircle,
@@ -213,26 +211,6 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
 
   if (!isOpen) return null;
 
-  const handleDownloadTxt = () => {
-    const safeTitle = (title.trim() || manifest.title || 'manuscript').replace(/[/\\?%*:|"<>]/g, '-');
-    const blob = new Blob([sanitizedFullText], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${safeTitle}.txt`;
-    link.click();
-    URL.revokeObjectURL(url);
-    if (onPrintedComplete) {
-      onPrintedComplete(sanitizedFullText.length);
-    }
-  };
-
-  const handleBrowserPrint = () => {
-    window.print();
-    if (onPrintedComplete) {
-      onPrintedComplete(sanitizedFullText.length);
-    }
-  };
 
   const handleStartNewSession = async () => {
     const hasEmptyActive = resolvedSessions.some(
@@ -400,7 +378,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
               </button>
             </div>
 
-            {/* Dividers Toggle */}
+            {/* Show Sessions Toggle */}
             <button
               type="button"
               onClick={() => {
@@ -411,14 +389,14 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                   ? 'bg-primary/10 border-primary text-foreground font-medium'
                   : 'border-border/80 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground'
               }`}
-              title={showDividers ? 'Hide session dividers' : 'Show session dividers'}
+              title={showDividers ? 'Hide sessions' : 'Show sessions'}
             >
               <span
                 className={`w-1.5 h-1.5 rounded-[0.5px] ${
                   showDividers ? 'bg-primary' : 'bg-muted-foreground/50'
                 }`}
               />
-              <span>Dividers</span>
+              <span>Show Sessions</span>
             </button>
 
             {/* Double-space Toggle */}
@@ -433,7 +411,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                   ? 'bg-primary/10 border-primary text-foreground font-medium'
                   : 'border-border/80 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground'
               }`}
-              title="Double-space paragraphs in preview and export"
+              title="Double-space paragraphs in preview"
             >
               <span
                 className={`w-1.5 h-1.5 rounded-[0.5px] ${
@@ -441,31 +419,6 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                 }`}
               />
               <span>Double-space</span>
-            </button>
-
-            {/* Export .txt */}
-            <button
-              type="button"
-              onClick={handleDownloadTxt}
-              disabled={sanitizedFullText.length === 0}
-              className="flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1 rounded-[2px] border border-border/80 bg-muted/40 hover:bg-muted text-foreground transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-xs"
-              title="Export clean .txt file"
-              aria-label="Export clean .txt"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Export</span>
-            </button>
-
-            {/* Print */}
-            <button
-              type="button"
-              onClick={handleBrowserPrint}
-              disabled={sanitizedFullText.length === 0}
-              className="p-1.5 rounded-[2px] border border-border/80 bg-muted/40 hover:bg-muted text-foreground transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-              title="Print document"
-              aria-label="Print document"
-            >
-              <Printer className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -576,35 +529,27 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
         </div>
 
         {/* Bottom Action Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/60 text-xs font-sans shrink-0">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleStartNewSession}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] border border-primary bg-primary text-primary-foreground font-semibold shadow-xs hover:opacity-90 transition-opacity cursor-pointer text-xs"
-              title="Start a new drafting session"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Start New Session</span>
-            </button>
+        <div className="flex items-center gap-2 pt-2 border-t border-border/60 text-xs font-sans shrink-0">
+          <button
+            type="button"
+            onClick={handleStartNewSession}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] border border-primary bg-primary text-primary-foreground font-semibold shadow-xs hover:opacity-90 transition-opacity cursor-pointer text-xs"
+            title="Start a new drafting session"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Start New Session</span>
+          </button>
 
-            <button
-              type="button"
-              onClick={handleCloseActiveSession}
-              disabled={!hasActiveSession}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] border border-border/80 bg-muted/40 hover:bg-muted text-foreground transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium"
-              title="Complete and close active drafting session"
-            >
-              <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Close Session</span>
-            </button>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <span className="text-[clamp(11px,0.85em,13px)] text-muted-foreground font-mono">
-              {totalWords.toLocaleString()} words total
-            </span>
-          </div>
+          <button
+            type="button"
+            onClick={handleCloseActiveSession}
+            disabled={!hasActiveSession}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] border border-border/80 bg-muted/40 hover:bg-muted text-foreground transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium"
+            title="Complete and close active drafting session"
+          >
+            <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Close Session</span>
+          </button>
         </div>
       </div>
     </div>
