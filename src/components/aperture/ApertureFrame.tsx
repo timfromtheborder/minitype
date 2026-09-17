@@ -156,6 +156,7 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = React.memo(function A
 
   return (
     <div
+      suppressHydrationWarning
       onMouseDown={handleMouseDown}
       onClick={handleFrameTap}
       onTouchEnd={handleFrameTap}
@@ -180,7 +181,7 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = React.memo(function A
 
       {/* Column guide top ruler marker (permanently fixed at top of the platen) */}
       {isPortrait ? (
-        <div className={`flex items-center justify-between ${platenWidthClass} font-mono select-none pointer-events-none mb-1.5 shrink-0 whitespace-nowrap overflow-hidden leading-none`}>
+        <div suppressHydrationWarning className={`flex items-center justify-between ${platenWidthClass} font-mono select-none pointer-events-none mb-1.5 shrink-0 whitespace-nowrap overflow-hidden leading-none`}>
           <span className="text-[0.625rem] font-semibold text-muted-foreground/45 shrink-0">01</span>
           <span className="flex-1 text-[0.625rem] text-center overflow-hidden whitespace-nowrap truncate tracking-widest text-muted-foreground/25 opacity-70 px-1">
             · · · · · · · · · · · · ·
@@ -188,7 +189,7 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = React.memo(function A
           <span className="text-[0.625rem] font-semibold text-muted-foreground/45 shrink-0">35</span>
         </div>
       ) : (
-        <div className={`flex items-center justify-between ${platenWidthClass} font-mono select-none pointer-events-none mb-1.5 shrink-0 whitespace-nowrap overflow-hidden leading-none`}>
+        <div suppressHydrationWarning className={`flex items-center justify-between ${platenWidthClass} font-mono select-none pointer-events-none mb-1.5 shrink-0 whitespace-nowrap overflow-hidden leading-none`}>
           <span className="text-[0.625rem] font-semibold text-muted-foreground/45 shrink-0">01</span>
           <span className="flex-1 text-[0.625rem] text-center overflow-hidden whitespace-nowrap truncate tracking-widest text-muted-foreground/25 opacity-70 px-1">
             · · · · · · · · · · · · ·
@@ -202,15 +203,16 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = React.memo(function A
       )}
 
       {/* Drafting lines viewport: fixed height based on aperture capacity, scrolling upward from bottom platen */}
-      <div className="relative flex flex-row justify-center">
+      <div suppressHydrationWarning className="relative flex flex-row justify-center">
         {/* Line numbers column in notecard mode */}
         {isNotecard && (
           <div
             aria-hidden="true"
+            suppressHydrationWarning
             className="absolute right-[calc(100%+0.75rem)] sm:right-[calc(100%+1.25rem)] top-0 bottom-0 flex flex-col justify-end select-none pointer-events-none"
             style={{
-              height: `var(--aperture-height-rem, ${viewportHeightRem}rem)`,
-              minHeight: `var(--aperture-height-rem, ${viewportHeightRem}rem)`,
+              height: 'var(--aperture-height-rem)',
+              minHeight: 'var(--aperture-height-rem)',
             }}
           >
             {visibleLines.map((line, idx) => {
@@ -228,10 +230,11 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = React.memo(function A
         )}
 
         <div
+          suppressHydrationWarning
           className={`flex flex-col justify-end ${platenWidthClass} overflow-hidden`}
           style={{
-            height: `var(--aperture-height-rem, ${viewportHeightRem}rem)`,
-            minHeight: `var(--aperture-height-rem, ${viewportHeightRem}rem)`,
+            height: 'var(--aperture-height-rem)',
+            minHeight: 'var(--aperture-height-rem)',
           }}
         >
           {visibleLines.map((line, idx) => {

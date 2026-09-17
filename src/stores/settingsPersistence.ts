@@ -161,6 +161,10 @@ export function getInitialManifest(): ManuscriptManifest {
   return base;
 }
 
+let hasRequestedStoragePersist = false;
+let hasCleanedLegacyCookies = false;
+let inMemorySettingsCache: (Partial<ManuscriptManifest> & { _updatedAt?: number }) | null = null;
+
 export function persistSettings(manifest: Partial<ManuscriptManifest>): void {
   if (typeof window === 'undefined') return;
 
@@ -168,8 +172,20 @@ export function persistSettings(manifest: Partial<ManuscriptManifest>): void {
     const settings = extractSettings(manifest);
     if (Object.keys(settings).length === 0) return;
 
-    const existing = readSynchronousSettings() || {};
+    // Invalidate in-memory cache if localStorage was cleared
+    let existing = inMemorySettingsCache;
+    try {
+      if (!localStorage.getItem(SETTINGS_KEY)) {
+        existing = null;
+      }
+    } catch (e) {}
+
+    if (!existing) {
+      existing = readSynchronousSettings() || {};
+    }
+
     const merged = { ...existing, ...settings, _updatedAt: Date.now() };
+    inMemorySettingsCache = merged;
     const serialized = JSON.stringify(merged);
 
     // 1. Synchronous localStorage
@@ -197,15 +213,18 @@ export function persistSettings(manifest: Partial<ManuscriptManifest>): void {
         // Write to root
         document.cookie = `${SETTINGS_KEY}=${cookieVal}; path=/; max-age=31536000; SameSite=Lax${secureFlag}`;
 
-        // Actively clear any legacy subfolder path cookies (e.g. /minitype or /minitype/)
-        const currentPath = window.location.pathname.replace(/\/[^/]*$/, '') || '';
-        const pathsToClear = new Set<string>(['/minitype', '/minitype/']);
-        if (currentPath && currentPath !== '/') {
-          pathsToClear.add(currentPath);
-          pathsToClear.add(`${currentPath}/`);
-        }
-        for (const p of pathsToClear) {
-          document.cookie = `${SETTINGS_KEY}=; path=${p}; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secureFlag}`;
+        // Actively clear any legacy subfolder path cookies (e.g. /minitype or /minitype/) once
+        if (!hasCleanedLegacyCookies) {
+          hasCleanedLegacyCookies = true;
+          const currentPath = window.location.pathname.replace(/\/[^/]*$/, '') || '';
+          const pathsToClear = new Set<string>(['/minitype', '/minitype/']);
+          if (currentPath && currentPath !== '/') {
+            pathsToClear.add(currentPath);
+            pathsToClear.add(`${currentPath}/`);
+          }
+          for (const p of pathsToClear) {
+            document.cookie = `${SETTINGS_KEY}=; path=${p}; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secureFlag}`;
+          }
         }
       }
     } catch (e) {}
@@ -213,8 +232,9 @@ export function persistSettings(manifest: Partial<ManuscriptManifest>): void {
     // 5. Asynchronous IndexedDB
     saveGlobalSettingsToDb(merged).catch(console.error);
 
-    // 6. Request persistent storage on mobile / WebKit
-    if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persist) {
+    // 6. Request persistent storage on mobile / WebKit (once)
+    if (!hasRequestedStoragePersist && typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persist) {
+      hasRequestedStoragePersist = true;
       navigator.storage.persist().catch(() => {});
     }
 

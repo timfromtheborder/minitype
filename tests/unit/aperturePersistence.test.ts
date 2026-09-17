@@ -168,22 +168,9 @@ describe('Aperture Persistence Invariant', () => {
   });
 
   it('ApertureFrame renders with CSS variable height and matches activeApertureHeight setting', () => {
-    // 1. When height is 1
-    useTypingStore.getState().setApertureHeight(1);
-    let html = renderToString(React.createElement(ApertureFrame, { height: 1, isPaused: false }));
-    expect(html).toContain('height:var(--aperture-height-rem, 1.25rem)');
-    expect(html).toContain('min-height:var(--aperture-height-rem, 1.25rem)');
-
-    // 2. When height is 4
-    useTypingStore.getState().setApertureHeight(4);
-    html = renderToString(React.createElement(ApertureFrame, { height: 4, isPaused: false }));
-    expect(html).toContain('height:var(--aperture-height-rem, 5rem)');
-    expect(html).toContain('min-height:var(--aperture-height-rem, 5rem)');
-
-    // 3. In notecard mode (locked to 10 lines)
-    useTypingStore.getState().setManifest({ pageMode: 'notecard', pageSize: 10 });
-    html = renderToString(React.createElement(ApertureFrame, { height: 10, isPaused: false }));
-    expect(html).toContain('height:var(--aperture-height-rem, 12.5rem)');
-    expect(html).toContain('min-height:var(--aperture-height-rem, 12.5rem)');
+    // ApertureFrame height is driven strictly by CSS variable --aperture-height-rem for hydration safety
+    const html = renderToString(React.createElement(ApertureFrame, { height: 4, isPaused: false }));
+    expect(html).toContain('height:var(--aperture-height-rem)');
+    expect(html).toContain('min-height:var(--aperture-height-rem)');
   });
 });
