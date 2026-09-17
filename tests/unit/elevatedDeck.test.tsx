@@ -10,10 +10,12 @@ import * as path from 'path';
 
 describe('Strategy A - Persistent Elevated Deck & Modal Linking', () => {
   let container: HTMLDivElement;
+  let root: ReturnType<typeof createRoot> | null = null;
 
   beforeEach(() => {
     container = document.createElement('div');
     document.body.appendChild(container);
+    root = null;
 
     // Reset Zustand store state
     useTypingStore.setState({
@@ -40,14 +42,22 @@ describe('Strategy A - Persistent Elevated Deck & Modal Linking', () => {
     });
   });
 
-  afterEach(() => {
-    document.body.removeChild(container);
+  afterEach(async () => {
+    if (root) {
+      await act(async () => {
+        root?.unmount();
+      });
+      root = null;
+    }
+    if (container.parentElement) {
+      document.body.removeChild(container);
+    }
   });
 
   it('renders persistent deck with z-[60] elevated positioning above modals', async () => {
-    const root = createRoot(container);
+    root = createRoot(container);
     await act(async () => {
-      root.render(<Home />);
+      root?.render(<Home />);
     });
 
     const footer = container.querySelector('footer');
@@ -58,9 +68,9 @@ describe('Strategy A - Persistent Elevated Deck & Modal Linking', () => {
   });
 
   it('allows direct 1-tap switching between modals without manual dismiss', async () => {
-    const root = createRoot(container);
+    root = createRoot(container);
     await act(async () => {
-      root.render(<Home />);
+      root?.render(<Home />);
     });
 
     const docBtn = container.querySelector('button[aria-label="Document"]') as HTMLButtonElement;
@@ -120,9 +130,9 @@ describe('Strategy A - Persistent Elevated Deck & Modal Linking', () => {
   });
 
   it('applies active styling to the currently open modal deck button', async () => {
-    const root = createRoot(container);
+    root = createRoot(container);
     await act(async () => {
-      root.render(<Home />);
+      root?.render(<Home />);
     });
 
     const docBtn = container.querySelector('button[aria-label="Document"]') as HTMLButtonElement;
@@ -157,5 +167,39 @@ describe('Strategy A - Persistent Elevated Deck & Modal Linking', () => {
     // Check clamped values include 11.9px and 15.2px
     expect(cssContent).toContain('11.9px)');
     expect(cssContent).toContain('15.2px)');
+  });
+
+  it('verifies modern minimal square-scrollbar and touch-action: manipulation in globals.css', () => {
+    const cssPath = path.resolve(__dirname, '../../src/app/globals.css');
+    const cssContent = fs.readFileSync(cssPath, 'utf-8');
+
+    // Check scrollbar styles
+    expect(cssContent).toContain('scrollbar-width: thin;');
+    expect(cssContent).toContain('scrollbar-color: var(--border) transparent;');
+    expect(cssContent).toContain('background: transparent;');
+
+    // Check touch-action manipulation for snappy mobile response
+    expect(cssContent).toContain('touch-action: manipulation;');
+  });
+
+  it('verifies modal cards have safe landscape bottom clearance preventing deck collision on S text size', async () => {
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(<Home />);
+    });
+
+    const docBtn = container.querySelector('button[aria-label="Document"]') as HTMLButtonElement;
+    await act(async () => {
+      docBtn.click();
+    });
+
+    const dialog = container.querySelector('div[role="dialog"]') as HTMLElement;
+    expect(dialog).not.toBeNull();
+    // Backdrop has pb-[max(3.5rem,56px)] ensuring at least 56px bottom space for the deck
+    expect(dialog.className).toContain('pb-[max(3.5rem,56px)]');
+
+    // Inner card has landscape:max-h-[calc(100dvh-max(4.5rem,68px))] guaranteeing 68px clearance
+    const card = dialog.firstElementChild as HTMLElement;
+    expect(card.className).toContain('landscape:max-h-[calc(100dvh-max(4.5rem,68px))]');
   });
 });

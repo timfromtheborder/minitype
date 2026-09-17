@@ -173,7 +173,7 @@ export default function Home() {
           <button
             type="button"
             onClick={() => toggleModal('document')}
-            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${getDeckButtonClass(
+            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 touch-manipulation text-[11px] sm:text-xs whitespace-nowrap ${getDeckButtonClass(
               isSessionOpen
             )}`}
             title="Document"
@@ -188,7 +188,7 @@ export default function Home() {
           <button
             type="button"
             onClick={() => toggleModal('project')}
-            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${getDeckButtonClass(
+            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 touch-manipulation text-[11px] sm:text-xs whitespace-nowrap ${getDeckButtonClass(
               isProjectOpen
             )}`}
             title="Project"
@@ -203,7 +203,7 @@ export default function Home() {
           <button
             type="button"
             onClick={() => toggleModal('settings')}
-            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${getDeckButtonClass(
+            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 touch-manipulation text-[11px] sm:text-xs whitespace-nowrap ${getDeckButtonClass(
               isSettingsOpen
             )}`}
             title="Settings"
@@ -218,7 +218,7 @@ export default function Home() {
           <button
             type="button"
             onClick={() => toggleModal('help')}
-            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${getDeckButtonClass(
+            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 touch-manipulation text-[11px] sm:text-xs whitespace-nowrap ${getDeckButtonClass(
               isHelpOpen
             )}`}
             title="Help"

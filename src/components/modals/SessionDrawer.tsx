@@ -342,13 +342,13 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
       role="dialog"
       aria-modal="true"
       aria-label="Document"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-2 pb-14 sm:p-4 sm:pb-16 animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 pb-[max(3.5rem,56px)] sm:p-4 sm:pb-16 animate-in fade-in duration-75"
       onClick={handleModalClose}
     >
       <div
         ref={modalRef}
         tabIndex={-1}
-        className="w-full max-w-3xl h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] landscape:h-[calc(100dvh-4.5rem)] landscape:max-h-[calc(100dvh-4.5rem)] sm:h-[620px] sm:max-h-[calc(100dvh-5.5rem)] my-auto rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-col select-none relative overflow-hidden p-3 sm:p-5 gap-2.5 sm:gap-3 focus:outline-none"
+        className="w-full max-w-3xl h-[calc(100dvh-max(5.5rem,72px))] max-h-[calc(100dvh-max(5.5rem,72px))] landscape:h-[calc(100dvh-max(4.5rem,68px))] landscape:max-h-[calc(100dvh-max(4.5rem,68px))] sm:h-[620px] sm:max-h-[calc(100dvh-max(5.5rem,72px))] my-auto rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-col select-none relative overflow-hidden p-3 sm:p-5 gap-2.5 sm:gap-3 focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header: Breadcrumb Title Input + Return Button */}
@@ -389,7 +389,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
           <button
             type="button"
             onClick={handleModalClose}
-            className="flex items-center gap-1 px-2 py-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-border/60 transition-colors cursor-pointer text-xs"
+            className="flex items-center gap-1 px-2 py-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-border/60 transition-colors cursor-pointer touch-manipulation text-xs"
             title="Return to writing in aperture"
           >
             <CornerUpLeft className="w-4 h-4 shrink-0" />

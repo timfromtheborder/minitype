@@ -70,13 +70,13 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
       role="dialog"
       aria-modal="true"
       aria-label="Help and Instructions"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-2 pb-14 sm:p-4 sm:pb-16 animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 pb-[max(3.5rem,56px)] sm:p-4 sm:pb-16 animate-in fade-in duration-75"
       onClick={onClose}
     >
       <div
         ref={modalRef}
         tabIndex={-1}
-        className="w-full max-w-2xl h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] landscape:h-[calc(100dvh-4.5rem)] landscape:max-h-[calc(100dvh-4.5rem)] sm:h-[580px] sm:max-h-[calc(100dvh-5.5rem)] my-auto rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-col select-none relative overflow-hidden p-3 sm:p-5 gap-3 focus:outline-none"
+        className="w-full max-w-2xl h-[calc(100dvh-max(5.5rem,72px))] max-h-[calc(100dvh-max(5.5rem,72px))] landscape:h-[calc(100dvh-max(4.5rem,68px))] landscape:max-h-[calc(100dvh-max(4.5rem,68px))] sm:h-[580px] sm:max-h-[calc(100dvh-max(5.5rem,72px))] my-auto rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-col select-none relative overflow-hidden p-3 sm:p-5 gap-3 focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header: Unified Icon, Label & Return Button */}
@@ -91,7 +91,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
           <button
             type="button"
             onClick={onClose}
-            className="flex items-center gap-1 px-2 py-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-border/60 transition-colors cursor-pointer text-xs shrink-0"
+            className="flex items-center gap-1 px-2 py-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-border/60 transition-colors cursor-pointer touch-manipulation text-xs shrink-0"
             title="Return to writing in aperture"
             aria-label="Return to writing in aperture"
           >
@@ -101,7 +101,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Scrollable Content Stream with Collapsible Cards */}
-        <div className="flex-1 overflow-y-auto square-scrollbar pr-1 flex flex-col gap-2.5 sm:gap-3 text-xs font-sans text-foreground/90 select-text leading-relaxed">
+        <div className="flex-1 overflow-y-auto square-scrollbar pr-1.5 sm:pr-2 flex flex-col gap-2.5 sm:gap-3 text-xs font-sans text-foreground/90 select-text leading-relaxed">
           {/* Card 1: Saving, Importing & Exporting */}
           <div className="rounded-[2px] border border-border/70 bg-card/25 overflow-hidden shrink-0 transition-all">
             <button

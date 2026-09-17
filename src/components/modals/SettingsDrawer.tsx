@@ -119,12 +119,12 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
       role="dialog"
       aria-modal="true"
       aria-label="Settings"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-2 pb-14 sm:p-4 sm:pb-16 animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 pb-[max(3.5rem,56px)] sm:p-4 sm:pb-16 animate-in fade-in duration-75"
       onClick={handleClose}
     >
       <div
         ref={drawerRef}
-        className="w-full max-w-md max-h-[calc(100dvh-4.5rem)] sm:max-h-[calc(100dvh-5rem)] overflow-y-auto square-scrollbar p-4 sm:p-6 rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-col gap-4 sm:gap-5 select-none"
+        className="w-full max-w-md max-h-[calc(100dvh-max(4.5rem,68px))] sm:max-h-[calc(100dvh-5rem)] overflow-y-auto square-scrollbar p-4 sm:p-6 rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-col gap-4 sm:gap-5 select-none"
         onClick={(e) => {
           e.stopPropagation();
           setIsPhosphorPickerOpen(false);
@@ -141,7 +141,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           <button
             type="button"
             onClick={handleClose}
-            className="flex items-center gap-1 px-2 py-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-border/60 transition-colors cursor-pointer text-xs shrink-0"
+            className="flex items-center gap-1 px-2 py-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-border/60 transition-colors cursor-pointer touch-manipulation text-xs shrink-0"
             title="Return to writing in aperture"
           >
             <CornerUpLeft className="w-4 h-4 shrink-0" />
@@ -594,7 +594,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.10.1 · by timfromtheborder
+              Minitype v0.9.10.2 · by timfromtheborder
             </span>
           </div>
         </div>

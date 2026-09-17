@@ -434,15 +434,20 @@ html[data-column-limit="35"][data-text-size="xl"] {
 }
 
 /* Custom Square Monospace Scrollbar */
+.square-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
 .square-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 .square-scrollbar::-webkit-scrollbar-track {
-  background: var(--muted);
+  background: transparent;
 }
 .square-scrollbar::-webkit-scrollbar-thumb {
   background: var(--border);
+  border-radius: 2px;
 }
 .square-scrollbar::-webkit-scrollbar-thumb:hover {
   background: var(--muted-foreground);
@@ -658,6 +663,13 @@ html[data-page-mode="notecard"],
 /* Touch device button responsiveness: trigger tactile highlight immediately on tap (:active) */
 * {
   -webkit-tap-highlight-color: transparent;
+}
+
+button,
+[role="button"],
+[role="switch"],
+.cursor-pointer {
+  touch-action: manipulation;
 }
 
 @media (hover: none) and (pointer: coarse) {
