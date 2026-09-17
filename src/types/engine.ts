@@ -1,6 +1,7 @@
 import { CharacterCell, LineRecord } from './aperture';
 import { ManuscriptManifest, PageMode, TextSize } from './manuscript';
 import { SessionRecord } from './session';
+import { MinitypeBackupArchive } from './backup';
 
 export interface CursorPosition {
   lineIndex: number;
@@ -47,6 +48,8 @@ export interface TypingEngineActions {
   newProject: (skipSaveCurrent?: boolean) => Promise<void>;
   loadProject: (id: string, skipSaveCurrent?: boolean) => Promise<void>;
   importTextFileAsProject: (title: string, rawText: string) => Promise<void>;
+  exportFullBackup: () => Promise<MinitypeBackupArchive>;
+  restoreFullBackup: (archive: MinitypeBackupArchive, mode?: 'merge' | 'replace') => Promise<{ projectCount: number; sessionCount: number }>;
   deleteProject: (id: string) => Promise<void>;
   renameProject: (id: string, newTitle: string) => Promise<void>;
   startNewSession: () => Promise<void>;

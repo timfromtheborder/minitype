@@ -4,6 +4,7 @@ import { getAllManuscripts, loadManuscriptProject } from '@/db';
 import { useTypingStore } from '@/stores/typingStore';
 import { sanitizeManuscript } from '@/lib/sanitize';
 import { serializeProjectFile } from '@/lib/projectSerializer';
+import { downloadLibraryBackup, validateBackupArchive } from '@/lib/backup';
 import {
   FolderOpen,
   Plus,
@@ -45,6 +46,10 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
   const [sortField, setSortField] = useState<SortField>('modified');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const backupInputRef = useRef<HTMLInputElement>(null);
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [isRestoring, setIsRestoring] = useState<boolean>(false);
+  const [backupStatus, setBackupStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const lastTapRef = useRef<{ id: string; time: number }>({ id: '', time: 0 });
 
   const refreshFiles = async (showLoader = true) => {
@@ -120,6 +125,72 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
       e.target.value = '';
     }
   };
+
+  const handleBackupExport = async () => {
+    try {
+      setIsExporting(true);
+      setBackupStatus(null);
+      const archive = await useTypingStore.getState().exportFullBackup();
+      downloadLibraryBackup(archive);
+      setBackupStatus({
+        type: 'success',
+        text: `Exported ${archive.manuscripts.length} project${archive.manuscripts.length === 1 ? '' : 's'}`,
+      });
+    } catch (err) {
+      console.error('Failed to export backup:', err);
+      setBackupStatus({ type: 'error', text: 'Failed to export library backup' });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleRestoreClick = () => {
+    backupInputRef.current?.click();
+  };
+
+  const handleBackupFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsRestoring(true);
+      setBackupStatus(null);
+      const text = await file.text();
+      let parsed: any;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        setBackupStatus({ type: 'error', text: 'File is not valid JSON' });
+        return;
+      }
+
+      const validation = validateBackupArchive(parsed);
+      if (!validation.isValid || !validation.archive) {
+        setBackupStatus({ type: 'error', text: validation.error || 'Invalid Minitype backup archive' });
+        return;
+      }
+
+      const result = await useTypingStore.getState().restoreFullBackup(validation.archive, 'merge');
+      await refreshFiles();
+      setBackupStatus({
+        type: 'success',
+        text: `Restored ${result.projectCount} project${result.projectCount === 1 ? '' : 's'} (${result.sessionCount} sessions)`,
+      });
+    } catch (err) {
+      console.error('Failed to restore backup:', err);
+      setBackupStatus({ type: 'error', text: 'Failed to restore backup' });
+    } finally {
+      setIsRestoring(false);
+      e.target.value = '';
+    }
+  };
+
+  useEffect(() => {
+    if (backupStatus) {
+      const timer = setTimeout(() => setBackupStatus(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [backupStatus]);
 
   const handleOpenProject = async (id: string) => {
     if (id !== activeManuscriptId) {
@@ -239,6 +310,14 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
         accept=".txt,.md,text/plain"
         className="hidden"
         onChange={handleFileChange}
+      />
+      {/* Hidden JSON backup picker */}
+      <input
+        ref={backupInputRef}
+        type="file"
+        accept=".json,application/json"
+        className="hidden"
+        onChange={handleBackupFileChange}
       />
 
       {/* Top Action Bar */}
@@ -467,6 +546,49 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
             })}
           </div>
         )}
+      </div>
+
+      {/* Bottom Library Data Safety Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-2 shrink-0 pt-2 border-t border-border/60 text-xs">
+        <div className="flex items-center gap-1.5 min-h-[1.5rem]">
+          {backupStatus ? (
+            <span
+              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[2px] text-[11px] font-medium animate-in fade-in duration-150 ${
+                backupStatus.type === 'error'
+                  ? 'bg-destructive/15 text-destructive border border-destructive/30'
+                  : 'bg-primary/15 text-primary border border-primary/30'
+              }`}
+            >
+              {backupStatus.type === 'error' ? '!' : '✓'} {backupStatus.text}
+            </span>
+          ) : (
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/60 select-none">
+              Library Data Safety (JSON)
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={handleBackupExport}
+            disabled={isExporting}
+            className="flex items-center gap-1 px-2 py-1 text-xs rounded-[2px] border border-border/80 bg-muted/40 hover:bg-muted text-foreground transition-colors cursor-pointer disabled:opacity-50"
+            title="Download complete library backup as JSON"
+          >
+            {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+            <span>Backup All</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleRestoreClick}
+            disabled={isRestoring}
+            className="flex items-center gap-1 px-2 py-1 text-xs rounded-[2px] border border-border/80 bg-muted/40 hover:bg-muted text-foreground transition-colors cursor-pointer disabled:opacity-50"
+            title="Restore library from a JSON backup file"
+          >
+            {isRestoring ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+            <span>Restore</span>
+          </button>
+        </div>
       </div>
     </div>
   );

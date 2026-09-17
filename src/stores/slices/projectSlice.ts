@@ -5,7 +5,9 @@ import {
   SessionRecord,
   LineRecord,
   PageRecord,
+  MinitypeBackupArchive,
 } from '@/types';
+import { createLibraryBackup, restoreLibraryBackup } from '@/lib/backup';
 import {
   saveManuscript,
   savePage,
@@ -160,6 +162,8 @@ export interface ProjectSlice {
   renameProject: (id: string, newTitle: string) => Promise<void>;
   importTextFileAsProject: (title: string, rawText: string) => Promise<void>;
   clearText: () => Promise<void>;
+  exportFullBackup: () => Promise<MinitypeBackupArchive>;
+  restoreFullBackup: (archive: MinitypeBackupArchive, mode?: 'merge' | 'replace') => Promise<{ projectCount: number; sessionCount: number }>;
   startNewSession: () => Promise<void>;
   syncSessionStats: (fullText?: string, words?: number) => void;
 }
@@ -751,6 +755,29 @@ export const createProjectSlice: StateCreator<
     if (m) {
       await saveManuscript({ ...m, title: newTitle, updatedAt: new Date().toISOString() }).catch(console.error);
     }
+  },
+
+  exportFullBackup: async () => {
+    await finalizeAndSaveCurrentProject(get, set);
+    return await createLibraryBackup();
+  },
+
+  restoreFullBackup: async (archive: MinitypeBackupArchive, mode: 'merge' | 'replace' = 'merge') => {
+    const result = await restoreLibraryBackup(archive, mode);
+
+    const currentId = get().manifest.id;
+    const allManuscripts = await getAllManuscripts();
+    const currentExists = allManuscripts.some((m) => m.id === currentId);
+
+    if (currentExists) {
+      await get().loadProject(currentId, true);
+    } else if (allManuscripts.length > 0) {
+      await get().loadProject(allManuscripts[0].id, true);
+    } else {
+      await get().newProject(true);
+    }
+
+    return result;
   },
 
   startNewSession: async () => {
