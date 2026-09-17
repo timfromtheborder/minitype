@@ -118,12 +118,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
     if (!isOpen) return;
 
     const timer = setTimeout(() => {
-      const focusables = modalRef.current?.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-      );
-      if (focusables && focusables.length > 0) {
-        focusables[0].focus();
-      }
+      modalRef.current?.focus();
     }, 50);
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -141,7 +136,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
         const lastEl = focusables[focusables.length - 1];
 
         if (e.shiftKey) {
-          if (document.activeElement === firstEl) {
+          if (document.activeElement === firstEl || document.activeElement === modalRef.current) {
             e.preventDefault();
             lastEl.focus();
           }
@@ -271,7 +266,8 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
     >
       <div
         ref={modalRef}
-        className="w-full max-w-3xl h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] landscape:h-[calc(100dvh-3.5rem)] landscape:max-h-[calc(100dvh-3.5rem)] sm:h-[620px] sm:max-h-[620px] my-auto rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-col select-none relative overflow-hidden p-3 sm:p-5 gap-2.5 sm:gap-3"
+        tabIndex={-1}
+        className="w-full max-w-3xl h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] landscape:h-[calc(100dvh-3.5rem)] landscape:max-h-[calc(100dvh-3.5rem)] sm:h-[620px] sm:max-h-[620px] my-auto rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-col select-none relative overflow-hidden p-3 sm:p-5 gap-2.5 sm:gap-3 focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header: Breadcrumb Title Input + Return Button */}

@@ -45,10 +45,7 @@ const ProjectFilesModalComponent: React.FC<ProjectFilesModalProps> = ({
     if (!isOpen) return;
 
     const timer = setTimeout(() => {
-      const firstFocusable = modalRef.current?.querySelector<HTMLElement>(
-        'input, button:not([disabled])'
-      );
-      firstFocusable?.focus();
+      modalRef.current?.focus();
     }, 50);
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -67,7 +64,7 @@ const ProjectFilesModalComponent: React.FC<ProjectFilesModalProps> = ({
         const lastEl = focusables[focusables.length - 1];
 
         if (e.shiftKey) {
-          if (document.activeElement === firstEl) {
+          if (document.activeElement === firstEl || document.activeElement === modalRef.current) {
             e.preventDefault();
             lastEl.focus();
           }
@@ -99,7 +96,8 @@ const ProjectFilesModalComponent: React.FC<ProjectFilesModalProps> = ({
     >
       <div
         ref={modalRef}
-        className="w-full max-w-3xl h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] landscape:h-[calc(100dvh-3.5rem)] landscape:max-h-[calc(100dvh-3.5rem)] sm:h-[560px] sm:max-h-[560px] my-auto rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-col p-3 sm:p-5 gap-2.5 sm:gap-3 select-none relative overflow-hidden"
+        tabIndex={-1}
+        className="w-full max-w-3xl h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] landscape:h-[calc(100dvh-3.5rem)] landscape:max-h-[calc(100dvh-3.5rem)] sm:h-[560px] sm:max-h-[560px] my-auto rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-col p-3 sm:p-5 gap-2.5 sm:gap-3 select-none relative overflow-hidden focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header: Projects / [Document Title] + Return button */}

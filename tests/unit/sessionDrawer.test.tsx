@@ -819,4 +819,44 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     expect(state.activeLineIndex).toBe(1);
     expect(state.activeColIndex).toBe(0);
   });
+
+  it('does not automatically focus or activate the project title input when SessionDrawer or ProjectFilesModal open', async () => {
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+    const root = createRoot(container);
+
+    // Test SessionDrawer
+    await act(async () => {
+      root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
+    });
+    // Wait for the 50ms focus timeout
+    await act(async () => {
+      await new Promise((res) => setTimeout(res, 80));
+    });
+
+    const sessionDrawerInput = container.querySelector('input[data-modal-input="true"]') as HTMLInputElement;
+    expect(sessionDrawerInput).not.toBeNull();
+    expect(document.activeElement).not.toBe(sessionDrawerInput);
+
+    await act(async () => {
+      root.unmount();
+    });
+
+    // Test ProjectFilesModal
+    const root2 = createRoot(container);
+    await act(async () => {
+      root2.render(<ProjectFilesModal isOpen={true} onClose={() => {}} />);
+    });
+    await act(async () => {
+      await new Promise((res) => setTimeout(res, 80));
+    });
+
+    const projectFilesInput = container.querySelector('input[data-modal-input="true"]') as HTMLInputElement;
+    expect(projectFilesInput).not.toBeNull();
+    expect(document.activeElement).not.toBe(projectFilesInput);
+
+    await act(async () => {
+      root2.unmount();
+    });
+    container.remove();
+  });
 });
