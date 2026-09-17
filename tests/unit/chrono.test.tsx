@@ -57,9 +57,10 @@ describe('ChronoSuite & Clock Formatter', () => {
         root.render(<ChronoSuite showClock={true} />);
       });
 
-      const clockBtn = container.querySelector('button[title*="clock"]');
+      const clockBtn = container.querySelector('button[aria-label*="time"]');
       expect(clockBtn).not.toBeNull();
       expect(clockBtn?.className).toContain('text-xl');
+      expect(clockBtn?.getAttribute('title')).toBeNull();
       expect(container.textContent).toMatch(/10:15/);
 
       // Advance 1 minute
@@ -78,7 +79,7 @@ describe('ChronoSuite & Clock Formatter', () => {
         root.render(<ChronoSuite showClock={true} />);
       });
 
-      const clockBtn = container.querySelector('button[title*="clock"]');
+      const clockBtn = container.querySelector('button[aria-label*="time"]');
       expect(clockBtn).not.toBeNull();
 
       // Click clock to start session timer
@@ -89,11 +90,13 @@ describe('ChronoSuite & Clock Formatter', () => {
       // Now badge should appear with initial "+0m"
       expect(container.textContent).toContain('+0m');
 
-      const badgeBtn = container.querySelector('button[title*="elapsed"]');
+      const badgeBtn = container.querySelector('button[aria-label*="Session timer started"]');
       expect(badgeBtn).not.toBeNull();
-      // Verify non-shifting absolute positioning above clock
+      expect(badgeBtn?.getAttribute('title')).toBeNull();
+      // Verify non-shifting absolute positioning above clock and slide-up animation
       expect(badgeBtn?.className).toContain('absolute');
       expect(badgeBtn?.className).toContain('bottom-full');
+      expect(badgeBtn?.className).toContain('animate-timer-slide-up');
 
       // Advance time by 25 minutes
       await act(async () => {
@@ -108,7 +111,7 @@ describe('ChronoSuite & Clock Formatter', () => {
       });
 
       // Badge should be removed
-      expect(container.querySelector('button[title*="elapsed"]')).toBeNull();
+      expect(container.querySelector('button[aria-label*="Session timer started"]')).toBeNull();
     });
   });
 });

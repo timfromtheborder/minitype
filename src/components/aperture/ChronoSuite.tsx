@@ -95,26 +95,25 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
 
   return (
     <div className={`relative flex flex-col items-center justify-center select-none ${fontClass}`}>
-      {/* Session Timer Badge: anchored absolutely above the clock without shifting clock position */}
+      {/* Session Timer: exact same size as clock, faded out, no border/bg/button aesthetic, slide-up & fade-in */}
       {timerStartTime !== null && (
         <button
+          key={timerStartTime}
           type="button"
           onClick={handleTimerBadgeClick}
-          className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-[2px] border border-border/60 bg-muted/80 hover:bg-destructive/15 hover:border-destructive/40 text-muted-foreground hover:text-destructive text-xs font-mono font-medium transition-all cursor-pointer active:scale-95 animate-in fade-in slide-in-from-bottom-1 duration-150 flex items-center gap-1.5 shadow-xs whitespace-nowrap z-20"
-          title="Session elapsed timer (click to dismiss)"
+          className="absolute bottom-full mb-2 left-1/2 text-xl sm:text-2xl font-mono uppercase tracking-widest text-foreground/45 hover:text-foreground/60 transition-colors cursor-pointer bg-transparent border-none p-0 shadow-none outline-none whitespace-nowrap animate-timer-slide-up select-none"
           aria-label={`Session timer started at ${formattedStartTime}, elapsed ${elapsedMinutes} minutes. Click to dismiss.`}
         >
           <span>{formattedStartTime}</span>
-          <span className="font-bold">+{elapsedMinutes}m</span>
+          <span className="ml-2">+{elapsedMinutes}m</span>
         </button>
       )}
 
-      {/* Clock Display: 100% larger (text-xl sm:text-2xl) */}
+      {/* Clock Display: 100% larger, 25% brighter than timer, no tooltip */}
       <button
         type="button"
         onClick={handleClockClick}
-        className="text-xl sm:text-2xl text-foreground/40 hover:text-foreground/80 transition-opacity cursor-pointer tracking-widest font-mono uppercase focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-[2px] px-2 py-0.5 whitespace-nowrap"
-        title="Session clock (click to stamp timer)"
+        className="text-xl sm:text-2xl text-foreground/75 hover:text-foreground transition-colors cursor-pointer tracking-widest font-mono uppercase bg-transparent border-none p-0 shadow-none outline-none whitespace-nowrap select-none"
         aria-label={`Current time: ${formattedCurrentTime}. Click to start session timer.`}
       >
         {formattedCurrentTime}
