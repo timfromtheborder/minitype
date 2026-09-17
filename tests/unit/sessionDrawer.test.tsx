@@ -1274,12 +1274,33 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
       await new Promise((r) => setTimeout(r, 100));
     });
 
-    // Session in store should now be completed
+    // Session in store should now be erased like it was never created (not promoted)
     const state = useTypingStore.getState();
-    expect(state.activeSessions[0].completedAt).not.toBeNull();
+    expect(state.activeSessions.find((s) => s.id === 'test-empty-s1')).toBeUndefined();
+    expect(state.activeSessions.length).toBe(0);
+    expect(state.manifest.activeSessionId).toBeUndefined();
 
     // In modal, Close Session should now be disabled (no active session remaining)
     expect(closeBtn?.hasAttribute('disabled')).toBe(true);
+
+    // Verify a new session can be started cleanly after erasing the empty session
+    await act(async () => {
+      await useTypingStore.getState().startNewSession();
+    });
+    const stateAfterNew = useTypingStore.getState();
+    expect(stateAfterNew.activeSessions.length).toBe(1);
+    expect(stateAfterNew.activeSessions[0].completedAt).toBeNull();
+
+    // Verify typing text is stored properly
+    await act(async () => {
+      useTypingStore.getState().insertChar('W');
+      useTypingStore.getState().insertChar('o');
+      useTypingStore.getState().insertChar('r');
+      useTypingStore.getState().insertChar('d');
+      useTypingStore.getState().insertChar(' ');
+    });
+    const stateAfterTyping = useTypingStore.getState();
+    expect(stateAfterTyping.currentPageLines[stateAfterTyping.activeLineIndex].cells.length).toBeGreaterThan(0);
 
     await act(async () => {
       root.unmount();
