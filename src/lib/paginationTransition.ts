@@ -122,6 +122,18 @@ export function applyPageModeTransition(
       activeLineIndex = unifiedLines.length - 1;
       activeColIndex = unifiedLines[activeLineIndex].cells.length;
     } else {
+      const hasClosedSessions = state.activeSessions && state.activeSessions.some((s: any) => s.completedAt !== null);
+      const lastLine = unifiedLines.length > 0 ? unifiedLines[unifiedLines.length - 1] : null;
+      if (hasClosedSessions && unifiedLines.length > 0 && !lastLine?.isSessionDivider) {
+        const dividerIdx = unifiedLines.length;
+        unifiedLines.push({
+          id: `p1-divider-${dividerIdx}`,
+          lineIndex: dividerIdx,
+          cells: [],
+          isCommitted: true,
+          isSessionDivider: true,
+        });
+      }
       activeLineIndex = unifiedLines.length;
       activeColIndex = 0;
       unifiedLines.push(createEmptyLine(1, activeLineIndex));

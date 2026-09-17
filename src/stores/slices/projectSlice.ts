@@ -390,6 +390,36 @@ export const createProjectSlice: StateCreator<
         effectivePageSize,
         loadedManifest.id
       );
+      const shouldInsertDivider =
+        effectivePageMode === 'scroll' &&
+        cleanText.trim() !== '' &&
+        (
+          (pages && pages.some((p) => p.lines && p.lines.some((l) => l.isSessionDivider))) ||
+          (existingSessions && existingSessions.some((s) => s.isImported)) ||
+          (existingSessions && existingSessions.length > 1 && existingSessions.some((s) => s.completedAt !== null))
+        );
+
+      if (shouldInsertDivider) {
+        const contentLines = parsed.lines.slice(0, parsed.activeLineIndex);
+        if (contentLines.length > 0) {
+          const linesWithDivider: LineRecord[] = [...contentLines];
+          const dividerIdx = linesWithDivider.length;
+          linesWithDivider.push({
+            id: `${loadedManifest.id}-divider-load`,
+            lineIndex: dividerIdx,
+            cells: [],
+            isCommitted: true,
+            isSessionDivider: true,
+          });
+          const nextDraftingIdx = linesWithDivider.length;
+          linesWithDivider.push(createEmptyLine(1, nextDraftingIdx));
+          partitioned = {
+            historicalPages: [],
+            currentPageNumber: 1,
+            currentPageLines: linesWithDivider,
+          };
+        }
+      }
     }
 
     // Prepare sessions: if none exist in db, generate Session 1 from cleanText
@@ -591,9 +621,26 @@ export const createProjectSlice: StateCreator<
       // Scroll mode (or empty text): all preceding text is placed in currentPageLines
       historicalPages = [];
       currentPageNumber = 1;
-      currentPageLines = parsed.lines;
-      activeLineIndex = parsed.activeLineIndex;
-      activeColIndex = parsed.activeColIndex;
+      if (contentLines.length > 0) {
+        const linesWithDivider: LineRecord[] = [...contentLines];
+        const dividerIdx = linesWithDivider.length;
+        linesWithDivider.push({
+          id: `${newId}-divider-imported`,
+          lineIndex: dividerIdx,
+          cells: [],
+          isCommitted: true,
+          isSessionDivider: true,
+        });
+        const nextDraftingIdx = linesWithDivider.length;
+        linesWithDivider.push(createEmptyLine(1, nextDraftingIdx));
+        currentPageLines = linesWithDivider;
+        activeLineIndex = nextDraftingIdx;
+        activeColIndex = 0;
+      } else {
+        currentPageLines = [createEmptyLine(1, 0)];
+        activeLineIndex = 0;
+        activeColIndex = 0;
+      }
     }
 
     // Auto-start next active session for writing upon import

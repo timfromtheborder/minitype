@@ -379,6 +379,13 @@ export const createApertureSlice: StateCreator<
         if (prevPage && prevPage.lines.some((l) => l.isSessionDivider)) {
           return;
         }
+        const lastSession = state.activeSessions && state.activeSessions.length > 0
+          ? state.activeSessions[state.activeSessions.length - 1]
+          : null;
+        const isNewSession = !lastSession || lastSession.completedAt !== null || (lastSession.text === '' && lastSession.wordCount === 0);
+        if (isNewSession && state.activeSessions?.some((s) => s.completedAt !== null)) {
+          return;
+        }
         historical.pop();
         const restoredLines = [...prevPage.lines];
         const lastLineIndex = Math.max(0, restoredLines.length - 1);

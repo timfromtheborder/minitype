@@ -46,6 +46,7 @@ describe('Typing Engine & State Machine Invariants', () => {
       wrapMode: 'soft',
       pageSize: 54,
     });
+    useTypingStore.getState().setActiveColumnLimit(70);
   });
 
   describe('Character Insertion & Strict Column Bounds', () => {
@@ -2824,9 +2825,10 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(state.manifest.pageMode).toBe('scroll');
       expect(state.historicalPages).toHaveLength(0);
       expect(state.currentPageNumber).toBe(1);
-      // All 12 preceding lines plus 1 active empty drafting line at the end
-      expect(state.currentPageLines.length).toBe(13);
-      expect(state.activeLineIndex).toBe(12);
+      // All 12 preceding lines plus 1 divider line plus 1 active empty drafting line at the end
+      expect(state.currentPageLines.length).toBe(14);
+      expect(state.currentPageLines[12].isSessionDivider).toBe(true);
+      expect(state.activeLineIndex).toBe(13);
       expect(state.activeColIndex).toBe(0);
     });
 
@@ -3320,6 +3322,64 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(sessions[0].completedAt).toBeNull();
       expect(sessions[0].wordCount).toBe(0);
       expect(useTypingStore.getState().manifest.activeSessionId).toBe(sessions[0].id);
+    });
+
+    it('applies dashed session divider line to imported text and locks backspace at session boundary', async () => {
+      const store = useTypingStore.getState();
+      store.setPageMode('scroll');
+
+      const importedText = 'Chapter One\nIt was a dark and stormy night.';
+      await store.importTextFileAsProject('Novel Import', importedText);
+
+      const state = useTypingStore.getState();
+      // Preceding lines: line 0 ("Chapter One"), line 1 ("It was a dark and stormy night.")
+      // Line 2: Session divider
+      // Line 3: Active drafting line
+      expect(state.currentPageLines.length).toBe(4);
+      expect(state.currentPageLines[0].cells.map((c) => c.char).join('')).toBe('Chapter One');
+      expect(state.currentPageLines[1].cells.map((c) => c.char).join('')).toBe('It was a dark and stormy night.');
+      expect(state.currentPageLines[2].isSessionDivider).toBe(true);
+      expect(state.activeLineIndex).toBe(3);
+      expect(state.currentPageLines[3].cells).toHaveLength(0);
+
+      // Backspace on empty line after imported text is clamped: cannot strike carriage return of divider
+      store.handleBackspace();
+      const stateAfterBackspace = useTypingStore.getState();
+      expect(stateAfterBackspace.activeLineIndex).toBe(3);
+      expect(stateAfterBackspace.currentPageLines.length).toBe(4);
+      expect(stateAfterBackspace.isHighlighting).toBe(false);
+      expect(stateAfterBackspace.currentPageLines[1].cells.map((c) => c.char).join('')).toBe('It was a dark and stormy night.');
+
+      // Type in new session
+      for (const ch of 'Line in new session') {
+        store.insertChar(ch);
+      }
+      expect(useTypingStore.getState().currentPageLines[3].cells.map((c) => c.char).join('')).toBe('Line in new session');
+
+      // Enter to create a new line in this session
+      store.handleEnter();
+      expect(useTypingStore.getState().activeLineIndex).toBe(4);
+
+      // Backspace can cancel Enter carriage return within the active session
+      store.handleBackspace();
+      expect(useTypingStore.getState().activeLineIndex).toBe(3);
+
+      // Backspace highlights cells on line 3
+      store.handleBackspace();
+      expect(useTypingStore.getState().isHighlighting).toBe(true);
+
+      // Repeated backspace stops at column 0 of line 3, cannot step into divider or imported text
+      for (let i = 0; i < 30; i++) {
+        store.handleBackspace();
+      }
+      expect(useTypingStore.getState().highlightHead?.lineIndex).toBe(3);
+      expect(useTypingStore.getState().highlightHead?.colIndex).toBe(0);
+
+      // Reloading project preserves the divider line
+      await store.rehydrate();
+      const rehydratedState = useTypingStore.getState();
+      const dividerFound = rehydratedState.currentPageLines.some((l) => l.isSessionDivider);
+      expect(dividerFound).toBe(true);
     });
   });
 });

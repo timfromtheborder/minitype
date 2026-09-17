@@ -408,6 +408,36 @@ export const createPersistenceSlice: StateCreator<
             effectivePageSize,
             loadedManifest.id
           );
+          const shouldInsertDivider =
+            effectivePageMode === 'scroll' &&
+            cleanText.trim() !== '' &&
+            (
+              (pages && pages.some((p) => p.lines && p.lines.some((l) => l.isSessionDivider))) ||
+              (sessions && sessions.some((s) => s.isImported)) ||
+              (sessions && sessions.length > 1 && sessions.some((s) => s.completedAt !== null))
+            );
+
+          if (shouldInsertDivider) {
+            const contentLines = parsed.lines.slice(0, parsed.activeLineIndex);
+            if (contentLines.length > 0) {
+              const linesWithDivider: LineRecord[] = [...contentLines];
+              const dividerIdx = linesWithDivider.length;
+              linesWithDivider.push({
+                id: `${loadedManifest.id}-divider-rehydrate`,
+                lineIndex: dividerIdx,
+                cells: [],
+                isCommitted: true,
+                isSessionDivider: true,
+              });
+              const nextDraftingIdx = linesWithDivider.length;
+              linesWithDivider.push(createEmptyLine(1, nextDraftingIdx));
+              partitioned = {
+                historicalPages: [],
+                currentPageNumber: 1,
+                currentPageLines: linesWithDivider,
+              };
+            }
+          }
         }
 
         let rawSessions: SessionRecord[] = [];
