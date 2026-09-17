@@ -379,7 +379,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
           projectId: 'doc-1',
           sessionNumber: 1,
           startedAt: now,
-          completedAt: null,
+          completedAt: now,
           text: 'Drafting text here.',
           wordCount: 3,
         },
@@ -599,7 +599,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     container.remove();
   });
 
-  it('masks active session text with block glyphs █ in Document modal and unmasks when closed', async () => {
+  it('demarcates active session in a dedicated card with locked banner and promotes to readable text when closed', async () => {
     (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
     const root = createRoot(container);
 
@@ -609,14 +609,16 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
       manifest: {
         ...useTypingStore.getState().manifest,
         id: 'doc-mask-1',
-        documentViewMode: 'typewriter',
+        title: 'Drafting Demarcation Test',
       },
+      historicalPages: [],
+      currentPageNumber: 1,
       currentPageLines: [
         {
           id: 'p1-line-0',
           lineIndex: 0,
           cells: Array.from(activeText).map((ch, i) => ({
-            id: `c0_${i}`,
+            id: `p1-l0-c${i}`,
             char: ch,
             state: 'standard',
             colIndex: i,
@@ -642,13 +644,13 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
       root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
     });
 
-    // Active session text must be masked with block glyphs (█)
-    const textPreview = container.querySelector('.whitespace-pre-wrap');
-    expect(textPreview).not.toBeNull();
-    // Non-whitespace characters must be masked
-    expect(textPreview?.textContent).toContain(activeText.replace(/\S/g, '█'));
-    // Real text should be concealed
-    expect(textPreview?.textContent).not.toContain('Drafting in progress');
+    // Active session must render in a dedicated demarcated card
+    const activeCard = container.querySelector('[data-active-session="true"]');
+    expect(activeCard).not.toBeNull();
+    // Banner displays locked message with wordcount
+    expect(activeCard?.textContent).toContain('[ 5 words drafted · Locked until session closed ]');
+    // Raw active text should NOT be rendered in the document modal while active
+    expect(container.textContent).not.toContain('Drafting in progress right now.');
 
     // Click Close Session button to finalize active session
     const buttons = Array.from(container.querySelectorAll('button'));
@@ -660,12 +662,86 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
       await new Promise((r) => setTimeout(r, 50));
     });
 
-    // Once closed, completed session is unmasked and readable
+    // Once closed, completed session is unmasked and readable in the manuscript body
+    expect(container.querySelector('[data-active-session="true"]')).toBeNull();
     expect(container.querySelector('.whitespace-pre-wrap')?.textContent).toContain('Drafting in progress right now.');
 
     await act(async () => {
       root.unmount();
     });
-    container.remove();
+  });
+
+  it('preserves active session demarcation card when Show Sessions is toggled off', async () => {
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+    const root = createRoot(container);
+
+    const now = new Date().toISOString();
+    const completedText = 'Completed chapter one text.';
+    const activeText = 'Currently drafting chapter two.';
+
+    const fullDocText = `${completedText} ${activeText}`;
+
+    useTypingStore.setState({
+      manifest: {
+        ...useTypingStore.getState().manifest,
+        id: 'doc-mask-2',
+        title: 'Dividers Off Demarcation Test',
+        showSessionDividers: false, // Sessions hidden
+      },
+      historicalPages: [],
+      currentPageNumber: 1,
+      currentPageLines: [
+        {
+          id: 'p1-line-0',
+          lineIndex: 0,
+          cells: Array.from(fullDocText).map((ch, i) => ({
+            id: `p1-l0-c${i}`,
+            char: ch,
+            state: 'standard',
+            colIndex: i,
+            lineIndex: 0,
+          })),
+          isCommitted: false,
+        },
+      ],
+      activeSessions: [
+        {
+          id: 'doc-mask-2-session-1',
+          projectId: 'doc-mask-2',
+          sessionNumber: 1,
+          startedAt: now,
+          completedAt: now, // Completed
+          text: completedText,
+          wordCount: 4,
+        },
+        {
+          id: 'doc-mask-2-session-2',
+          projectId: 'doc-mask-2',
+          sessionNumber: 2,
+          startedAt: now,
+          completedAt: null, // Active
+          text: activeText,
+          wordCount: 4,
+        },
+      ],
+    });
+
+    await act(async () => {
+      root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
+    });
+
+    // Completed session text is visible in main body
+    expect(container.querySelector('.whitespace-pre-wrap')?.textContent).toContain(completedText);
+
+    // Active session card remains distinctly demarcated beneath the body
+    const activeCard = container.querySelector('[data-active-session="true"]');
+    expect(activeCard).not.toBeNull();
+    expect(activeCard?.textContent).toContain('[ 4 words drafted · Locked until session closed ]');
+    // Active draft text is hidden
+    expect(container.textContent).not.toContain(activeText);
+
+    await act(async () => {
+      root.unmount();
+    });
   });
 });

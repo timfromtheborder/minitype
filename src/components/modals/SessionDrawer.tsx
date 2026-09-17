@@ -11,6 +11,7 @@ import {
   Sparkles,
   Type,
   BookOpen,
+  Lock,
 } from 'lucide-react';
 import {
   countWords,
@@ -222,14 +223,24 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
     });
   }, [effectiveSessions, totalWords, sanitizedFullText, manifest.doubleSpaceLinebreaks]);
 
+  // Separate completed historical sessions from the active in-progress drafting session
+  const completedSessions = useMemo(() => {
+    return resolvedSessions.filter((s, idx) => {
+      const isLatest = idx === resolvedSessions.length - 1;
+      return !(isLatest && !s.completedAt);
+    });
+  }, [resolvedSessions]);
+
+  const activeSession = useMemo(() => {
+    if (resolvedSessions.length === 0) return null;
+    const latest = resolvedSessions[resolvedSessions.length - 1];
+    return !latest.completedAt ? latest : null;
+  }, [resolvedSessions]);
+
   if (!isOpen) return null;
 
-
   const handleStartNewSession = async () => {
-    const hasEmptyActive = resolvedSessions.some(
-      (s, idx) => idx === resolvedSessions.length - 1 && !s.completedAt && s.wordCount === 0
-    );
-    if (hasEmptyActive) {
+    if (activeSession && activeSession.wordCount === 0) {
       setIsPulsingActive(true);
       setTimeout(() => setIsPulsingActive(false), 600);
     }
@@ -240,9 +251,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
     await useTypingStore.getState().closeActiveSession();
   };
 
-  const hasActiveSession = resolvedSessions.some(
-    (s, idx) => idx === resolvedSessions.length - 1 && !s.completedAt && s.wordCount > 0
-  );
+  const hasActiveSession = Boolean(activeSession && activeSession.wordCount > 0);
 
   return (
     <div
@@ -442,108 +451,134 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
           style={{ overflowAnchor: 'none' }}
           className="flex-1 min-h-0 overflow-y-auto square-scrollbar border border-border/80 bg-card text-card-foreground p-3 sm:p-5 space-y-3 rounded-[2px] [overflow-anchor:none]"
         >
-          {resolvedSessions.length === 0 ? (
+          {completedSessions.length === 0 && !activeSession ? (
             <div className="flex flex-col items-center justify-center h-48 p-4 text-center gap-2 text-muted-foreground font-mono">
               <span className="text-xs italic">No sessions recorded yet for this project.</span>
             </div>
           ) : (
-            resolvedSessions.map((session, index) => {
-              const isLatest = index === resolvedSessions.length - 1;
-              const isActive = isLatest && !session.completedAt;
-              const isTargetMet = isActive
-                ? Boolean(sessionWordTarget && sessionWordTarget > 0 && session.wordCount >= sessionWordTarget)
-                : Boolean(session.targetReached);
+            <>
+              {/* Completed Historical Sessions */}
+              {completedSessions.map((session) => {
+                const isTargetMet = Boolean(session.targetReached);
+                let timeRange: string;
+                if (session.isImported) {
+                  const dt = formatSessionDateTime(session.importedAt || session.startedAt);
+                  timeRange = `${dt} [imported]`;
+                } else if (session.completedAt) {
+                  timeRange = `${formatSessionDateTime(session.startedAt)} - ${formatSessionDateTime(session.completedAt)}`;
+                } else {
+                  timeRange = formatSessionDateTime(session.startedAt);
+                }
 
-              let timeRange: string;
-              if (session.isImported) {
-                const dt = formatSessionDateTime(session.importedAt || session.startedAt);
-                timeRange = `${dt} [imported]`;
-              } else if (isActive) {
-                timeRange = `${formatSessionDateTime(session.startedAt)} - Present`;
-              } else if (session.completedAt) {
-                timeRange = `${formatSessionDateTime(session.startedAt)} - ${formatSessionDateTime(session.completedAt)}`;
-              } else {
-                timeRange = formatSessionDateTime(session.startedAt);
-              }
+                const sessionText = session.text || '';
 
-              const sessionText = session.text || '';
+                return (
+                  <div key={session.id} data-session-card="true">
+                    {/* Nested In-line Header Divider in Small Faded Text */}
+                    {showDividers && (
+                      <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono text-muted-foreground/60 select-none py-1 mb-1.5 overflow-hidden">
+                        <span className="shrink-0 opacity-40 select-none">-----</span>
+                        <span className="font-semibold text-foreground/80 shrink-0 select-none">
+                          Session {session.sessionNumber}
+                        </span>
+                        <span className="shrink-0 opacity-40 select-none">---</span>
+                        <span className="shrink-0 truncate text-muted-foreground/75 select-none">
+                          {timeRange}
+                        </span>
+                        <div className="flex-1 min-w-4 border-t border-dashed border-border/40 self-center mx-1" />
+                        <span
+                          className={`shrink-0 text-right text-[10px] sm:text-[11px] ${
+                            isTargetMet
+                              ? 'font-bold text-foreground'
+                              : 'font-medium text-muted-foreground/75'
+                          }`}
+                        >
+                          {session.wordCount.toLocaleString()} words
+                        </span>
+                        <span className="shrink-0 opacity-40 select-none">-----</span>
+                      </div>
+                    )}
 
-              return (
+                    {/* Manuscript Text: Contiguous & Permanently Expanded */}
+                    <div
+                      className={`whitespace-pre-wrap select-text py-0.5 ${
+                        viewMode === 'typewriter'
+                          ? 'font-mono text-xs sm:text-sm leading-relaxed'
+                          : 'font-manuscript-serif text-sm sm:text-base leading-relaxed'
+                      }`}
+                    >
+                      {sessionText.length === 0 ? (
+                        <span className="text-muted-foreground/40 italic font-mono text-xs">
+                          No text in this session.
+                        </span>
+                      ) : viewMode === 'manuscript' ? (
+                        sessionText.split('\n').map((para, pIdx) =>
+                          para.length === 0 ? (
+                            <div key={pIdx} className="h-3 sm:h-4" />
+                          ) : (
+                            <p key={pIdx} className="indent-8 leading-relaxed mb-0">
+                              {para}
+                            </p>
+                          )
+                        )
+                      ) : (
+                        sessionText
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Active Session Demarcation Card */}
+              {activeSession && (
                 <div
-                  key={session.id}
                   data-session-card="true"
-                  className={`transition-all duration-200 ${
-                    isActive && isPulsingActive
-                      ? 'bg-primary/10 rounded-[2px] p-1'
-                      : ''
-                  }`}
+                  data-active-session="true"
+                  className={`border border-border/80 bg-muted/20 rounded-[2px] p-3.5 sm:p-4 text-center select-none shadow-2xs transition-all duration-200 ${
+                    completedSessions.length > 0 ? 'mt-6' : 'mt-2'
+                  } ${isPulsingActive ? 'bg-primary/15 ring-1 ring-primary/40' : ''}`}
                 >
-                  {/* Nested In-line Header Divider in Small Faded Text */}
-                  {showDividers && (
-                    <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono text-muted-foreground/60 select-none py-1 mb-1.5 overflow-hidden">
-                      <span className="shrink-0 opacity-40 select-none">-----</span>
-                      <span className="font-semibold text-foreground/80 shrink-0 select-none">
-                        Session {session.sessionNumber}
-                      </span>
-                      <span className="shrink-0 opacity-40 select-none">---</span>
-                      <span className="shrink-0 truncate text-muted-foreground/75 select-none">
-                        {timeRange}
-                      </span>
-                      {isActive && (
+                  {showDividers && (() => {
+                    const isActiveTargetMet = Boolean(
+                      sessionWordTarget && sessionWordTarget > 0 && activeSession.wordCount >= sessionWordTarget
+                    );
+                    return (
+                      <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono text-muted-foreground/60 select-none py-1 mb-2 overflow-hidden">
+                        <span className="shrink-0 opacity-40 select-none">-----</span>
+                        <span className="font-semibold text-foreground/80 shrink-0 select-none">
+                          Session {activeSession.sessionNumber}
+                        </span>
+                        <span className="shrink-0 opacity-40 select-none">---</span>
+                        <span className="shrink-0 truncate text-muted-foreground/75 select-none">
+                          {formatSessionDateTime(activeSession.startedAt)} - Present
+                        </span>
                         <span className="flex items-center gap-1 text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-[1px] shrink-0 font-sans ml-1 select-none">
                           <Sparkles className="w-2.5 h-2.5" />
                           <span>Active</span>
                         </span>
-                      )}
-                      <div className="flex-1 min-w-4 border-t border-dashed border-border/40 self-center mx-1" />
-                      <span
-                        className={`shrink-0 text-right text-[10px] sm:text-[11px] ${
-                          isTargetMet
-                            ? 'font-bold text-foreground'
-                            : 'font-medium text-muted-foreground/75'
-                        }`}
-                      >
-                        {session.wordCount.toLocaleString()} words
-                      </span>
-                      <span className="shrink-0 opacity-40 select-none">-----</span>
-                    </div>
-                  )}
-
-                  {/* Manuscript Text: Contiguous & Permanently Expanded */}
-                  {(() => {
-                    const displayText = isActive ? sessionText.replace(/\S/g, '█') : sessionText;
-
-                    return (
-                      <div
-                        className={`whitespace-pre-wrap select-text py-0.5 ${
-                          viewMode === 'typewriter'
-                            ? 'font-mono text-xs sm:text-sm leading-relaxed'
-                            : 'font-manuscript-serif text-sm sm:text-base leading-relaxed'
-                        }`}
-                      >
-                        {displayText.length === 0 ? (
-                          <span className="text-muted-foreground/40 italic font-mono text-xs">
-                            No text in this session.
-                          </span>
-                        ) : viewMode === 'manuscript' ? (
-                          displayText.split('\n').map((para, pIdx) =>
-                            para.length === 0 ? (
-                              <div key={pIdx} className="h-3 sm:h-4" />
-                            ) : (
-                              <p key={pIdx} className="indent-8 leading-relaxed mb-0">
-                                {para}
-                              </p>
-                            )
-                          )
-                        ) : (
-                          displayText
-                        )}
+                        <div className="flex-1 min-w-4 border-t border-dashed border-border/40 self-center mx-1" />
+                        <span
+                          className={`shrink-0 text-right text-[10px] sm:text-[11px] ${
+                            isActiveTargetMet
+                              ? 'font-bold text-foreground'
+                              : 'font-medium text-muted-foreground/75'
+                          }`}
+                        >
+                          {activeSession.wordCount.toLocaleString()} words
+                        </span>
+                        <span className="shrink-0 opacity-40 select-none">-----</span>
                       </div>
                     );
                   })()}
+                  <div className="flex items-center justify-center gap-2 py-3 px-2 text-xs sm:text-sm font-mono text-muted-foreground">
+                    <Lock className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                    <span>
+                      [ {activeSession.wordCount.toLocaleString()} {activeSession.wordCount === 1 ? 'word' : 'words'} drafted · Locked until session closed ]
+                    </span>
+                  </div>
                 </div>
-              );
-            })
+              )}
+            </>
           )}
         </div>
 
