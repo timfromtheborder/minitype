@@ -90,28 +90,13 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = React.memo(function A
       // When text size is L or XL, 70 columns overflows the platen; switch to 35
       const isLargeText = textSize === 'l' || textSize === 'xl';
 
-      // Also dynamically verify if 71 monospace characters fit comfortably within available width
-      let overflows = isLargeText;
-      if (!overflows) {
-        try {
-          const testSpan = document.createElement('span');
-          testSpan.style.fontFamily = 'var(--font-courier-prime), Courier, monospace';
-          testSpan.style.fontSize = getComputedStyle(document.documentElement).fontSize;
-          testSpan.style.visibility = 'hidden';
-          testSpan.style.position = 'absolute';
-          testSpan.style.whiteSpace = 'nowrap';
-          testSpan.textContent = '0'.repeat(71);
-          document.body.appendChild(testSpan);
-          const measuredWidth = testSpan.getBoundingClientRect().width;
-          document.body.removeChild(testSpan);
-
-          // Horizontal margins: platen padding + viewport safe margins + line numbers if notecard
-          const padding = pageMode === 'notecard' ? 84 : 52;
-          overflows = measuredWidth + padding > window.innerWidth;
-        } catch {
-          overflows = isLargeText;
-        }
-      }
+      // Deterministic calculation without DOM span measurement (Pillar 1):
+      // Standard monospace 1ch = 0.6 * fontSize.
+      // Base font sizes: S=14px, M=16px, L=18px, XL=24px (default 16px).
+      const baseFontSize = textSize === 's' ? 14 : textSize === 'l' ? 18 : textSize === 'xl' ? 24 : 16;
+      const estimatedWidth = 71 * (baseFontSize * 0.6);
+      const padding = pageMode === 'notecard' ? 84 : 52;
+      const overflows = isLargeText || (estimatedWidth + padding > window.innerWidth);
 
       const finalLimit = overflows ? 35 : 70;
       setActiveColumnLimit(finalLimit);
@@ -218,6 +203,8 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = React.memo(function A
             style={{
               height: 'var(--aperture-height-rem)',
               minHeight: 'var(--aperture-height-rem)',
+              contain: 'layout size',
+              transition: 'height 120ms cubic-bezier(0.4, 0, 0.2, 1)',
             }}
           >
             {visibleLines.map((line, idx) => {
@@ -240,6 +227,8 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = React.memo(function A
           style={{
             height: 'var(--aperture-height-rem)',
             minHeight: 'var(--aperture-height-rem)',
+            contain: 'layout size',
+            transition: 'height 120ms cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         >
           {visibleLines.map((line, idx) => {
