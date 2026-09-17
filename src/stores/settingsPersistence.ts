@@ -187,6 +187,49 @@ export function getInitialManifest(): ManuscriptManifest {
 let hasRequestedStoragePersist = false;
 let hasCleanedLegacyCookies = false;
 let inMemorySettingsCache: (Partial<ManuscriptManifest> & { _updatedAt?: number }) | null = null;
+let secondaryTierTimer: ReturnType<typeof setTimeout> | null = null;
+let pendingSecondarySerialized: string | null = null;
+
+export function flushSecondaryTiers(): void {
+  if (!pendingSecondarySerialized || typeof window === 'undefined') return;
+  const serialized = pendingSecondarySerialized;
+  pendingSecondarySerialized = null;
+  if (secondaryTierTimer) {
+    clearTimeout(secondaryTierTimer);
+    secondaryTierTimer = null;
+  }
+
+  // 3. Synchronous window.name backup
+  try {
+    window.name = `minitype_settings:${serialized}`;
+  } catch (e) {}
+
+  // 4. Synchronous Cookies: Write strictly to root and clear any legacy subpath shadow cookies
+  try {
+    if (typeof document !== 'undefined') {
+      const isSecure = window.location.protocol === 'https:';
+      const secureFlag = isSecure ? '; Secure' : '';
+      const cookieVal = encodeURIComponent(serialized);
+
+      // Write to root
+      document.cookie = `${SETTINGS_KEY}=${cookieVal}; path=/; max-age=31536000; SameSite=Lax${secureFlag}`;
+
+      // Actively clear any legacy subfolder path cookies (e.g. /minitype or /minitype/) once
+      if (!hasCleanedLegacyCookies) {
+        hasCleanedLegacyCookies = true;
+        const currentPath = window.location.pathname.replace(/\/[^/]*$/, '') || '';
+        const pathsToClear = new Set<string>(['/minitype', '/minitype/']);
+        if (currentPath && currentPath !== '/') {
+          pathsToClear.add(currentPath);
+          pathsToClear.add(`${currentPath}/`);
+        }
+        for (const p of pathsToClear) {
+          document.cookie = `${SETTINGS_KEY}=; path=${p}; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secureFlag}`;
+        }
+      }
+    }
+  } catch (e) {}
+}
 
 export function persistSettings(manifest: Partial<ManuscriptManifest>): void {
   if (typeof window === 'undefined') return;
@@ -218,46 +261,26 @@ export function persistSettings(manifest: Partial<ManuscriptManifest>): void {
     inMemorySettingsCache = merged;
     const serialized = JSON.stringify(merged);
 
-    // 1. Synchronous localStorage
+    // 1. Immediate synchronous localStorage
     try {
       localStorage.setItem(SETTINGS_KEY, serialized);
     } catch (e) {}
 
-    // 2. Synchronous sessionStorage
+    // 2. Immediate synchronous sessionStorage
     try {
       sessionStorage.setItem(SETTINGS_KEY, serialized);
     } catch (e) {}
 
-    // 3. Synchronous window.name backup
-    try {
-      window.name = `minitype_settings:${serialized}`;
-    } catch (e) {}
-
-    // 4. Synchronous Cookies: Write strictly to root and clear any legacy subpath shadow cookies
-    try {
-      if (typeof document !== 'undefined') {
-        const isSecure = window.location.protocol === 'https:';
-        const secureFlag = isSecure ? '; Secure' : '';
-        const cookieVal = encodeURIComponent(serialized);
-
-        // Write to root
-        document.cookie = `${SETTINGS_KEY}=${cookieVal}; path=/; max-age=31536000; SameSite=Lax${secureFlag}`;
-
-        // Actively clear any legacy subfolder path cookies (e.g. /minitype or /minitype/) once
-        if (!hasCleanedLegacyCookies) {
-          hasCleanedLegacyCookies = true;
-          const currentPath = window.location.pathname.replace(/\/[^/]*$/, '') || '';
-          const pathsToClear = new Set<string>(['/minitype', '/minitype/']);
-          if (currentPath && currentPath !== '/') {
-            pathsToClear.add(currentPath);
-            pathsToClear.add(`${currentPath}/`);
-          }
-          for (const p of pathsToClear) {
-            document.cookie = `${SETTINGS_KEY}=; path=${p}; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secureFlag}`;
-          }
-        }
+    // 3 & 4. Debounced fallback tiers (window.name & document.cookie) to prevent main-thread thrashing on slider scrub
+    pendingSecondarySerialized = serialized;
+    if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
+      flushSecondaryTiers();
+    } else {
+      if (secondaryTierTimer) {
+        clearTimeout(secondaryTierTimer);
       }
-    } catch (e) {}
+      secondaryTierTimer = setTimeout(flushSecondaryTiers, 300);
+    }
 
     // 5. Asynchronous IndexedDB
     saveGlobalSettingsToDb(merged).catch(console.error);

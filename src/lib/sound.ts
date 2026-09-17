@@ -159,6 +159,17 @@ class TypewriterAudio {
     return this.isMuted;
   }
 
+  private cleanupNodes(source: AudioScheduledSourceNode, ...connectedNodes: (AudioNode | null | undefined)[]) {
+    source.onended = () => {
+      try {
+        source.disconnect();
+        for (const node of connectedNodes) {
+          node?.disconnect();
+        }
+      } catch {}
+    };
+  }
+
   /**
    * Synthesizes a mechanical typewriter key click (hammer striking platen).
    */
@@ -190,7 +201,9 @@ class TypewriterAudio {
       filter.connect(gain);
       gain.connect(this.getMasterBus(ctx));
 
+      this.cleanupNodes(noise, filter, gain);
       noise.start(t);
+      noise.stop(t + 0.035);
     } catch {}
   }
 
@@ -225,7 +238,9 @@ class TypewriterAudio {
       filter.connect(gain);
       gain.connect(this.getMasterBus(ctx));
 
+      this.cleanupNodes(noise, filter, gain);
       noise.start(t);
+      noise.stop(t + 0.038);
     } catch {}
   }
 
@@ -260,7 +275,9 @@ class TypewriterAudio {
       filter.connect(gain);
       gain.connect(this.getMasterBus(ctx));
 
+      this.cleanupNodes(noise, filter, gain);
       noise.start(t);
+      noise.stop(t + 0.025);
     } catch {}
   }
 
@@ -298,7 +315,9 @@ class TypewriterAudio {
       filter.connect(gain);
       gain.connect(this.getMasterBus(ctx));
 
+      this.cleanupNodes(noise, filter, gain);
       noise.start(t);
+      noise.stop(t + duration + 0.005);
     } catch {}
   }
 
@@ -346,7 +365,10 @@ class TypewriterAudio {
       zipSource.connect(zipFilter);
       zipFilter.connect(zipGain);
       zipGain.connect(this.getMasterBus(ctx));
+
+      this.cleanupNodes(zipSource, zipFilter, zipGain);
       zipSource.start(t);
+      zipSource.stop(t + zipDuration + 0.005);
 
       // 2. The "Clunk" (margin stop impact - softened and de-bassed)
       const clunkTime = t + 0.095;
@@ -363,6 +385,7 @@ class TypewriterAudio {
 
       thudOsc.connect(thudGain);
       thudGain.connect(this.getMasterBus(ctx));
+      this.cleanupNodes(thudOsc, thudGain);
       thudOsc.start(clunkTime);
       thudOsc.stop(clunkTime + 0.045);
 
@@ -387,7 +410,9 @@ class TypewriterAudio {
       metalSource.connect(metalFilter);
       metalFilter.connect(metalGain);
       metalGain.connect(this.getMasterBus(ctx));
+      this.cleanupNodes(metalSource, metalFilter, metalGain);
       metalSource.start(clunkTime);
+      metalSource.stop(clunkTime + 0.035);
     } catch {}
   }
 
@@ -434,7 +459,9 @@ class TypewriterAudio {
       source.connect(filter);
       filter.connect(gain);
       gain.connect(this.getMasterBus(ctx));
+      this.cleanupNodes(source, filter, gain);
       source.start(t);
+      source.stop(t + 0.17);
 
       // Stepper motor feed click at end of line (0.18s)
       const stepOsc = ctx.createOscillator();
@@ -447,8 +474,9 @@ class TypewriterAudio {
 
       stepOsc.connect(stepGain);
       stepGain.connect(this.getMasterBus(ctx));
+      this.cleanupNodes(stepOsc, stepGain);
       stepOsc.start(t + 0.18);
-      stepOsc.stop(t + 0.22);
+      stepOsc.stop(t + 0.225);
     } catch {}
   }
 
@@ -491,7 +519,9 @@ class TypewriterAudio {
       puffSource.connect(puffFilter);
       puffFilter.connect(puffGain);
       puffGain.connect(this.getMasterBus(ctx));
+      this.cleanupNodes(puffSource, puffFilter, puffGain);
       puffSource.start(t);
+      puffSource.stop(t + puffDuration + 0.005);
 
       // 2. Dull cardstock body pop (snappy lower-mid pitch sweep, no sub-bass)
       const thwupDuration = 0.055;
@@ -507,6 +537,7 @@ class TypewriterAudio {
 
       osc.connect(oscGain);
       oscGain.connect(this.getMasterBus(ctx));
+      this.cleanupNodes(osc, oscGain);
 
       osc.start(t);
       osc.stop(t + thwupDuration);

@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { TypingStore } from './types';
-import { createApertureSlice } from './slices/apertureSlice';
-import { createPaginationSlice } from './slices/paginationSlice';
+import { createDraftingEngineSlice } from './slices/draftingEngineSlice';
 import { createProjectSlice } from './slices/projectSlice';
 import { createPersistenceSlice, cancelVisualSaveTimers } from './slices/persistenceSlice';
 import { setPersistenceErrorHandler } from '@/db';
@@ -20,8 +19,7 @@ export const useTypingStore = create<TypingStore>()((...a) => {
   }
 
   return {
-    ...createApertureSlice(...a),
-    ...createPaginationSlice(...a),
+    ...createDraftingEngineSlice(...a),
     ...createProjectSlice(...a),
     ...createPersistenceSlice(...a),
   };

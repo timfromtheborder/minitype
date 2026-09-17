@@ -275,14 +275,14 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = React.memo(function A
         </div>
       </div>
 
-      {/* Accessibility Live Region for Screen Readers */}
+      {/* Accessibility Live Region for Screen Readers: throttled to line and highlight transitions */}
       <div
         role="status"
         aria-live="polite"
         aria-atomic="true"
         className="sr-only"
       >
-        {`Line ${activeLineIndex + 1}, Column ${activeColIndex + 1}${isHighlighting ? ', Highlighting strikeout' : ''}`}
+        {isHighlighting ? 'Highlighting strikeout' : `Line ${activeLineIndex + 1}, Column ${activeColIndex + 1}`}
       </div>
 
       {/* Mechanical Platen Roller Line Bar Indicator */}

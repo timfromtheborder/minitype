@@ -13,4 +13,5 @@ export interface TypingStore extends TypingEngineState, TypingEngineActions {
   historicalPages: PageRecord[];
   pendingWrappedCells: CharacterCell[] | null;
   sessionCommittedLines: number;
+  activeLineWords?: number;
 }

@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
-import { ManuscriptManifest, PageRecord, SessionRecord } from '@/types';
+import { ManuscriptManifest, PageRecord, SessionRecord, LineRecord } from '@/types';
 
 export interface PersistedSettingsRecord {
   id: string;
@@ -277,6 +277,28 @@ export function debounceSavePage(page: PageRecord, delayMs = 2000): void {
   pendingPagesMap.set(pageId, page);
 
   // Requirement: Only animate when typing stops for a few seconds. Do not trigger 'saving' on every key!
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    notifySaveStatus('saving');
+    await flushPendingSave();
+  }, delayMs);
+}
+
+export function debounceSavePageFast(
+  manuscriptId: string,
+  pageNumber: number,
+  lines: LineRecord[],
+  delayMs = 2000
+): void {
+  const pageId = `${manuscriptId}-page-${pageNumber}`;
+  pendingPagesMap.set(pageId, {
+    id: pageId,
+    manuscriptId,
+    pageNumber,
+    lines,
+    completedAt: null,
+  });
+
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     notifySaveStatus('saving');
