@@ -17,6 +17,8 @@ export const SETTING_KEYS = [
   'showClock',
   'clockFormat',
   'phosphorColor',
+  'documentViewMode',
+  'showSessionDividers',
 ] as const;
 
 export const SETTINGS_KEY = 'minitype_global_settings';
@@ -46,6 +48,8 @@ export const DEFAULT_MANIFEST: ManuscriptManifest = {
   showClock: true,
   clockFormat: '12h',
   phosphorColor: 'amber',
+  documentViewMode: 'typewriter',
+  showSessionDividers: true,
   sessionCount: 0,
   totalWordCount: 0,
   createdAt: '2026-01-01T00:00:00.000Z',

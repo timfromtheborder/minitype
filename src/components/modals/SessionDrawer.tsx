@@ -47,7 +47,8 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
   const storeTitle = useTypingStore((state) => state.manifest.title);
   const [title, setTitle] = useState<string>(manifest.title || 'Untitled Project');
   const [sanitizedFullText, setSanitizedFullText] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'typewriter' | 'manuscript'>('typewriter');
+  const viewMode = manifest.documentViewMode || 'typewriter';
+  const showDividers = manifest.showSessionDividers !== false;
   const [isPulsingActive, setIsPulsingActive] = useState<boolean>(false);
 
   const modalRef = useRef<HTMLDivElement>(null);
@@ -373,7 +374,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
             <div className="flex items-center border border-border/80 rounded-[2px] bg-background/50 p-0.5 text-[11px] font-sans">
               <button
                 type="button"
-                onClick={() => setViewMode('typewriter')}
+                onClick={() => useTypingStore.getState().setManifest({ documentViewMode: 'typewriter' })}
                 className={`flex items-center gap-1 px-2 py-0.5 rounded-[1px] transition-colors cursor-pointer ${
                   viewMode === 'typewriter'
                     ? 'bg-muted text-foreground font-semibold shadow-2xs'
@@ -386,7 +387,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => setViewMode('manuscript')}
+                onClick={() => useTypingStore.getState().setManifest({ documentViewMode: 'manuscript' })}
                 className={`flex items-center gap-1 px-2 py-0.5 rounded-[1px] transition-colors cursor-pointer ${
                   viewMode === 'manuscript'
                     ? 'bg-muted text-foreground font-semibold shadow-2xs'
@@ -398,6 +399,27 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                 <span>Manuscript</span>
               </button>
             </div>
+
+            {/* Dividers Toggle */}
+            <button
+              type="button"
+              onClick={() => {
+                useTypingStore.getState().setManifest({ showSessionDividers: !showDividers });
+              }}
+              className={`flex items-center gap-1.5 px-2 py-1 rounded-[2px] border transition-colors cursor-pointer text-[clamp(10px,0.8em,12px)] font-sans ${
+                showDividers
+                  ? 'bg-primary/10 border-primary text-foreground font-medium'
+                  : 'border-border/80 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground'
+              }`}
+              title={showDividers ? 'Hide session dividers' : 'Show session dividers'}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-[0.5px] ${
+                  showDividers ? 'bg-primary' : 'bg-muted-foreground/50'
+                }`}
+              />
+              <span>Dividers</span>
+            </button>
 
             {/* Double-space Toggle */}
             <button
@@ -491,48 +513,60 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                   }`}
                 >
                   {/* Nested In-line Header Divider in Small Faded Text */}
-                  <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono text-muted-foreground/60 select-none py-1 mb-1.5 overflow-hidden">
-                    <span className="shrink-0 opacity-40 select-none">-----</span>
-                    <span className="font-semibold text-foreground/80 shrink-0 select-none">
-                      Session {session.sessionNumber}
-                    </span>
-                    <span className="shrink-0 opacity-40 select-none">---</span>
-                    <span className="shrink-0 truncate text-muted-foreground/75 select-none">
-                      {timeRange}
-                    </span>
-                    {isActive && (
-                      <span className="flex items-center gap-1 text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-[1px] shrink-0 font-sans ml-1 select-none">
-                        <Sparkles className="w-2.5 h-2.5" />
-                        <span>Active</span>
+                  {showDividers && (
+                    <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono text-muted-foreground/60 select-none py-1 mb-1.5 overflow-hidden">
+                      <span className="shrink-0 opacity-40 select-none">-----</span>
+                      <span className="font-semibold text-foreground/80 shrink-0 select-none">
+                        Session {session.sessionNumber}
                       </span>
-                    )}
-                    <div className="flex-1 min-w-4 border-t border-dashed border-border/40 self-center mx-1" />
-                    <span
-                      className={`shrink-0 text-right text-[10px] sm:text-[11px] ${
-                        isTargetMet
-                          ? 'font-bold text-foreground'
-                          : 'font-medium text-muted-foreground/75'
-                      }`}
-                    >
-                      {session.wordCount.toLocaleString()} words
-                    </span>
-                    <span className="shrink-0 opacity-40 select-none">-----</span>
-                  </div>
+                      <span className="shrink-0 opacity-40 select-none">---</span>
+                      <span className="shrink-0 truncate text-muted-foreground/75 select-none">
+                        {timeRange}
+                      </span>
+                      {isActive && (
+                        <span className="flex items-center gap-1 text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-[1px] shrink-0 font-sans ml-1 select-none">
+                          <Sparkles className="w-2.5 h-2.5" />
+                          <span>Active</span>
+                        </span>
+                      )}
+                      <div className="flex-1 min-w-4 border-t border-dashed border-border/40 self-center mx-1" />
+                      <span
+                        className={`shrink-0 text-right text-[10px] sm:text-[11px] ${
+                          isTargetMet
+                            ? 'font-bold text-foreground'
+                            : 'font-medium text-muted-foreground/75'
+                        }`}
+                      >
+                        {session.wordCount.toLocaleString()} words
+                      </span>
+                      <span className="shrink-0 opacity-40 select-none">-----</span>
+                    </div>
+                  )}
 
                   {/* Manuscript Text: Contiguous & Permanently Expanded */}
                   <div
                     className={`whitespace-pre-wrap select-text py-0.5 ${
                       viewMode === 'typewriter'
                         ? 'font-mono text-xs sm:text-sm leading-relaxed'
-                        : 'font-manuscript-serif text-sm sm:text-base leading-relaxed indent-8'
+                        : 'font-manuscript-serif text-sm sm:text-base leading-relaxed'
                     }`}
                   >
-                    {sessionText.length > 0 ? (
-                      sessionText
-                    ) : (
+                    {sessionText.length === 0 ? (
                       <span className="text-muted-foreground/40 italic font-mono text-xs">
                         No text in this session.
                       </span>
+                    ) : viewMode === 'manuscript' ? (
+                      sessionText.split('\n').map((para, pIdx) =>
+                        para.length === 0 ? (
+                          <div key={pIdx} className="h-3 sm:h-4" />
+                        ) : (
+                          <p key={pIdx} className="indent-8 leading-relaxed mb-0">
+                            {para}
+                          </p>
+                        )
+                      )
+                    ) : (
+                      sessionText
                     )}
                   </div>
                 </div>

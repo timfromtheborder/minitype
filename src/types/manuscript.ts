@@ -46,6 +46,8 @@ export interface ManuscriptManifest {
   showClock?: boolean;
   clockFormat?: ClockFormat;
   phosphorColor?: PhosphorColor;
+  documentViewMode?: 'typewriter' | 'manuscript';
+  showSessionDividers?: boolean;
   activeSessionId?: string;
   sessionCount?: number;
   totalWordCount?: number;

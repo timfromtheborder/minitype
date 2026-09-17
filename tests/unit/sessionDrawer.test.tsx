@@ -471,4 +471,111 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     });
     container.remove();
   });
+
+  it('supports hiding and showing session dividers via the Dividers toolbar button', async () => {
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+    const root = createRoot(container);
+
+    const now = new Date().toISOString();
+    useTypingStore.setState({
+      activeSessions: [
+        {
+          id: 'doc-1-session-1',
+          projectId: 'doc-1',
+          sessionNumber: 1,
+          startedAt: now,
+          completedAt: now,
+          text: 'First session content.',
+          wordCount: 3,
+        },
+      ],
+      manifest: {
+        ...useTypingStore.getState().manifest,
+        showSessionDividers: true,
+      },
+    });
+
+    await act(async () => {
+      root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
+    });
+
+    // Dividers exist initially
+    expect(container.textContent).toContain('-----');
+
+    // Click Dividers button
+    const buttons = Array.from(container.querySelectorAll('button'));
+    const dividersBtn = buttons.find((b) => b.textContent?.includes('Dividers'));
+    expect(dividersBtn).toBeDefined();
+
+    await act(async () => {
+      dividersBtn?.click();
+    });
+
+    expect(useTypingStore.getState().manifest.showSessionDividers).toBe(false);
+    // Divider dashes should be hidden now
+    expect(container.textContent).not.toContain('-----');
+    // Content is still present and continuous
+    expect(container.textContent).toContain('First session content.');
+
+    // Click Dividers button again to restore
+    await act(async () => {
+      dividersBtn?.click();
+    });
+
+    expect(useTypingStore.getState().manifest.showSessionDividers).toBe(true);
+    expect(container.textContent).toContain('-----');
+
+    await act(async () => {
+      root.unmount();
+    });
+    container.remove();
+  });
+
+  it('indents every paragraph in Manuscript view mode', async () => {
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+    const root = createRoot(container);
+
+    const multiParagraphText = 'Paragraph one text.\nParagraph two text.\nParagraph three text.';
+    const now = new Date().toISOString();
+
+    useTypingStore.setState({
+      activeSessions: [
+        {
+          id: 'doc-1-session-1',
+          projectId: 'doc-1',
+          sessionNumber: 1,
+          startedAt: now,
+          completedAt: now,
+          text: multiParagraphText,
+          wordCount: 9,
+        },
+      ],
+      manifest: {
+        ...useTypingStore.getState().manifest,
+        documentViewMode: 'manuscript',
+      },
+    });
+
+    await act(async () => {
+      root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
+    });
+
+    // Query all paragraph elements inside the text preview
+    const paragraphs = Array.from(container.querySelectorAll('.whitespace-pre-wrap p'));
+    expect(paragraphs.length).toBe(3);
+
+    // Every paragraph must have the indent-8 class
+    paragraphs.forEach((p) => {
+      expect(p.className).toContain('indent-8');
+    });
+
+    expect(paragraphs[0].textContent).toBe('Paragraph one text.');
+    expect(paragraphs[1].textContent).toBe('Paragraph two text.');
+    expect(paragraphs[2].textContent).toBe('Paragraph three text.');
+
+    await act(async () => {
+      root.unmount();
+    });
+    container.remove();
+  });
 });
