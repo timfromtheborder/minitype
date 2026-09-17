@@ -55,9 +55,11 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
 }) => {
   const [now, setNow] = useState<Date>(() => new Date());
   const [timerStartTime, setTimerStartTime] = useState<number | null>(null);
+  const [isMounted, setIsMounted] = useState<boolean>(false);
 
   // Update clock every second and sync on mount
   useEffect(() => {
+    setIsMounted(true);
     setNow(new Date());
     const timer = setInterval(() => {
       setNow(new Date());
@@ -92,10 +94,12 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
     : '';
   const formattedElapsed = formatElapsedTime(elapsedMinutes);
 
+  const effectiveColorScheme = isMounted ? colorScheme : 'typewriter';
+
   const isSerifTheme =
-    colorScheme === 'typewriter' ||
-    colorScheme === 'high-contrast' ||
-    colorScheme === 'low-contrast';
+    effectiveColorScheme === 'typewriter' ||
+    effectiveColorScheme === 'high-contrast' ||
+    effectiveColorScheme === 'low-contrast';
 
   const fontClass = isSerifTheme
     ? 'font-serif-clock tracking-widest font-normal'
@@ -109,6 +113,7 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
 
   return (
     <div
+      suppressHydrationWarning
       className={`relative inline-flex flex-col items-start justify-center select-none ${fontClass}`}
     >
       {/* Session Timer: justified with the clock so numbers align vertically */}

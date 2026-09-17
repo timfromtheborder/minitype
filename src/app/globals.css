@@ -646,7 +646,8 @@ html[data-page-mode="notecard"],
 [data-theme="spotlight"] .font-serif-clock,
 [data-theme="dark-mode"] .font-serif-clock,
 [data-theme="phosphor"] .font-serif-clock {
-  font-family: var(--font-courier-prime), "Courier Prime", "Courier New", Courier, monospace;
+  font-family: var(--font-courier-prime), "Courier Prime", "Courier New", Courier, monospace !important;
+  letter-spacing: normal !important;
 }
 
 /* Touch device button responsiveness: trigger tactile highlight immediately on tap (:active) */

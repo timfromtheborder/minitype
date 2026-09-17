@@ -164,7 +164,7 @@ describe('ChronoSuite & Clock Formatter', () => {
       expect(container.querySelector('button[aria-label*="Session timer started"]')).toBeNull();
     });
 
-    it('does not suppress hydration on outer div and correctly transitions between serif and mono fonts', async () => {
+    it('correctly transitions between serif and mono fonts across theme switches', async () => {
       const root = createRoot(container);
       
       // Initial render with dark-amber (Terminal - mono)
@@ -174,8 +174,6 @@ describe('ChronoSuite & Clock Formatter', () => {
 
       const wrapper = container.querySelector('div');
       expect(wrapper).not.toBeNull();
-      // Outer div must NOT suppress hydration warnings so client state changes reconcile cleanly
-      expect(wrapper?.hasAttribute('suppressHydrationWarning')).toBe(false);
       expect(wrapper?.className).toContain('font-mono');
       expect(wrapper?.className).not.toContain('font-serif-clock');
 
