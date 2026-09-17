@@ -109,7 +109,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
               <div className="p-2.5 rounded-[2px] border border-border/70 bg-muted/20 flex flex-col gap-1">
                 <span className="font-semibold text-foreground">Exporting</span>
                 <span className="text-foreground/75 leading-normal">
-                  Download clean <code className="font-mono text-[10px]">.txt</code> plaintext from Document or Project modals. Download full project/library <code className="font-mono text-[10px]">.json</code> backups from Project.
+                  Download clean <code className="font-mono text-[10px]">.txt</code> plaintext from Document or Project modals. Struck-out text is cleaned up and omitted from final exports and Document view. Download full <code className="font-mono text-[10px]">.json</code> backups from Project.
                 </span>
               </div>
               <div className="p-2.5 rounded-[2px] border border-border/70 bg-muted/20 flex flex-col gap-1">
@@ -142,7 +142,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
               </div>
               <div className="p-2 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
                 <span className="font-semibold text-foreground sm:w-40 shrink-0">Theme</span>
-                <span className="text-foreground/75">Color palette (Manuscript, Spotlight, Paperwhite, Terminal, Overcast, Charcoal).</span>
+                <span className="text-foreground/75">Color palettes in thematic order (Manuscript, Paperwhite, Newsprint, Spotlight, Terminal, Charcoal).</span>
               </div>
               <div className="p-2 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
                 <span className="font-semibold text-foreground sm:w-40 shrink-0">Show document stats</span>
@@ -150,19 +150,19 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
               </div>
               <div className="p-2 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
                 <span className="font-semibold text-foreground sm:w-40 shrink-0">Session target tracker</span>
-                <span className="text-foreground/75">Sets a target word count with a live progress bar above the platen.</span>
+                <span className="text-foreground/75">Shows a live session progress bar above the aperture. The target word count is set inside the Document modal.</span>
               </div>
               <div className="p-2 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
                 <span className="font-semibold text-foreground sm:w-40 shrink-0">Show clock & Timer style</span>
-                <span className="text-foreground/75">Shows the clock above the platen. Choose <strong>Snapshot</strong> (tap clock to stamp time and count elapsed minutes) or <strong>Pomodoro</strong> (25m focus countdown followed by 5m break).</span>
+                <span className="text-foreground/75">Shows the clock above the aperture. Tap the clock to start or restart the timer, and tap the active timer badge to dismiss it. Choose <strong>Snapshot</strong> (counts elapsed minutes) or <strong>Pomodoro</strong> (25m focus countdown followed by 5m break, with audio cues).</span>
               </div>
               <div className="p-2 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
                 <span className="font-semibold text-foreground sm:w-40 shrink-0">Allow backspace</span>
-                <span className="text-foreground/75">When enabled, Backspace steps backward to strike out text. When disabled, drafting is forward-only.</span>
+                <span className="text-foreground/75">When enabled, Backspace steps backward to strike out text. Struck-out text is kept visible while drafting but automatically omitted and cleaned up for Document view and plaintext exports.</span>
               </div>
               <div className="p-2 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
-                <span className="font-semibold text-foreground sm:w-40 shrink-0">Enable sound</span>
-                <span className="text-foreground/75">Synthesized mechanical typewriter keystrokes, carriage returns, and Pomodoro timer audio alerts.</span>
+                <span className="font-semibold text-foreground sm:w-40 shrink-0">Typing sounds</span>
+                <span className="text-foreground/75">Synthesized mechanical typewriter keystrokes, carriage returns, and spacebar. Pomodoro timer audio alerts can be toggled independently next to the timer style selector.</span>
               </div>
             </div>
           </section>

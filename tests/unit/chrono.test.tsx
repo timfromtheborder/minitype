@@ -85,7 +85,7 @@ describe('ChronoSuite & Clock Formatter', () => {
       expect(container.children.length).toBe(0);
     });
 
-    it('applies elegant serif font for manuscript, paperwhite, and overcast themes', async () => {
+    it('applies elegant serif font for manuscript, paperwhite, and newsprint themes', async () => {
       const serifThemes = ['typewriter', 'high-contrast', 'low-contrast'] as const;
 
       for (const theme of serifThemes) {
@@ -218,7 +218,7 @@ describe('ChronoSuite & Clock Formatter', () => {
 
     it('handles pomodoro timer countdown, audio alerts, warning flash, break inversion, and dismissal', async () => {
       const beepSpy = vi.spyOn(typewriterAudio, 'playPomodoroBeep');
-      const dingSpy = vi.spyOn(typewriterAudio, 'playPomodoroDing');
+      const doubleBeepSpy = vi.spyOn(typewriterAudio, 'playPomodoroDoubleBeep');
       const chimeSpy = vi.spyOn(typewriterAudio, 'playPomodoroChime');
 
       const root = createRoot(container);
@@ -263,13 +263,13 @@ describe('ChronoSuite & Clock Formatter', () => {
         vi.advanceTimersByTime(60 * 1000);
       });
 
-      // Now in break mode: inverted styling (bg-foreground text-background) and ding played
+      // Now in break mode: inverted styling (bg-foreground text-background) and double beep played
       badgeBtn = container.querySelector('button[aria-label*="Pomodoro break"]');
       expect(badgeBtn).not.toBeNull();
       expect(badgeBtn?.textContent).toBe('01:00');
       expect(badgeBtn?.className).toContain('bg-foreground');
       expect(badgeBtn?.className).toContain('text-background');
-      expect(dingSpy).toHaveBeenCalledTimes(1);
+      expect(doubleBeepSpy).toHaveBeenCalledTimes(1);
 
       // Advance 60 seconds to complete break and resume work session -> chime played
       await act(async () => {
@@ -298,7 +298,36 @@ describe('ChronoSuite & Clock Formatter', () => {
       expect(container.querySelector('button[aria-label*="Pomodoro break"]')).toBeNull();
 
       beepSpy.mockRestore();
-      dingSpy.mockRestore();
+      doubleBeepSpy.mockRestore();
+      chimeSpy.mockRestore();
+    });
+
+    it('silences pomodoro audio cues when pomodoroSoundEnabled is false', async () => {
+      const beepSpy = vi.spyOn(typewriterAudio, 'playPomodoroBeep');
+      const doubleBeepSpy = vi.spyOn(typewriterAudio, 'playPomodoroDoubleBeep');
+      const chimeSpy = vi.spyOn(typewriterAudio, 'playPomodoroChime');
+
+      const root = createRoot(container);
+      await act(async () => {
+        root.render(<ChronoSuite showClock={true} timerStyle="pomodoro" pomodoroSoundEnabled={false} />);
+      });
+
+      const clockBtn = container.querySelector('button[aria-label*="time"]');
+      await act(async () => {
+        clockBtn?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      });
+
+      // Advance past 1 minute warning (60s) and transition (120s) and resume (180s)
+      await act(async () => {
+        vi.advanceTimersByTime(180 * 1000);
+      });
+
+      expect(beepSpy).not.toHaveBeenCalled();
+      expect(doubleBeepSpy).not.toHaveBeenCalled();
+      expect(chimeSpy).not.toHaveBeenCalled();
+
+      beepSpy.mockRestore();
+      doubleBeepSpy.mockRestore();
       chimeSpy.mockRestore();
     });
 

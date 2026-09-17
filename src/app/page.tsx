@@ -119,6 +119,7 @@ export default function Home() {
         <ChronoSuite
           showClock={manifest.showClock}
           timerStyle={manifest.timerStyle}
+          pomodoroSoundEnabled={manifest.pomodoroSoundEnabled ?? true}
           typeface={manifest.typeface}
           colorScheme={colorScheme}
           isPaused={isAnyModalOpen}

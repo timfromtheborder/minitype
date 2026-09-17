@@ -549,7 +549,6 @@ class TypewriterAudio {
    * Pure medical C6 monitor tone with rapid attack and clean cutoff.
    */
   public playPomodoroBeep() {
-    if (this.isMuted) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
@@ -577,42 +576,63 @@ class TypewriterAudio {
   }
 
   /**
-   * Warm, solid desk bell ding when Pomodoro hits 0 and transitions.
-   * Clean mid-range A5 fundamental with natural decay and no resonant tail or warble.
+   * Double heart monitor bleep when Pomodoro time is up (replaces the bell ding).
    */
-  public playPomodoroDing() {
-    if (this.isMuted) return;
+  public playPomodoroDoubleBeep() {
     const ctx = this.getContext();
     if (!ctx) return;
 
     try {
       const t = ctx.currentTime;
-      const duration = 0.32; // Snappy, not overly resonant
 
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      // First bleep (0 to 65ms)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(1046.5, t);
 
-      // Warm, pleasing mid-range chime (880Hz A5) - not piercingly bright
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(880, t);
+      gain1.gain.setValueAtTime(0.0001, t);
+      gain1.gain.linearRampToValueAtTime(0.16, t + 0.003);
+      gain1.gain.setValueAtTime(0.16, t + 0.048);
+      gain1.gain.exponentialRampToValueAtTime(0.0001, t + 0.065);
 
-      gain.gain.setValueAtTime(0.22, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+      osc1.connect(gain1);
+      gain1.connect(this.getMasterBus(ctx));
+      this.cleanupNodes(osc1, gain1);
+      osc1.start(t);
+      osc1.stop(t + 0.075);
 
-      osc.connect(gain);
-      gain.connect(this.getMasterBus(ctx));
+      // Second bleep (100ms to 165ms)
+      const t2 = t + 0.10;
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(1046.5, t2);
 
-      this.cleanupNodes(osc, gain);
-      osc.start(t);
-      osc.stop(t + duration + 0.01);
+      gain2.gain.setValueAtTime(0.0001, t2);
+      gain2.gain.linearRampToValueAtTime(0.16, t2 + 0.003);
+      gain2.gain.setValueAtTime(0.16, t2 + 0.048);
+      gain2.gain.exponentialRampToValueAtTime(0.0001, t2 + 0.065);
+
+      osc2.connect(gain2);
+      gain2.connect(this.getMasterBus(ctx));
+      this.cleanupNodes(osc2, gain2);
+      osc2.start(t2);
+      osc2.stop(t2 + 0.075);
     } catch {}
+  }
+
+  /**
+   * Warm, solid desk bell ding (kept for backward compatibility; calls double beep).
+   */
+  public playPomodoroDing() {
+    this.playPomodoroDoubleBeep();
   }
 
   /**
    * Uplifting harmonic two-tone chime when Pomodoro work session resumes.
    */
   public playPomodoroChime() {
-    if (this.isMuted) return;
     const ctx = this.getContext();
     if (!ctx) return;
 

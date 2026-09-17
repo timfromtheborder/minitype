@@ -8,6 +8,7 @@ export interface ChronoSuiteProps {
   showClock?: boolean;
   clockFormat?: ClockFormat;
   timerStyle?: TimerStyle;
+  pomodoroSoundEnabled?: boolean;
   typeface?: Typeface;
   colorScheme?: ColorScheme;
   isPaused?: boolean;
@@ -63,6 +64,7 @@ export function formatPomodoroTime(totalSeconds: number): string {
 export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
   showClock = true,
   timerStyle = 'snapshot',
+  pomodoroSoundEnabled = true,
   typeface = 'courier-prime',
   colorScheme = 'typewriter',
   isPaused = false,
@@ -112,9 +114,9 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
   }, [timerStartTime, now]);
 
   // Pomodoro Audio Alerts:
-  // - 1-minute remaining warning beep in work phase
-  // - Ding when hitting 0 and transitioning to break
-  // - Chime when break hits 0 and work resumes
+  // - 1-minute remaining warning: single heart monitor bleep
+  // - Time's up (work hits 0, transitions to break): double heart monitor bleep
+  // - Resume (break hits 0, work resumes): two-tone chime
   const prevPhaseRef = useRef<'work' | 'break' | null>(null);
   const hasPlayedBeepRef = useRef<boolean>(false);
   const prevStartTimeRef = useRef<number | null>(null);
@@ -135,11 +137,13 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
       return;
     }
 
-    // 1. Warning beep at <= 1 minute left in work phase
+    // 1. Warning beep at <= 1 minute left in work phase (single bleep)
     if (pomodoroPhase === 'work') {
       if (pomodoroSeconds <= 60 && !hasPlayedBeepRef.current) {
         hasPlayedBeepRef.current = true;
-        typewriterAudio.playPomodoroBeep();
+        if (pomodoroSoundEnabled !== false) {
+          typewriterAudio.playPomodoroBeep();
+        }
       } else if (pomodoroSeconds > 60) {
         hasPlayedBeepRef.current = false;
       }
@@ -148,18 +152,22 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
     // 2. Phase transitions
     if (prevPhaseRef.current !== null && prevPhaseRef.current !== pomodoroPhase) {
       if (prevPhaseRef.current === 'work' && pomodoroPhase === 'break') {
-        // Work hit 0 and transitioned to break
-        typewriterAudio.playPomodoroDing();
+        // Work hit 0 and transitioned to break: double bleep
+        if (pomodoroSoundEnabled !== false) {
+          typewriterAudio.playPomodoroDoubleBeep();
+        }
         hasPlayedBeepRef.current = false;
       } else if (prevPhaseRef.current === 'break' && pomodoroPhase === 'work') {
-        // Break hit 0 and resumed work
-        typewriterAudio.playPomodoroChime();
+        // Break hit 0 and resumed work: chime
+        if (pomodoroSoundEnabled !== false) {
+          typewriterAudio.playPomodoroChime();
+        }
         hasPlayedBeepRef.current = false;
       }
     }
 
     prevPhaseRef.current = pomodoroPhase;
-  }, [timerStyle, timerStartTime, pomodoroPhase, pomodoroSeconds]);
+  }, [timerStyle, timerStartTime, pomodoroPhase, pomodoroSeconds, pomodoroSoundEnabled]);
 
   const handleClockClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();

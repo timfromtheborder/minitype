@@ -48,6 +48,7 @@ export interface ManuscriptManifest {
   showClock?: boolean;
   clockFormat?: ClockFormat;
   timerStyle?: TimerStyle;
+  pomodoroSoundEnabled?: boolean;
   phosphorColor?: PhosphorColor;
   documentViewMode?: 'typewriter' | 'manuscript';
   showSessionDividers?: boolean;

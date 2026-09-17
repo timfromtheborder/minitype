@@ -288,7 +288,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 },
                 {
                   id: 'low-contrast',
-                  label: 'Overcast',
+                  label: 'Newsprint',
                   bg: '#646a71',
                   fg: '#1c2024',
                   border: '#6d747c',
@@ -492,21 +492,52 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                     {manifest.timerStyle || 'snapshot'}
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {(['snapshot', 'pomodoro'] as TimerStyle[]).map((style) => (
-                    <button
-                      key={style}
-                      type="button"
-                      onClick={() => onUpdateManifest({ timerStyle: style })}
-                      className={`py-1 px-1 rounded-[2px] border text-center transition-all cursor-pointer capitalize text-[11px] ${
-                        (manifest.timerStyle || 'snapshot') === style
-                          ? 'border-primary bg-primary text-primary-foreground font-bold shadow-xs'
-                          : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground font-medium'
-                      }`}
-                    >
-                      {style}
-                    </button>
-                  ))}
+                <div className="flex items-center gap-1.5">
+                  <div className="grid grid-cols-2 gap-1.5 flex-1">
+                    {(['snapshot', 'pomodoro'] as TimerStyle[]).map((style) => (
+                      <button
+                        key={style}
+                        type="button"
+                        onClick={() => onUpdateManifest({ timerStyle: style })}
+                        className={`py-1 px-1 rounded-[2px] border text-center transition-all cursor-pointer capitalize text-[11px] ${
+                          (manifest.timerStyle || 'snapshot') === style
+                            ? 'border-primary bg-primary text-primary-foreground font-bold shadow-xs'
+                            : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground font-medium'
+                        }`}
+                      >
+                        {style}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onUpdateManifest({
+                        pomodoroSoundEnabled: !(manifest.pomodoroSoundEnabled ?? true),
+                      })
+                    }
+                    className={`h-[26px] w-[26px] flex items-center justify-center rounded-[2px] border transition-colors cursor-pointer shrink-0 ${
+                      manifest.pomodoroSoundEnabled ?? true
+                        ? 'border-primary bg-primary/15 text-primary hover:bg-primary/25'
+                        : 'border-border/80 bg-muted/30 text-muted-foreground/60 hover:text-foreground'
+                    }`}
+                    title={
+                      manifest.pomodoroSoundEnabled ?? true
+                        ? 'Mute Pomodoro audio alerts'
+                        : 'Enable Pomodoro audio alerts'
+                    }
+                    aria-label={
+                      manifest.pomodoroSoundEnabled ?? true
+                        ? 'Mute Pomodoro audio alerts'
+                        : 'Enable Pomodoro audio alerts'
+                    }
+                  >
+                    {(manifest.pomodoroSoundEnabled ?? true) ? (
+                      <Volume2 className="w-3.5 h-3.5" />
+                    ) : (
+                      <VolumeX className="w-3.5 h-3.5" />
+                    )}
+                  </button>
                 </div>
               </div>
             )}
@@ -538,12 +569,12 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
               </button>
             </div>
 
-            {/* Enable sound */}
+            {/* Typing sounds */}
             <div
               className="flex items-center justify-between cursor-pointer"
               onClick={handleToggleMute}
             >
-              <span className="text-muted-foreground">Enable sound</span>
+              <span className="text-muted-foreground">Typing sounds</span>
               <button
                 type="button"
                 role="switch"
@@ -555,7 +586,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[2px] border transition-colors duration-150 ease-in-out focus:outline-hidden ${
                   !isMuted ? 'bg-primary border-primary' : 'bg-muted/70 border-border/80'
                 }`}
-                title="Enable sound"
+                title="Typing sounds"
               >
                 <span
                   className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-[1px] shadow-xs transition-transform duration-150 ease-in-out ${
