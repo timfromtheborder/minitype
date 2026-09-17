@@ -18,7 +18,6 @@ export default function Home() {
 
   const colorScheme = useTypingStore((s) => s.manifest.colorScheme);
   const textSize = useTypingStore((s) => s.manifest.textSize);
-  const keepScreenAwake = useTypingStore((s) => s.manifest.keepScreenAwake);
   const showSessionTargetTracker = useTypingStore((s) => s.manifest.showSessionTargetTracker);
   const sessionWordTarget = useTypingStore((s) => s.manifest.sessionWordTarget);
   const saveState = useTypingStore((s) => s.saveState);
@@ -32,12 +31,12 @@ export default function Home() {
   const activeApertureHeight = useTypingStore((s) => s.manifest.activeApertureHeight);
   const pageMode = useTypingStore((s) => s.manifest.pageMode);
 
-  useWakeLock(keepScreenAwake || 'always');
+  useWakeLock();
 
   const handleCloseSettings = React.useCallback(() => setIsSettingsOpen(false), []);
   const handleClosePrint = React.useCallback(() => setIsPrintOpen(false), []);
 
-  // Sync active palette data-theme, data-text-size, data-aperture-height, data-page-mode, and data-keep-screen-awake attribute with document root
+  // Sync active palette data-theme, data-text-size, data-aperture-height, and data-page-mode attribute with document root
   useEffect(() => {
     if (typeof document !== 'undefined') {
       if (colorScheme && document.documentElement.getAttribute('data-theme') !== colorScheme) {
@@ -52,11 +51,8 @@ export default function Home() {
       if (pageMode && document.documentElement.getAttribute('data-page-mode') !== pageMode) {
         document.documentElement.setAttribute('data-page-mode', pageMode);
       }
-      if (keepScreenAwake && document.documentElement.getAttribute('data-keep-screen-awake') !== keepScreenAwake) {
-        document.documentElement.setAttribute('data-keep-screen-awake', keepScreenAwake);
-      }
     }
-  }, [colorScheme, textSize, activeApertureHeight, pageMode, keepScreenAwake]);
+  }, [colorScheme, textSize, activeApertureHeight, pageMode]);
 
 
   const handlePrintedComplete = React.useCallback(
@@ -151,22 +147,26 @@ export default function Home() {
       </footer>
 
       {/* Settings Drawer Modal */}
-      <SettingsDrawer
-        isOpen={isSettingsOpen}
-        onClose={handleCloseSettings}
-        manifest={manifest}
-        onUpdateHeight={setApertureHeight}
-        onUpdatePageSize={setPageSize}
-        onUpdateManifest={setManifest}
-      />
+      {isSettingsOpen && (
+        <SettingsDrawer
+          isOpen={isSettingsOpen}
+          onClose={handleCloseSettings}
+          manifest={manifest}
+          onUpdateHeight={setApertureHeight}
+          onUpdatePageSize={setPageSize}
+          onUpdateManifest={setManifest}
+        />
+      )}
 
       {/* Project Modal */}
-      <PrintModal
-        isOpen={isPrintOpen}
-        onClose={handleClosePrint}
-        onPrintedComplete={handlePrintedComplete}
-        onClearText={clearText}
-      />
+      {isPrintOpen && (
+        <PrintModal
+          isOpen={isPrintOpen}
+          onClose={handleClosePrint}
+          onPrintedComplete={handlePrintedComplete}
+          onClearText={clearText}
+        />
+      )}
     </main>
   );
 }

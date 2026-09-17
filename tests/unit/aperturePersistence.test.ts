@@ -173,11 +173,4 @@ describe('Aperture Persistence Invariant', () => {
     expect(html).toContain('height:var(--aperture-height-rem)');
     expect(html).toContain('min-height:var(--aperture-height-rem)');
   });
-
-  it('persists and restores keepScreenAwake across sync tiers', () => {
-    persistSettings({ keepScreenAwake: '5-min' });
-    const settings = readSynchronousSettings();
-    expect(settings?.keepScreenAwake).toBe('5-min');
-    expect(document.documentElement.getAttribute('data-keep-screen-awake')).toBe('5-min');
-  });
 });

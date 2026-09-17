@@ -28,7 +28,7 @@ interface PrintModalProps {
 // Persist scroll position per document ID while open
 const documentScrollPositions = new Map<string, number>();
 
-export const PrintModal: React.FC<PrintModalProps> = ({
+const PrintModalComponent: React.FC<PrintModalProps> = ({
   isOpen,
   onClose,
   pages: propPages,
@@ -514,3 +514,5 @@ export const PrintModal: React.FC<PrintModalProps> = ({
     </div>
   );
 };
+
+export const PrintModal = React.memo(PrintModalComponent);

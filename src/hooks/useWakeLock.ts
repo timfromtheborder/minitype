@@ -1,11 +1,8 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { ScreenWakeLockPolicy } from '@/types';
 
-export interface UseWakeLockOptions {
-  policy?: ScreenWakeLockPolicy;
-}
+const FIVE_MINUTES_MS = 5 * 60 * 1000;
 
-export function useWakeLock(policy: ScreenWakeLockPolicy = 'always') {
+export function useWakeLock(timeoutMs: number = FIVE_MINUTES_MS) {
   const sentinelRef = useRef<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const lastActiveTimeRef = useRef<number>(Date.now());
@@ -26,7 +23,6 @@ export function useWakeLock(policy: ScreenWakeLockPolicy = 'always') {
   }, []);
 
   const requestLock = useCallback(async () => {
-    if (policy === 'off') return;
     if (typeof navigator === 'undefined' || !('wakeLock' in navigator)) return;
     if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
     if (sentinelRef.current && !sentinelRef.current.released) return;
@@ -44,50 +40,38 @@ export function useWakeLock(policy: ScreenWakeLockPolicy = 'always') {
       // Screen wake lock request can fail due to battery saver, backgrounding, etc.
       sentinelRef.current = null;
     }
-  }, [policy]);
+  }, []);
 
   const scheduleTimeout = useCallback(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    if (policy === '5-min') {
-      timerRef.current = setTimeout(() => {
-        releaseLock();
-      }, 5 * 60 * 1000);
-    }
-  }, [policy, releaseLock]);
+    timerRef.current = setTimeout(() => {
+      releaseLock();
+    }, timeoutMs);
+  }, [timeoutMs, releaseLock]);
 
   const onUserActivity = useCallback(() => {
     lastActiveTimeRef.current = Date.now();
-    if (policy === 'off') return;
 
     if (!sentinelRef.current || sentinelRef.current.released) {
       requestLock();
     }
     scheduleTimeout();
-  }, [policy, requestLock, scheduleTimeout]);
+  }, [requestLock, scheduleTimeout]);
 
   useEffect(() => {
-    if (policy === 'off') {
-      releaseLock();
-      return;
-    }
-
     // Try to acquire initial wake lock
     requestLock();
     scheduleTimeout();
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        if (policy === 'always') {
+        const elapsed = Date.now() - lastActiveTimeRef.current;
+        if (elapsed < timeoutMs) {
           requestLock();
-        } else if (policy === '5-min') {
-          const elapsed = Date.now() - lastActiveTimeRef.current;
-          if (elapsed < 5 * 60 * 1000) {
-            requestLock();
-            scheduleTimeout();
-          }
+          scheduleTimeout();
         }
       } else {
         releaseLock();
@@ -110,5 +94,5 @@ export function useWakeLock(policy: ScreenWakeLockPolicy = 'always') {
       window.removeEventListener('pointerdown', handleActivity);
       releaseLock();
     };
-  }, [policy, requestLock, releaseLock, scheduleTimeout, onUserActivity]);
+  }, [timeoutMs, requestLock, releaseLock, scheduleTimeout, onUserActivity]);
 }

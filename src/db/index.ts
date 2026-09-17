@@ -65,8 +65,7 @@ function notifySaveStatus(status: SaveStatus): void {
 
 export async function saveManuscript(manifest: ManuscriptManifest): Promise<void> {
   try {
-    const docData: any = {
-      ...manifest,
+    const docData: ManuscriptManifest = {
       id: manifest.id,
       title: manifest.title || 'Untitled Manuscript',
       mode: 'local',
@@ -74,6 +73,19 @@ export async function saveManuscript(manifest: ManuscriptManifest): Promise<void
       outboxCount: manifest.outboxCount ?? 0,
       lastPrintedCharIndex: manifest.lastPrintedCharIndex ?? 0,
       printedPagesCount: manifest.printedPagesCount ?? 0,
+      activeApertureHeight: manifest.activeApertureHeight,
+      preferredApertureHeight: manifest.preferredApertureHeight,
+      wrapMode: manifest.wrapMode,
+      pageSize: manifest.pageSize,
+      pageMode: manifest.pageMode,
+      colorScheme: manifest.colorScheme,
+      typeface: manifest.typeface,
+      textSize: manifest.textSize,
+      showStats: manifest.showStats,
+      showSessionTargetTracker: manifest.showSessionTargetTracker,
+      sessionWordTarget: manifest.sessionWordTarget,
+      doubleSpaceLinebreaks: manifest.doubleSpaceLinebreaks,
+      allowStrikeout: manifest.allowStrikeout,
       activeSessionId: manifest.activeSessionId,
       sessionCount: manifest.sessionCount ?? 1,
       totalWordCount: manifest.totalWordCount ?? 0,

@@ -12,7 +12,8 @@ This document outlines the near-term feature, polish, safety, architectural, per
 | **v0.9.7.5.1** | **Hotfix** | Theme Switching Latency & SSR Hydration Optimization | Instant CSS variable switching, debounced saving, stable modal callbacks | **Complete** |
 | **v0.9.7.5.2** | **Pass B1** | Mobile Ergonomics, Orientation Clamping, Screen Wake Lock & PWA Readiness | Wake Lock API, PWA manifest, iOS app header, dialog focus traps, a11y | **Complete** |
 | **v0.9.7.5.3** | **Pass B1.1** | Lossless 70/35-Col Text Re-flow Engine | Bidirectional cell re-flow, exact cursor mapping, 0 scaling, round-trip fidelity | **Complete** |
-| **v0.9.7.5.4** | **Pass B2** | Data Safety (Full Backup/Restore) & Manuscript View | Full-library JSON import/export, serif publishing layout | Planned |
+| **v0.9.7.5.4** | **Hotfix/Polish** | Wake Lock Permanence, File List Optimization & Target Isolation | 5-minute permanent wake lock, conditional modal rendering, target bug fix | **Complete** |
+| **v0.9.7.5.5** | **Pass B2** | Data Safety (Full Backup/Restore) & Manuscript View | Full-library JSON import/export, serif publishing layout | Planned |
 | **v0.9.7.6** | **Tier 2 (Pass A)** | Platen Rendering Optimization & Typing Engine Isolation | Zero-CLS platen, single-frame themes, cursor overlay | Planned |
 | **v0.9.7.6.1** | **Tier 2 (Pass B)** | Storage Architecture, Hydrator Consolidation & Batching | Unified hydrator parity, Dexie `bulkPut()`, schema typing | Planned |
 | **v0.9.7.6.2** | **Tier 2 (Pass C)** | Large-Scale Concurrency, Web Worker & Stress Profiling | 50k-word stress test, Web Worker background word count | Planned |
@@ -119,7 +120,27 @@ Focuses on mobile writing ergonomics, orientation-based font sizing, keeping the
 
 ---
 
-## [v0.9.7.5.4] — Pass B2: Data Safety (Full Backup/Restore) & Manuscript View
+## [v0.9.7.5.4] — Wake Lock Permanence, File List Optimization & Target Isolation
+
+Polish and bugfix release focused on wake lock ergonomics, modal render isolation, and project target isolation:
+
+### 1. Permanent 5-Minute Screen Wake Lock
+* Removed configurable screen awake policy options ('always', '5-min', 'off') from `SettingsDrawer.tsx`.
+* Permanently configured screen wake lock with 5-minute inactivity timeout refreshed on typing, touch, and pointer interactions.
+* Released automatically upon backgrounding/tab hide or 5 minutes of total user inactivity.
+
+### 2. UI & Theme Refresh Performance Optimization
+* Conditionally rendered `<SettingsDrawer>` and `<PrintModal>` so unmounted modals and `ProjectFilesTab` do not execute Dexie IndexedDB queries, sanitization routines, or re-render during theme or typing state updates.
+* Memoized `PrintModal` with `React.memo`.
+* Sanitized `docData` in `saveManuscript` to explicitly whitelist manifest properties and prevent leaking large object payloads into IndexedDB.
+
+### 3. Session Target Isolation Bugfix
+* Fixed bug where imported text files inherited the `sessionWordTarget` of the active project.
+* Removed fallback in `persistenceSlice.ts` (`rehydrate()`) that copied the active project's word target onto loaded manuscripts.
+
+---
+
+## [v0.9.7.5.5] — Pass B2: Data Safety (Full Backup/Restore) & Manuscript View
 
 Dedicated pass to implement full-library backup/restore and publisher-standard reader preview layout.
 

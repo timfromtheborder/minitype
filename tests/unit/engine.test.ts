@@ -3381,6 +3381,25 @@ describe('Typing Engine & State Machine Invariants', () => {
       const dividerFound = rehydratedState.currentPageLines.some((l) => l.isSessionDivider);
       expect(dividerFound).toBe(true);
     });
+
+    it('does not inherit sessionWordTarget from active project when importing a file', async () => {
+      const store = useTypingStore.getState();
+      // Set target on currently active project
+      store.setManifest({ sessionWordTarget: 750 });
+      expect(useTypingStore.getState().manifest.sessionWordTarget).toBe(750);
+
+      // Import a new text file
+      await store.importTextFileAsProject('Imported Story', 'Chapter One: It begins.');
+
+      // Imported project must have undefined sessionWordTarget
+      const importedManifest = useTypingStore.getState().manifest;
+      expect(importedManifest.title).toBe('Imported Story');
+      expect(importedManifest.sessionWordTarget).toBeUndefined();
+
+      // Rehydrating must preserve undefined target, not restore 750 from old active state
+      await store.rehydrate();
+      expect(useTypingStore.getState().manifest.sessionWordTarget).toBeUndefined();
+    });
   });
 });
 

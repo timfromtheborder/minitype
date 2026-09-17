@@ -5,7 +5,6 @@ import {
   PageMode,
   ColorScheme,
   TextSize,
-  ScreenWakeLockPolicy,
   ManuscriptManifest,
 } from '@/types';
 import { X, Sliders, Volume2, VolumeX } from 'lucide-react';
@@ -429,42 +428,12 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 />
               </button>
             </div>
-
-            {/* Keep screen awake */}
-            <div className="flex flex-col gap-1.5 pt-2 border-t border-border/40">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Keep screen awake:</span>
-                <span className="font-bold text-foreground capitalize">
-                  {(manifest.keepScreenAwake || 'always') === '5-min' ? '5 Minutes' : manifest.keepScreenAwake || 'always'}
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-1.5">
-                {(['always', '5-min', 'off'] as ScreenWakeLockPolicy[]).map((policy) => {
-                  const isSelected = (manifest.keepScreenAwake || 'always') === policy;
-                  const label = policy === 'always' ? 'Always' : policy === '5-min' ? '5 Min' : 'Off';
-                  return (
-                    <button
-                      key={policy}
-                      type="button"
-                      onClick={() => onUpdateManifest({ keepScreenAwake: policy })}
-                      className={`py-1.5 rounded-[2px] border text-center transition-all cursor-pointer font-bold text-xs sm:text-sm ${
-                        isSelected
-                          ? 'border-primary bg-primary text-primary-foreground shadow-xs'
-                          : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
           </div>
 
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.7.5.3
+              Minitype v0.9.7.5.4
             </span>
           </div>
         </div>

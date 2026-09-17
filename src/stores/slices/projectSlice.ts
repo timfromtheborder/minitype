@@ -672,6 +672,7 @@ export const createProjectSlice: StateCreator<
 
     const newManifest: ManuscriptManifest = {
       ...state.manifest,
+      sessionWordTarget: undefined,
       id: newId,
       title: cleanTitle,
       mode: 'local',

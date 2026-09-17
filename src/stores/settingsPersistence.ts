@@ -14,7 +14,6 @@ export const SETTING_KEYS = [
   'showSessionTargetTracker',
   'doubleSpaceLinebreaks',
   'allowStrikeout',
-  'keepScreenAwake',
 ] as const;
 
 export const SETTINGS_KEY = 'minitype_global_settings';
@@ -41,7 +40,6 @@ export const DEFAULT_MANIFEST: ManuscriptManifest = {
   sessionWordTarget: undefined,
   doubleSpaceLinebreaks: false,
   allowStrikeout: true,
-  keepScreenAwake: 'always',
   sessionCount: 0,
   totalWordCount: 0,
   createdAt: '2026-01-01T00:00:00.000Z',

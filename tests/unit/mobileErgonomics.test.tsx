@@ -26,8 +26,8 @@ function makeLine(cellCount: number): LineRecord {
   };
 }
 
-function WakeLockTestComponent({ policy }: { policy?: any }) {
-  useWakeLock(policy);
+function WakeLockTestComponent({ timeoutMs }: { timeoutMs?: number } = {}) {
+  useWakeLock(timeoutMs);
   return <div data-testid="wakelock-host" />;
 }
 
@@ -90,20 +90,26 @@ describe('useWakeLock Hook', () => {
     vi.restoreAllMocks();
   });
 
-  it('requests screen wake lock when policy is "always"', async () => {
+  it('requests screen wake lock on mount', async () => {
     const root = createRoot(container);
     await act(async () => {
-      root.render(<WakeLockTestComponent policy="always" />);
+      root.render(<WakeLockTestComponent />);
     });
     expect(mockRequest).toHaveBeenCalledWith('screen');
   });
 
-  it('does not request wake lock when policy is "off"', async () => {
+  it('releases wake lock after timeout', async () => {
+    vi.useFakeTimers();
     const root = createRoot(container);
     await act(async () => {
-      root.render(<WakeLockTestComponent policy="off" />);
+      root.render(<WakeLockTestComponent timeoutMs={1000} />);
     });
-    expect(mockRequest).not.toHaveBeenCalled();
+    expect(mockRequest).toHaveBeenCalledWith('screen');
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(mockSentinel.release).toHaveBeenCalled();
+    vi.useRealTimers();
   });
 
   it('handles unsupported wake lock gracefully without errors', async () => {
@@ -116,7 +122,7 @@ describe('useWakeLock Hook', () => {
     const root = createRoot(container);
     await expect(
       act(async () => {
-        root.render(<WakeLockTestComponent policy="always" />);
+        root.render(<WakeLockTestComponent />);
       })
     ).resolves.not.toThrow();
   });
