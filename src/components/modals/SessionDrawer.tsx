@@ -12,6 +12,7 @@ import {
   Type,
   BookOpen,
   Lock,
+  Download,
 } from 'lucide-react';
 import {
   countWords,
@@ -62,6 +63,11 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
   const viewMode = manifest.documentViewMode || 'typewriter';
   const showDividers = manifest.showSessionDividers !== false;
   const [isPulsingActive, setIsPulsingActive] = useState<boolean>(false);
+  const [showExportConfirm, setShowExportConfirm] = useState<boolean>(false);
+  const showExportConfirmRef = useRef<boolean>(false);
+  useEffect(() => {
+    showExportConfirmRef.current = showExportConfirm;
+  }, [showExportConfirm]);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -124,6 +130,10 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
+        if (showExportConfirmRef.current) {
+          setShowExportConfirm(false);
+          return;
+        }
         onClose();
         return;
       }
@@ -255,6 +265,46 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
   };
 
   const hasActiveSession = Boolean(activeSession && activeSession.wordCount > 0);
+
+  const downloadPlainText = (textToExport: string) => {
+    const safeTitle = (title.trim() || 'manuscript').replace(/[/\\?%*:|"<>]/g, '-');
+    const blob = new Blob([textToExport], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${safeTitle}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const executeExport = async (shouldCloseSession: boolean) => {
+    setShowExportConfirm(false);
+    if (shouldCloseSession) {
+      await useTypingStore.getState().closeActiveSession();
+    }
+    const state = useTypingStore.getState();
+    const allPages = propPages ?? [
+      ...state.historicalPages,
+      {
+        pageNumber: state.currentPageNumber,
+        lines: state.currentPageLines,
+        completedAt: null,
+      },
+    ];
+    const latestClean = sanitizeManuscript(allPages, {
+      doubleSpaceLinebreaks: state.manifest.doubleSpaceLinebreaks,
+      pageMode: state.manifest.pageMode,
+    });
+    downloadPlainText(latestClean);
+  };
+
+  const handleExportClick = () => {
+    if (hasActiveSession) {
+      setShowExportConfirm(true);
+    } else {
+      executeExport(false);
+    }
+  };
 
   return (
     <div
@@ -587,28 +637,87 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
         </div>
 
         {/* Bottom Action Bar */}
-        <div className="flex items-center gap-2 pt-2 border-t border-border/60 text-xs font-sans shrink-0">
-          <button
-            type="button"
-            onClick={handleStartNewSession}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] border border-primary bg-primary text-primary-foreground font-semibold shadow-xs hover:opacity-90 transition-opacity cursor-pointer text-xs"
-            title="Start a new drafting session"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Start New Session</span>
-          </button>
+        <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/60 text-xs font-sans shrink-0">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleStartNewSession}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] border border-primary bg-primary text-primary-foreground font-semibold shadow-xs hover:opacity-90 transition-opacity cursor-pointer text-xs"
+              title="Start a new drafting session"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Start New Session</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleCloseActiveSession}
+              disabled={!hasActiveSession}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] border border-border/80 bg-muted/40 hover:bg-muted text-foreground transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium"
+              title="Complete and close active drafting session"
+            >
+              <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Close Session</span>
+            </button>
+          </div>
 
           <button
             type="button"
-            onClick={handleCloseActiveSession}
-            disabled={!hasActiveSession}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] border border-border/80 bg-muted/40 hover:bg-muted text-foreground transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium"
-            title="Complete and close active drafting session"
+            onClick={handleExportClick}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] border border-border/80 bg-muted/40 hover:bg-muted hover:border-foreground/40 text-foreground transition-colors cursor-pointer text-xs font-medium shrink-0"
+            title="Export document as plaintext (.txt)"
           >
-            <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
-            <span>Close Session</span>
+            <Download className="w-3.5 h-3.5 opacity-70" />
+            <span>Export Document</span>
           </button>
         </div>
+
+        {/* Export with Active Session Confirmation Dialog */}
+        {showExportConfirm && (
+          <div
+            className="absolute inset-0 z-30 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-100"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowExportConfirm(false);
+            }}
+          >
+            <div
+              className="border border-border bg-card text-card-foreground p-5 rounded-[2px] shadow-2xl max-w-sm w-full flex flex-col gap-3 font-sans select-none"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
+                <Download className="w-4 h-4 text-primary" />
+                <span>Export Document</span>
+              </div>
+              <p className="text-xs text-card-foreground/75 leading-relaxed">
+                You have an active drafting session with text. Would you like to close the session before exporting?
+              </p>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-2 border-t border-border/60 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setShowExportConfirm(false)}
+                  className="px-2.5 py-1.5 rounded-[2px] border border-border/80 hover:bg-muted text-card-foreground/70 hover:text-card-foreground transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => executeExport(false)}
+                  className="px-2.5 py-1.5 rounded-[2px] border border-border/80 bg-card-foreground/5 hover:bg-card-foreground/10 text-card-foreground transition-colors cursor-pointer font-medium"
+                >
+                  Export Without Closing
+                </button>
+                <button
+                  type="button"
+                  onClick={() => executeExport(true)}
+                  className="px-3 py-1.5 rounded-[2px] border border-primary bg-primary text-primary-foreground transition-colors cursor-pointer font-semibold shadow-xs"
+                >
+                  Close & Export
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

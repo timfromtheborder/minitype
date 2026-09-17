@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { SessionDrawer } from '@/components/modals/SessionDrawer';
@@ -468,15 +468,16 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     expect(card?.textContent).toContain('-----');
     expect(card?.textContent).toContain('4 words');
 
-    // Verify copy, delete, export, and print buttons are removed
+    // Verify per-session copy, delete, export, and print buttons are removed
+    const cardButtons = Array.from(card?.querySelectorAll('button') || []);
+    expect(cardButtons.length).toBe(0);
+
     const buttons = Array.from(container.querySelectorAll('button'));
     const copyBtn = buttons.find((b) => b.title?.toLowerCase().includes('copy'));
     const deleteBtn = buttons.find((b) => b.title?.toLowerCase().includes('delete'));
-    const exportBtn = buttons.find((b) => b.title?.toLowerCase().includes('export') || b.textContent?.includes('Export'));
     const printBtn = buttons.find((b) => b.title?.toLowerCase().includes('print'));
     expect(copyBtn).toBeUndefined();
     expect(deleteBtn).toBeUndefined();
-    expect(exportBtn).toBeUndefined();
     expect(printBtn).toBeUndefined();
 
     // Verify redundant "words total" at bottom right is removed
@@ -857,6 +858,124 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     await act(async () => {
       root2.unmount();
     });
+    container.remove();
+  });
+
+  it('exports plaintext directly when no active session with text, but prompts to close session when active text exists', async () => {
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+    if (!window.URL.createObjectURL) {
+      window.URL.createObjectURL = vi.fn().mockReturnValue('blob:mock');
+      window.URL.revokeObjectURL = vi.fn();
+    }
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+    // Case 1: No active session with text
+    useTypingStore.setState({
+      activeSessions: [],
+      currentPageLines: [
+        {
+          id: 'p1-l0',
+          lineIndex: 0,
+          cells: [],
+          isCommitted: false,
+        },
+      ],
+      manifest: {
+        ...useTypingStore.getState().manifest,
+        title: 'Export Test Doc',
+      },
+    });
+
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
+    });
+
+    const exportBtn = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Export Document')
+    );
+    expect(exportBtn).not.toBeUndefined();
+
+    await act(async () => {
+      exportBtn?.click();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    // Should download directly without confirmation modal
+    expect(clickSpy).toHaveBeenCalled();
+    expect(container.textContent).not.toContain('You have an active drafting session with text');
+
+    await act(async () => {
+      root.unmount();
+    });
+
+    // Case 2: Active session with text exists
+    const now = new Date().toISOString();
+    useTypingStore.setState({
+      activeSessions: [
+        {
+          id: 'export-session-1',
+          projectId: 'current',
+          sessionNumber: 1,
+          startedAt: now,
+          completedAt: null,
+          text: 'Active drafted words here.',
+          wordCount: 4,
+        },
+      ],
+      currentPageLines: [
+        {
+          id: 'p1-l0',
+          lineIndex: 0,
+          cells: 'Active drafted words here.'.split('').map((char, colIndex) => ({
+            id: `p1-l0-c${colIndex}`,
+            char,
+            state: 'standard' as const,
+            colIndex,
+            lineIndex: 0,
+          })),
+          isCommitted: false,
+        },
+      ],
+    });
+
+    const closeSessionSpy = vi.spyOn(useTypingStore.getState(), 'closeActiveSession');
+
+    const root2 = createRoot(container);
+    await act(async () => {
+      root2.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
+    });
+
+    const exportBtn2 = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Export Document')
+    );
+    expect(exportBtn2).not.toBeUndefined();
+
+    // Click Export Document -> must show prompt asking if user wants to close session
+    await act(async () => {
+      exportBtn2?.click();
+    });
+
+    expect(container.textContent).toContain('You have an active drafting session with text');
+    expect(container.textContent).toContain('Close & Export');
+
+    // Click Close & Export
+    const closeAndExportBtn = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Close & Export')
+    );
+    expect(closeAndExportBtn).not.toBeUndefined();
+
+    await act(async () => {
+      closeAndExportBtn?.click();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    expect(closeSessionSpy).toHaveBeenCalled();
+
+    await act(async () => {
+      root2.unmount();
+    });
+    clickSpy.mockRestore();
     container.remove();
   });
 });
