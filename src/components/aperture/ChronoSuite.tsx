@@ -89,10 +89,10 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
   }, [timerStartTime, now]);
 
   // Pomodoro countdown derived continuously in realtime from wall-clock time
-  // TEMPORARY: Set work to 2 minutes, break to 1 minute for testing (normally 25m work, 5m break)
+  // Standard Pomodoro: 25 minutes work, 5 minutes break
   const { pomodoroPhase, pomodoroSeconds } = useMemo(() => {
-    const WORK_SECONDS = 2 * 60;
-    const BREAK_SECONDS = 1 * 60;
+    const WORK_SECONDS = 25 * 60;
+    const BREAK_SECONDS = 5 * 60;
     const CYCLE_SECONDS = WORK_SECONDS + BREAK_SECONDS;
 
     if (timerStartTime === null) {
