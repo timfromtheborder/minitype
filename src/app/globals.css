@@ -641,6 +641,11 @@ html[data-page-mode="notecard"],
   font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
 }
 
+/* Publisher Manuscript Serif View: always forces elegant publisher serif font regardless of theme */
+.font-manuscript-serif {
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif !important;
+}
+
 /* Ensure monospace clock font is enforced for Terminal, Spotlight, and Charcoal themes on page refresh/SSR */
 [data-theme="dark-amber"] .font-serif-clock,
 [data-theme="spotlight"] .font-serif-clock,

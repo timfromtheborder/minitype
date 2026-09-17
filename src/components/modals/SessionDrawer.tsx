@@ -10,13 +10,6 @@ import {
   CornerUpLeft,
   Plus,
   CheckCircle,
-  ChevronDown,
-  ChevronRight,
-  ChevronsUpDown,
-  ChevronsDownUp,
-  Copy,
-  Check,
-  Trash2,
   Sparkles,
   Type,
   BookOpen,
@@ -55,8 +48,6 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
   const [title, setTitle] = useState<string>(manifest.title || 'Untitled Project');
   const [sanitizedFullText, setSanitizedFullText] = useState<string>('');
   const [viewMode, setViewMode] = useState<'typewriter' | 'manuscript'>('typewriter');
-  const [collapsedSessionIds, setCollapsedSessionIds] = useState<Record<string, boolean>>({});
-  const [copiedSessionId, setCopiedSessionId] = useState<string | null>(null);
   const [isPulsingActive, setIsPulsingActive] = useState<boolean>(false);
 
   const modalRef = useRef<HTMLDivElement>(null);
@@ -257,40 +248,6 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
     await useTypingStore.getState().closeActiveSession();
   };
 
-  const handleCopySessionText = async (sessionId: string, text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedSessionId(sessionId);
-      setTimeout(() => setCopiedSessionId(null), 1500);
-    } catch {
-      // Fallback
-      setCopiedSessionId(null);
-    }
-  };
-
-  const toggleSessionCollapse = (sessionId: string) => {
-    setCollapsedSessionIds((prev) => ({
-      ...prev,
-      [sessionId]: !prev[sessionId],
-    }));
-  };
-
-  const allCollapsed = resolvedSessions.length > 0 && resolvedSessions.every((s) => collapsedSessionIds[s.id]);
-
-  const handleToggleAllCollapse = () => {
-    if (allCollapsed) {
-      // Expand all
-      setCollapsedSessionIds({});
-    } else {
-      // Collapse all
-      const next: Record<string, boolean> = {};
-      resolvedSessions.forEach((s) => {
-        next[s.id] = true;
-      });
-      setCollapsedSessionIds(next);
-    }
-  };
-
   const hasActiveSession = resolvedSessions.some(
     (s, idx) => idx === resolvedSessions.length - 1 && !s.completedAt && s.wordCount > 0
   );
@@ -299,7 +256,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Session Drawer"
+      aria-label="Document"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-2 sm:p-4 animate-in fade-in duration-150"
       onClick={onClose}
     >
@@ -312,7 +269,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
         <div className="flex items-center justify-between border-b border-border/60 pb-2 sm:pb-3 gap-2 sm:gap-3 shrink-0">
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
             <span className="text-xs font-sans font-bold tracking-widest uppercase text-muted-foreground shrink-0">
-              Session
+              Document
             </span>
             <span className="text-muted-foreground/40 font-sans text-xs">/</span>
             <input
@@ -464,17 +421,6 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
               <span>Double-space</span>
             </button>
 
-            {/* Expand / Collapse All */}
-            <button
-              type="button"
-              onClick={handleToggleAllCollapse}
-              className="flex items-center gap-1 px-2 py-1 rounded-[2px] border border-border/80 bg-muted/40 hover:bg-muted text-foreground transition-all cursor-pointer text-[clamp(10px,0.8em,12px)] font-sans"
-              title={allCollapsed ? 'Expand all sessions' : 'Collapse all sessions'}
-            >
-              {allCollapsed ? <ChevronsUpDown className="w-3 h-3" /> : <ChevronsDownUp className="w-3 h-3" />}
-              <span>{allCollapsed ? 'Expand All' : 'Collapse All'}</span>
-            </button>
-
             {/* Export .txt */}
             <button
               type="button"
@@ -502,11 +448,11 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
           </div>
         </div>
 
-        {/* Chronological Stream of Collapsible Session Cards */}
+        {/* Chronological Stream of Permanently Expanded Contiguous Sessions */}
         <div
           ref={scrollContainerRef}
           style={{ overflowAnchor: 'none' }}
-          className="flex-1 min-h-0 overflow-y-auto square-scrollbar border border-border/80 bg-card text-card-foreground p-2 sm:p-3 space-y-2.5 rounded-[2px] [overflow-anchor:none]"
+          className="flex-1 min-h-0 overflow-y-auto square-scrollbar border border-border/80 bg-card text-card-foreground p-3 sm:p-5 space-y-3 rounded-[2px] [overflow-anchor:none]"
         >
           {resolvedSessions.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 p-4 text-center gap-2 text-muted-foreground font-mono">
@@ -532,118 +478,63 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                 timeRange = formatSessionDateTime(session.startedAt);
               }
 
-              const isCollapsed = Boolean(collapsedSessionIds[session.id]);
               const sessionText = session.text || '';
 
               return (
                 <div
                   key={session.id}
                   data-session-card="true"
-                  className={`border rounded-[2px] transition-all duration-200 overflow-hidden ${
+                  className={`transition-all duration-200 ${
                     isActive && isPulsingActive
-                      ? 'border-primary bg-primary/15 shadow-xs'
-                      : 'border-border/70 bg-background/80'
+                      ? 'bg-primary/10 rounded-[2px] p-1'
+                      : ''
                   }`}
                 >
-                  {/* Card Header: Clickable to toggle collapse */}
-                  <div
-                    onClick={() => toggleSessionCollapse(session.id)}
-                    className="flex items-center justify-between p-2 sm:p-2.5 bg-muted/30 hover:bg-muted/50 cursor-pointer text-xs font-mono select-none gap-2"
-                  >
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <button
-                        type="button"
-                        className="text-muted-foreground hover:text-foreground shrink-0"
-                        title={isCollapsed ? 'Expand session' : 'Collapse session'}
-                      >
-                        {isCollapsed ? (
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        ) : (
-                          <ChevronDown className="w-3.5 h-3.5" />
-                        )}
-                      </button>
-                      <span className="font-bold text-foreground shrink-0">
-                        Session {session.sessionNumber}
+                  {/* Nested In-line Header Divider in Small Faded Text */}
+                  <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono text-muted-foreground/60 select-none py-1 mb-1.5 overflow-hidden">
+                    <span className="shrink-0 opacity-40 select-none">-----</span>
+                    <span className="font-semibold text-foreground/80 shrink-0 select-none">
+                      Session {session.sessionNumber}
+                    </span>
+                    <span className="shrink-0 opacity-40 select-none">---</span>
+                    <span className="shrink-0 truncate text-muted-foreground/75 select-none">
+                      {timeRange}
+                    </span>
+                    {isActive && (
+                      <span className="flex items-center gap-1 text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-[1px] shrink-0 font-sans ml-1 select-none">
+                        <Sparkles className="w-2.5 h-2.5" />
+                        <span>Active</span>
                       </span>
-                      <span className="text-muted-foreground/60 hidden sm:inline">|</span>
-                      <span className="text-muted-foreground text-[11px] truncate">
-                        {timeRange}
-                      </span>
-                      {isActive && (
-                        <span className="flex items-center gap-1 text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-[2px] shrink-0 font-sans ml-1">
-                          <Sparkles className="w-2.5 h-2.5" />
-                          <span>Active</span>
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span
-                        className={`text-right text-[11px] sm:text-xs ${
-                          isTargetMet
-                            ? 'font-bold text-foreground'
-                            : 'font-medium text-muted-foreground'
-                        }`}
-                      >
-                        {session.wordCount.toLocaleString()} words
-                      </span>
-
-                      {/* Copy Session Text Button */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCopySessionText(session.id, sessionText);
-                        }}
-                        className="p-1 rounded-[2px] border border-border/60 hover:bg-background text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                        title="Copy session text"
-                      >
-                        {copiedSessionId === session.id ? (
-                          <Check className="w-3 h-3 text-emerald-500" />
-                        ) : (
-                          <Copy className="w-3 h-3" />
-                        )}
-                      </button>
-
-                      {/* Delete Session Button (only if more than 1 session or inactive) */}
-                      {resolvedSessions.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            if (window.confirm(`Delete Session ${session.sessionNumber}?`)) {
-                              await useTypingStore.getState().deleteSession(session.id);
-                            }
-                          }}
-                          className="p-1 rounded-[2px] border border-border/60 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
-                          title="Delete session"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      )}
-                    </div>
+                    )}
+                    <div className="flex-1 min-w-4 border-t border-dashed border-border/40 self-center mx-1" />
+                    <span
+                      className={`shrink-0 text-right text-[10px] sm:text-[11px] ${
+                        isTargetMet
+                          ? 'font-bold text-foreground'
+                          : 'font-medium text-muted-foreground/75'
+                      }`}
+                    >
+                      {session.wordCount.toLocaleString()} words
+                    </span>
+                    <span className="shrink-0 opacity-40 select-none">-----</span>
                   </div>
 
-                  {/* Card Body: Manuscript text preview when expanded */}
-                  {!isCollapsed && (
-                    <div className="p-3 sm:p-4 border-t border-border/40 bg-card select-text">
-                      <div
-                        className={`whitespace-pre-wrap ${
-                          viewMode === 'typewriter'
-                            ? 'font-mono text-xs sm:text-sm leading-relaxed'
-                            : 'font-serif-clock text-sm sm:text-base leading-relaxed indent-8'
-                        }`}
-                      >
-                        {sessionText.length > 0 ? (
-                          sessionText
-                        ) : (
-                          <span className="text-muted-foreground/40 italic font-mono text-xs">
-                            No text in this session.
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                  {/* Manuscript Text: Contiguous & Permanently Expanded */}
+                  <div
+                    className={`whitespace-pre-wrap select-text py-0.5 ${
+                      viewMode === 'typewriter'
+                        ? 'font-mono text-xs sm:text-sm leading-relaxed'
+                        : 'font-manuscript-serif text-sm sm:text-base leading-relaxed indent-8'
+                    }`}
+                  >
+                    {sessionText.length > 0 ? (
+                      sessionText
+                    ) : (
+                      <span className="text-muted-foreground/40 italic font-mono text-xs">
+                        No text in this session.
+                      </span>
+                    )}
+                  </div>
                 </div>
               );
             })

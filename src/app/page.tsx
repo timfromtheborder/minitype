@@ -12,7 +12,7 @@ import { SettingsDrawer } from '@/components/modals/SettingsDrawer';
 import { SessionDrawer } from '@/components/modals/SessionDrawer';
 import { ProjectFilesModal } from '@/components/modals/ProjectFilesModal';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { Settings, FolderOpen, Layers, Check, Loader2 } from 'lucide-react';
+import { Settings, FolderOpen, Layers, FileText, Check, Loader2 } from 'lucide-react';
 
 export default function Home() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -131,7 +131,7 @@ export default function Home() {
       {/* UTILITY DECK: Viewport Base, centered */}
       <footer className="absolute bottom-0 left-0 right-0 flex justify-center items-center pb-[max(0.75rem,env(safe-area-inset-bottom))] px-2.5 sm:px-6 select-none text-xs">
         <div className="flex items-center justify-center gap-2 sm:gap-3">
-          {/* Session Button */}
+          {/* Document Button */}
           <button
             type="button"
             onClick={() => setIsSessionOpen(true)}
@@ -140,11 +140,11 @@ export default function Home() {
                 ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground active:bg-card active:text-card-foreground'
                 : 'border-border/70 bg-card hover:bg-muted text-card-foreground active:bg-muted'
             }`}
-            title="Session"
-            aria-label="Session"
+            title="Document"
+            aria-label="Document"
           >
-            <Layers className="w-3.5 h-3.5 opacity-70 shrink-0" />
-            <span>Session</span>
+            <FileText className="w-3.5 h-3.5 opacity-70 shrink-0" />
+            <span>Document</span>
           </button>
 
           {/* Project Button */}

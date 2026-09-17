@@ -395,7 +395,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     });
 
     textPreview = container.querySelector('.whitespace-pre-wrap');
-    expect(textPreview?.className).toContain('font-serif-clock');
+    expect(textPreview?.className).toContain('font-manuscript-serif');
 
     // Click Typewriter button
     const typewriterBtn = buttons.find((b) => b.textContent?.includes('Typewriter'));
@@ -414,7 +414,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     container.remove();
   });
 
-  it('supports collapsing and expanding session cards', async () => {
+  it('renders sessions permanently expanded with inline faded dashed divider and without copy/delete buttons', async () => {
     (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
     const root = createRoot(container);
 
@@ -440,33 +440,31 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
       root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
     });
 
-    // Card body is visible initially
-    expect(container.querySelector('.whitespace-pre-wrap')).not.toBeNull();
+    // Verify modal breadcrumb reads "Document"
+    expect(container.textContent).toContain('Document');
 
-    // Toggle Collapse All button
+    // Card body is permanently expanded
+    const textEl = container.querySelector('.whitespace-pre-wrap');
+    expect(textEl).not.toBeNull();
+    expect(textEl?.textContent).toContain('First session text content.');
+
+    // In-line header divider exists and contains session number, dashes, and word count
+    const card = container.querySelector('[data-session-card="true"]');
+    expect(card).not.toBeNull();
+    expect(card?.textContent).toContain('Session 1');
+    expect(card?.textContent).toContain('-----');
+    expect(card?.textContent).toContain('4 words');
+
+    // Verify copy and delete buttons are removed
     const buttons = Array.from(container.querySelectorAll('button'));
+    const copyBtn = buttons.find((b) => b.title?.toLowerCase().includes('copy'));
+    const deleteBtn = buttons.find((b) => b.title?.toLowerCase().includes('delete'));
+    expect(copyBtn).toBeUndefined();
+    expect(deleteBtn).toBeUndefined();
+
+    // Verify collapse all button is removed
     const collapseAllBtn = buttons.find((b) => b.textContent?.includes('Collapse All'));
-    expect(collapseAllBtn).toBeDefined();
-
-    await act(async () => {
-      collapseAllBtn?.click();
-    });
-
-    // Card body is collapsed
-    expect(container.querySelector('.whitespace-pre-wrap')).toBeNull();
-
-    // Toggle Expand All
-    const expandAllBtn = Array.from(container.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Expand All')
-    );
-    expect(expandAllBtn).toBeDefined();
-
-    await act(async () => {
-      expandAllBtn?.click();
-    });
-
-    // Card body is restored
-    expect(container.querySelector('.whitespace-pre-wrap')).not.toBeNull();
+    expect(collapseAllBtn).toBeUndefined();
 
     await act(async () => {
       root.unmount();
