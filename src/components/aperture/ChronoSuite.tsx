@@ -109,7 +109,6 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
 
   return (
     <div
-      suppressHydrationWarning
       className={`relative inline-flex flex-col items-start justify-center select-none ${fontClass}`}
     >
       {/* Session Timer: justified with the clock so numbers align vertically */}

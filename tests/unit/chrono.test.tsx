@@ -163,5 +163,35 @@ describe('ChronoSuite & Clock Formatter', () => {
       // Badge should be removed
       expect(container.querySelector('button[aria-label*="Session timer started"]')).toBeNull();
     });
+
+    it('does not suppress hydration on outer div and correctly transitions between serif and mono fonts', async () => {
+      const root = createRoot(container);
+      
+      // Initial render with dark-amber (Terminal - mono)
+      await act(async () => {
+        root.render(<ChronoSuite showClock={true} colorScheme="dark-amber" />);
+      });
+
+      const wrapper = container.querySelector('div');
+      expect(wrapper).not.toBeNull();
+      // Outer div must NOT suppress hydration warnings so client state changes reconcile cleanly
+      expect(wrapper?.hasAttribute('suppressHydrationWarning')).toBe(false);
+      expect(wrapper?.className).toContain('font-mono');
+      expect(wrapper?.className).not.toContain('font-serif-clock');
+
+      // Switch to typewriter (manuscript - serif)
+      await act(async () => {
+        root.render(<ChronoSuite showClock={true} colorScheme="typewriter" />);
+      });
+      expect(wrapper?.className).toContain('font-serif-clock');
+      expect(wrapper?.className).not.toContain('font-mono');
+
+      // Switch back to dark-amber (Terminal - mono)
+      await act(async () => {
+        root.render(<ChronoSuite showClock={true} colorScheme="dark-amber" />);
+      });
+      expect(wrapper?.className).toContain('font-mono');
+      expect(wrapper?.className).not.toContain('font-serif-clock');
+    });
   });
 });

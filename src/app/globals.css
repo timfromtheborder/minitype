@@ -641,6 +641,14 @@ html[data-page-mode="notecard"],
   font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
 }
 
+/* Ensure monospace clock font is enforced for Terminal, Spotlight, and Charcoal themes on page refresh/SSR */
+[data-theme="dark-amber"] .font-serif-clock,
+[data-theme="spotlight"] .font-serif-clock,
+[data-theme="dark-mode"] .font-serif-clock,
+[data-theme="phosphor"] .font-serif-clock {
+  font-family: var(--font-courier-prime), "Courier Prime", "Courier New", Courier, monospace;
+}
+
 /* Touch device button responsiveness: trigger tactile highlight immediately on tap (:active) */
 * {
   -webkit-tap-highlight-color: transparent;
