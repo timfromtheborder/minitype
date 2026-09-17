@@ -132,14 +132,14 @@ describe('partitionManuscriptLines', () => {
     expect(partitioned.currentPageLines.length).toBe(parsed.lines.length - 20);
   });
 
-  it('partitions lines by paragraph in paragraph mode', () => {
+  it('migrates legacy paragraph mode lines to scroll mode without page splits', () => {
     const text = 'Paragraph 1.\n\nParagraph 2.\n\nParagraph 3.';
     const parsed = textToManuscriptLines(text, 1, 70);
     const partitioned = partitionManuscriptLines(parsed.lines, 'paragraph', 54, 'para-doc');
 
-    // 3 completed paragraph pages + 1 active drafting page for typing the 4th paragraph
-    expect(partitioned.historicalPages.length).toBe(3);
-    expect(partitioned.currentPageNumber).toBe(4);
-    expect(partitioned.currentPageLines[0].cells.length).toBe(0);
+    // In retired paragraph mode, lines cleanly migrate to continuous scroll on page 1
+    expect(partitioned.historicalPages.length).toBe(0);
+    expect(partitioned.currentPageNumber).toBe(1);
+    expect(partitioned.currentPageLines.length).toBe(parsed.lines.length);
   });
 });

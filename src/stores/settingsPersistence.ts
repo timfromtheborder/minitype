@@ -64,6 +64,9 @@ export function extractSettings(obj: any): Partial<ManuscriptManifest> {
       settings[key] = obj[key];
     }
   }
+  if (settings.pageMode === 'paragraph') {
+    settings.pageMode = 'scroll';
+  }
   return settings;
 }
 
@@ -154,7 +157,7 @@ export function readSynchronousSettings(): (Partial<ManuscriptManifest> & { _upd
       if (theme) fallback.colorScheme = theme;
       if (textSize) fallback.textSize = textSize;
       if (apertureHeight) fallback.activeApertureHeight = parseInt(apertureHeight, 10);
-      if (pageMode) fallback.pageMode = pageMode;
+      if (pageMode) fallback.pageMode = pageMode === 'paragraph' ? 'scroll' : pageMode;
       if (pageSize) fallback.pageSize = parseInt(pageSize, 10);
       if (showStats !== null && showStats !== undefined) fallback.showStats = showStats === 'true';
       if (doubleSpace !== null && doubleSpace !== undefined) fallback.doubleSpaceLinebreaks = doubleSpace === 'true';

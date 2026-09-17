@@ -220,13 +220,13 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Page Mode */}
           <div className="flex flex-col gap-1.5">
             <label className="text-muted-foreground">Page Mode:</label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {(['scroll', 'paragraph', 'notecard'] as PageMode[]).map((mode) => (
+            <div className="grid grid-cols-2 gap-1.5">
+              {(['scroll', 'notecard'] as PageMode[]).map((mode) => (
                 <button
                   key={mode}
                   type="button"
                   onClick={() => {
-                    const pageSize = mode === 'scroll' ? 999999 : mode === 'notecard' ? 10 : 9999;
+                    const pageSize = mode === 'scroll' ? 999999 : 10;
                     onUpdateManifest({ pageMode: mode, pageSize });
                   }}
                   className={`py-1.5 px-0.5 rounded-[2px] border text-center transition-all cursor-pointer capitalize text-[10px] sm:text-xs truncate ${
@@ -529,7 +529,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.8.1
+              Minitype v0.9.8.2
             </span>
           </div>
         </div>

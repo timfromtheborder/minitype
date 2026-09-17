@@ -163,6 +163,8 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
       },
     ];
 
+    const fullDocText = 'First paragraph sentence.\nSecond paragraph sentence.\nFinal paragraph sentence.';
+    const now = new Date().toISOString();
     useTypingStore.setState({
       currentPageLines: testLines,
       manifest: {
@@ -170,6 +172,17 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
         textSize: 'xl',
         doubleSpaceLinebreaks: false,
       },
+      activeSessions: [
+        {
+          id: 'test-doc-session-1',
+          projectId: useTypingStore.getState().manifest.id,
+          sessionNumber: 1,
+          startedAt: now,
+          completedAt: now, // Completed session to test unmasked text formatting
+          text: fullDocText,
+          wordCount: 9,
+        },
+      ],
     });
 
     await act(async () => {
@@ -579,6 +592,76 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     expect(paragraphs[0].textContent).toBe('Paragraph one text.');
     expect(paragraphs[1].textContent).toBe('Paragraph two text.');
     expect(paragraphs[2].textContent).toBe('Paragraph three text.');
+
+    await act(async () => {
+      root.unmount();
+    });
+    container.remove();
+  });
+
+  it('masks active session text with block glyphs █ in Document modal and unmasks when closed', async () => {
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+    const root = createRoot(container);
+
+    const now = new Date().toISOString();
+    const activeText = 'Drafting in progress right now.';
+    useTypingStore.setState({
+      manifest: {
+        ...useTypingStore.getState().manifest,
+        id: 'doc-mask-1',
+        documentViewMode: 'typewriter',
+      },
+      currentPageLines: [
+        {
+          id: 'p1-line-0',
+          lineIndex: 0,
+          cells: Array.from(activeText).map((ch, i) => ({
+            id: `c0_${i}`,
+            char: ch,
+            state: 'standard',
+            colIndex: i,
+            lineIndex: 0,
+          })),
+          isCommitted: false,
+        },
+      ],
+      activeSessions: [
+        {
+          id: 'doc-mask-1-session-1',
+          projectId: 'doc-mask-1',
+          sessionNumber: 1,
+          startedAt: now,
+          completedAt: null, // Active in-progress session
+          text: activeText,
+          wordCount: 5,
+        },
+      ],
+    });
+
+    await act(async () => {
+      root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
+    });
+
+    // Active session text must be masked with block glyphs (█)
+    const textPreview = container.querySelector('.whitespace-pre-wrap');
+    expect(textPreview).not.toBeNull();
+    // Non-whitespace characters must be masked
+    expect(textPreview?.textContent).toContain(activeText.replace(/\S/g, '█'));
+    // Real text should be concealed
+    expect(textPreview?.textContent).not.toContain('Drafting in progress');
+
+    // Click Close Session button to finalize active session
+    const buttons = Array.from(container.querySelectorAll('button'));
+    const closeBtn = buttons.find((b) => b.textContent?.includes('Close Session'));
+    expect(closeBtn).toBeDefined();
+
+    await act(async () => {
+      closeBtn?.click();
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    // Once closed, completed session is unmasked and readable
+    expect(container.querySelector('.whitespace-pre-wrap')?.textContent).toContain('Drafting in progress right now.');
 
     await act(async () => {
       root.unmount();

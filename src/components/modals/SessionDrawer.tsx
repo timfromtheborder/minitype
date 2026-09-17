@@ -44,7 +44,20 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
   const manifest = propManifest ?? storeManifest;
   const storeTitle = useTypingStore((state) => state.manifest.title);
   const [title, setTitle] = useState<string>(manifest.title || 'Untitled Project');
-  const [sanitizedFullText, setSanitizedFullText] = useState<string>('');
+  const [sanitizedFullText, setSanitizedFullText] = useState<string>(() => {
+    const allPages = propPages || [
+      ...storeHistoricalPages,
+      {
+        pageNumber: storeCurrentPageNumber,
+        lines: storeCurrentPageLines,
+        completedAt: null,
+      },
+    ];
+    return sanitizeManuscript(allPages, {
+      doubleSpaceLinebreaks: false,
+      pageMode: manifest.pageMode,
+    });
+  });
   const viewMode = manifest.documentViewMode || 'typewriter';
   const showDividers = manifest.showSessionDividers !== false;
   const [isPulsingActive, setIsPulsingActive] = useState<boolean>(false);
@@ -497,31 +510,37 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                   )}
 
                   {/* Manuscript Text: Contiguous & Permanently Expanded */}
-                  <div
-                    className={`whitespace-pre-wrap select-text py-0.5 ${
-                      viewMode === 'typewriter'
-                        ? 'font-mono text-xs sm:text-sm leading-relaxed'
-                        : 'font-manuscript-serif text-sm sm:text-base leading-relaxed'
-                    }`}
-                  >
-                    {sessionText.length === 0 ? (
-                      <span className="text-muted-foreground/40 italic font-mono text-xs">
-                        No text in this session.
-                      </span>
-                    ) : viewMode === 'manuscript' ? (
-                      sessionText.split('\n').map((para, pIdx) =>
-                        para.length === 0 ? (
-                          <div key={pIdx} className="h-3 sm:h-4" />
+                  {(() => {
+                    const displayText = isActive ? sessionText.replace(/\S/g, '█') : sessionText;
+
+                    return (
+                      <div
+                        className={`whitespace-pre-wrap select-text py-0.5 ${
+                          viewMode === 'typewriter'
+                            ? 'font-mono text-xs sm:text-sm leading-relaxed'
+                            : 'font-manuscript-serif text-sm sm:text-base leading-relaxed'
+                        }`}
+                      >
+                        {displayText.length === 0 ? (
+                          <span className="text-muted-foreground/40 italic font-mono text-xs">
+                            No text in this session.
+                          </span>
+                        ) : viewMode === 'manuscript' ? (
+                          displayText.split('\n').map((para, pIdx) =>
+                            para.length === 0 ? (
+                              <div key={pIdx} className="h-3 sm:h-4" />
+                            ) : (
+                              <p key={pIdx} className="indent-8 leading-relaxed mb-0">
+                                {para}
+                              </p>
+                            )
+                          )
                         ) : (
-                          <p key={pIdx} className="indent-8 leading-relaxed mb-0">
-                            {para}
-                          </p>
-                        )
-                      )
-                    ) : (
-                      sessionText
-                    )}
-                  </div>
+                          displayText
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })

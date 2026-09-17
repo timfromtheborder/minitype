@@ -395,22 +395,23 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(useTypingStore.getState().manifest.outboxCount).toBe(1);
     });
 
-    it('advances page on every line break in paragraph mode', () => {
+    it('migrates legacy paragraph mode to scroll mode with continuous linebreaks on page 1', () => {
       const store = useTypingStore.getState();
       store.setPageMode('paragraph');
 
-      store.insertChar('A');
-      store.handleEnter(); // Linebreak makes a new page
+      expect(useTypingStore.getState().manifest.pageMode).toBe('scroll');
 
-      expect(useTypingStore.getState().currentPageNumber).toBe(2);
-      // Paragraphs do not automatically increment outbox sheets (< 10 lines)
-      expect(useTypingStore.getState().manifest.outboxCount).toBe(0);
+      store.insertChar('A');
+      store.handleEnter(); // Linebreak in scroll mode advances line on same page
+
+      expect(useTypingStore.getState().currentPageNumber).toBe(1);
+      expect(useTypingStore.getState().currentPageLines.length).toBe(2);
 
       store.insertChar('B');
       store.handleEnter();
 
-      expect(useTypingStore.getState().currentPageNumber).toBe(3);
-      expect(useTypingStore.getState().manifest.outboxCount).toBe(0);
+      expect(useTypingStore.getState().currentPageNumber).toBe(1);
+      expect(useTypingStore.getState().currentPageLines.length).toBe(3);
     });
 
     it('does not paginate or complete page in scroll mode (endless scroll)', () => {
@@ -565,7 +566,7 @@ describe('Typing Engine & State Machine Invariants', () => {
 
     it('preserves linebreaks and page boundaries across multiple pages during sanitization', () => {
       const store = useTypingStore.getState();
-      store.resetEngine({ mode: 'local', pageMode: 'paragraph' });
+      store.resetEngine({ mode: 'local', pageMode: 'scroll' });
 
       for (const c of 'Paragraph 1') store.insertChar(c);
       store.handleEnter(); // makes new page: Page 2!
@@ -747,25 +748,22 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(sanitized).toBe('Hello world');
     });
 
-    it('strikes out carriage return in paragraph mode restoring the completed paragraph', () => {
+    it('strikes out carriage return on empty line restoring the preceding line', () => {
       const store = useTypingStore.getState();
-      store.resetEngine({ mode: 'local', pageMode: 'paragraph' });
+      store.resetEngine({ mode: 'local', pageMode: 'scroll' });
 
       for (const c of 'Paragraph 1') store.insertChar(c);
 
-      // Enter completes Page 1 in paragraph mode
+      // Enter creates line 2
       store.handleEnter();
-      expect(useTypingStore.getState().currentPageNumber).toBe(2);
-      expect(useTypingStore.getState().historicalPages).toHaveLength(1);
-      expect(useTypingStore.getState().manifest.outboxCount).toBe(0);
+      expect(useTypingStore.getState().currentPageLines).toHaveLength(2);
+      expect(useTypingStore.getState().activeLineIndex).toBe(1);
 
-      // Press Backspace on empty Page 2: strikes out carriage return and restores Page 1
+      // Press Backspace on empty line 2: strikes out carriage return and restores line 1
       store.handleBackspace();
 
       const state = useTypingStore.getState();
-      expect(state.currentPageNumber).toBe(1);
-      expect(state.historicalPages).toHaveLength(0);
-      expect(state.manifest.outboxCount).toBe(0);
+      expect(state.currentPageLines).toHaveLength(1);
       expect(state.currentPageLines[0].wrapType).toBe('soft');
       expect(state.activeColIndex).toBe(11);
 
@@ -958,14 +956,13 @@ describe('Typing Engine & State Machine Invariants', () => {
       const store = useTypingStore.getState();
       store.setApertureHeight(4);
       store.setManifest({ colorScheme: 'phosphor' });
-      store.setPageMode('paragraph');
+      store.setPageMode('notecard');
 
       const savedJson = localStorage.getItem('minitype_global_settings');
       expect(savedJson).toBeTruthy();
       const parsed = JSON.parse(savedJson!);
-      expect(parsed.activeApertureHeight).toBe(4);
       expect(parsed.colorScheme).toBe('phosphor');
-      expect(parsed.pageMode).toBe('paragraph');
+      expect(parsed.pageMode).toBe('notecard');
     });
 
     it('locks aperture height to 10 in notecard mode and unlocks for scroll/paragraph', () => {
@@ -2291,7 +2288,8 @@ describe('Typing Engine & State Machine Invariants', () => {
     it('deletes vacated page in IndexedDB when backspacing across page boundary', async () => {
       const store = useTypingStore.getState();
       await store.newProject();
-      store.setPageMode('paragraph');
+      store.setManifest({ pageMode: 'page', pageSize: 1 });
+      store.setPageSize(1);
 
       // Paragraph 1
       "First paragraph text".split('').forEach((c) => store.insertChar(c));
@@ -2377,7 +2375,7 @@ describe('Typing Engine & State Machine Invariants', () => {
 
     it('increments outboxCount only at 10-line increments within a session', () => {
       const store = useTypingStore.getState();
-      store.setPageMode('paragraph');
+      store.setPageMode('notecard');
 
       // Type 9 short paragraphs (9 lines total)
       for (let i = 1; i <= 9; i++) {
@@ -2794,7 +2792,7 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(state.activeColIndex).toBe(0);
     });
 
-    it('isolates imported file text in paragraph view into historical paragraphs and starts a blank line', async () => {
+    it('migrates imported file text in legacy paragraph view to scroll mode cleanly', async () => {
       const store = useTypingStore.getState();
       store.setPageMode('paragraph');
 
@@ -2802,13 +2800,9 @@ describe('Typing Engine & State Machine Invariants', () => {
       await store.importTextFileAsProject('Paragraph Import', sampleText);
 
       const state = useTypingStore.getState();
-      expect(state.manifest.pageMode).toBe('paragraph');
-      expect(state.historicalPages.length).toBeGreaterThanOrEqual(2);
-      // Active line is blank
-      expect(state.currentPageLines).toHaveLength(1);
-      expect(state.currentPageLines[0].cells).toHaveLength(0);
-      expect(state.activeLineIndex).toBe(0);
-      expect(state.activeColIndex).toBe(0);
+      expect(state.manifest.pageMode).toBe('scroll');
+      // Preceding text is preserved on continuous scroll platen
+      expect(state.currentPageLines.length).toBeGreaterThanOrEqual(3);
     });
 
     it('populates preceding text immediately when switching to scroll mode', async () => {
@@ -2859,25 +2853,19 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(state.activeColIndex).toBe(0);
     });
 
-    it('does not alter platen lines or historical pages when switching to paragraph view', () => {
+    it('migrates legacy paragraph view switches cleanly to scroll mode', () => {
       const store = useTypingStore.getState();
       store.setPageMode('scroll');
 
       store.insertChar('A');
       store.insertChar('B');
-      const beforeState = useTypingStore.getState();
-      const beforeLines = beforeState.currentPageLines;
-      const beforeHist = beforeState.historicalPages;
-      const beforeActive = beforeState.activeLineIndex;
 
-      // Switch to paragraph mode
+      // Switch to legacy paragraph mode
       store.setPageMode('paragraph');
 
       const afterState = useTypingStore.getState();
-      expect(afterState.manifest.pageMode).toBe('paragraph');
-      expect(afterState.currentPageLines).toBe(beforeLines);
-      expect(afterState.historicalPages).toBe(beforeHist);
-      expect(afterState.activeLineIndex).toBe(beforeActive);
+      expect(afterState.manifest.pageMode).toBe('scroll');
+      expect(afterState.currentPageLines[0].cells.map((c) => c.char).join('')).toBe('AB');
     });
   });
 

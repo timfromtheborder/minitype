@@ -448,35 +448,6 @@ export const createProjectSlice: StateCreator<
       currentPageLines = [createEmptyLine(currentPageNumber, 0)];
       activeLineIndex = 0;
       activeColIndex = 0;
-      outboxCount = historicalPages.length;
-    } else if (effectivePageMode === 'paragraph' && contentLines.length > 0) {
-      // In paragraph view, imported text does not display on the platen at all.
-      // Partition into completed historical paragraph pages.
-      let currentGroup: LineRecord[] = [];
-      for (let i = 0; i < contentLines.length; i++) {
-        const line = contentLines[i];
-        currentGroup.push(line);
-        if (line.wrapType === 'hard' || i === contentLines.length - 1) {
-          const pageNum = historicalPages.length + 1;
-          historicalPages.push({
-            id: `${newId}-page-${pageNum}`,
-            manuscriptId: newId,
-            pageNumber: pageNum,
-            lines: currentGroup.map((l, lIdx) => ({
-              ...l,
-              id: `p${pageNum}-line-${lIdx}`,
-              lineIndex: lIdx,
-              isCommitted: true,
-            })),
-            completedAt: importTime,
-          });
-          currentGroup = [];
-        }
-      }
-      currentPageNumber = historicalPages.length + 1;
-      currentPageLines = [createEmptyLine(currentPageNumber, 0)];
-      activeLineIndex = 0;
-      activeColIndex = 0;
     } else {
       // Scroll mode (or empty text): all preceding text is placed in currentPageLines
       historicalPages = [];

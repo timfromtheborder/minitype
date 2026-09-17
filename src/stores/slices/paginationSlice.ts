@@ -21,7 +21,7 @@ export interface PaginationSlice {
   sessionCommittedLines: number;
   setApertureHeight: (height: ApertureHeight) => void;
   setPageSize: (pageSize: PageSize) => void;
-  setPageMode: (pageMode: PageMode) => void;
+  setPageMode: (pageMode: PageMode | 'paragraph') => void;
   setTextSize: (textSize: TextSize) => void;
   toggleStats: (show?: boolean) => void;
   toggleDoubleSpaceLinebreaks: (enabled?: boolean) => void;
@@ -85,7 +85,7 @@ export const createPaginationSlice: StateCreator<
     });
   },
 
-  setPageMode: (pageMode: PageMode) => {
+  setPageMode: (pageMode: PageMode | 'paragraph') => {
     set((state) => applyPageModeTransition(pageMode, state));
   },
 

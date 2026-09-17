@@ -1,4 +1,4 @@
-import { CharacterCell, LineRecord, PageRecord, PageMode } from '@/types';
+import { CharacterCell, LineRecord, PageRecord, PageMode, LegacyPageMode } from '@/types';
 
 /**
  * Sanitizes a single line by removing struck cells, trimming soft padding,
@@ -97,7 +97,7 @@ export function sanitizeLine(line: LineRecord): string {
 
 export interface SanitizeOptions {
   doubleSpaceLinebreaks?: boolean;
-  pageMode?: PageMode;
+  pageMode?: LegacyPageMode;
 }
 
 /**

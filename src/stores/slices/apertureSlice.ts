@@ -719,10 +719,9 @@ export const createApertureSlice: StateCreator<
     const newCommittedWords = (state.committedDocWords ?? 0) + lineWords;
 
     const nextLineIndex = state.activeLineIndex + 1;
-    const isParagraphMode = state.manifest.pageMode === 'paragraph';
     const isScrollMode = state.manifest.pageMode === 'scroll';
     const pageLineLimit = getPageLineLimit(state.manifest.pageMode, state.manifest.pageSize);
-    const shouldCompletePage = isParagraphMode || nextLineIndex >= pageLineLimit;
+    const shouldCompletePage = nextLineIndex >= pageLineLimit;
 
     const newSessionCommitted = (state.sessionCommittedLines || 0) + 1;
     const newOutbox = isScrollMode ? 0 : Math.floor(newSessionCommitted / 10);

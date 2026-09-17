@@ -21,8 +21,8 @@ describe('Pagination Transition Domain Service', () => {
       expect(getPageLineLimit('notecard')).toBe(10);
     });
 
-    it('returns 9999 for paragraph mode', () => {
-      expect(getPageLineLimit('paragraph')).toBe(9999);
+    it('returns Infinity for legacy paragraph mode (redirects to scroll)', () => {
+      expect(getPageLineLimit('paragraph')).toBe(Infinity);
     });
 
     it('returns custom size or default 54 for page mode', () => {

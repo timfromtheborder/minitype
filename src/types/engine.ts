@@ -41,7 +41,7 @@ export interface TypingEngineActions {
   feedPaper: (amount?: number) => void;
   setApertureHeight: (height: ManuscriptManifest['activeApertureHeight']) => void;
   setPageSize: (size: ManuscriptManifest['pageSize']) => void;
-  setPageMode: (mode: PageMode) => void;
+  setPageMode: (mode: PageMode | 'paragraph') => void;
   setTextSize: (size: TextSize) => void;
   setManifest: (manifest: Partial<ManuscriptManifest>) => void;
   setActiveColumnLimit: (limit: number) => void;

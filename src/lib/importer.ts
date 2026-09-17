@@ -1,4 +1,4 @@
-import { CharacterCell, LineRecord, PageRecord, PageMode, ManuscriptManifest, SessionRecord } from '@/types';
+import { CharacterCell, LineRecord, PageRecord, PageMode, LegacyPageMode, ManuscriptManifest, SessionRecord } from '@/types';
 import { createCellId, MAX_COLUMNS } from './wrap';
 import { sanitizeManuscript, sanitizeLine } from './sanitize';
 import { countWords, reconcileSessionsWithText, pruneZeroContentSessions } from './projectSerializer';
@@ -269,11 +269,12 @@ export const SCROLL_CHUNK_SIZE = 60;
  */
 export function partitionManuscriptLines(
   lines: LineRecord[],
-  pageMode: PageMode = 'scroll',
+  pageMode: PageMode | 'paragraph' = 'scroll',
   pageSize: number = 54,
   manifestId: string = 'manuscript'
 ): PartitionedManuscript {
-  if (pageMode === 'scroll' || !pageMode) {
+  const normalizedPageMode = pageMode === 'paragraph' ? 'scroll' : pageMode;
+  if (normalizedPageMode === 'scroll' || !normalizedPageMode) {
     if (lines.length <= SCROLL_CHUNK_SIZE) {
       return {
         historicalPages: [],
@@ -315,66 +316,6 @@ export function partitionManuscriptLines(
       historicalPages,
       currentPageNumber: pageNum,
       currentPageLines: remaining.length > 0 ? remaining : [createEmptyLine(pageNum, 0)],
-    };
-  }
-
-  if (pageMode === 'paragraph') {
-    const pageGroups: LineRecord[][] = [];
-    let currentGroup: LineRecord[] = [];
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      // Skip lone empty separator lines between paragraphs
-      if (line.cells.length === 0 && currentGroup.length === 0 && i < lines.length - 1) {
-        continue;
-      }
-      currentGroup.push(line);
-      // Hard break marks the end of a paragraph page, unless it's the very last uncommitted line
-      if (line.wrapType === 'hard' && i < lines.length - 1) {
-        pageGroups.push(currentGroup);
-        currentGroup = [];
-      }
-    }
-    if (currentGroup.length > 0 || pageGroups.length === 0) {
-      pageGroups.push(currentGroup);
-    }
-
-    const historicalPages: PageRecord[] = [];
-    for (let pIdx = 0; pIdx < pageGroups.length - 1; pIdx++) {
-      const pageNum = pIdx + 1;
-      const pLines = pageGroups[pIdx].map((l, lIdx) => ({
-        ...l,
-        id: `p${pageNum}-line-${lIdx}`,
-        lineIndex: lIdx,
-        isCommitted: true,
-      }));
-      historicalPages.push({
-        id: `${manifestId}-page-${pageNum}`,
-        manuscriptId: manifestId,
-        pageNumber: pageNum,
-        lines: pLines,
-        completedAt: new Date().toISOString(),
-      });
-    }
-
-    const activePageNum = pageGroups.length;
-    const activeLines = (pageGroups[pageGroups.length - 1] || []).map((l, lIdx) => ({
-      ...l,
-      id: `p${activePageNum}-line-${lIdx}`,
-      lineIndex: lIdx,
-    }));
-
-    return {
-      historicalPages,
-      currentPageNumber: activePageNum,
-      currentPageLines: activeLines.length > 0 ? activeLines : [
-        {
-          id: `p${activePageNum}-line-0`,
-          lineIndex: 0,
-          cells: [],
-          isCommitted: false,
-        },
-      ],
     };
   }
 
@@ -474,7 +415,8 @@ export function hydrateProjectSnapshot(
   const cleanText = healDuplicatedManuscriptText(rawCleanText);
 
   // 2. Determine effective page mode & size
-  const effectivePageMode = globalSettings.pageMode || loadedManifest.pageMode || 'scroll';
+  const rawPageMode = (globalSettings.pageMode || loadedManifest.pageMode || 'scroll') as LegacyPageMode;
+  const effectivePageMode: PageMode = rawPageMode === 'paragraph' ? 'scroll' : rawPageMode;
   const effectivePageSize = globalSettings.pageSize || loadedManifest.pageSize || 54;
 
   // 3. Parse into platen lines
