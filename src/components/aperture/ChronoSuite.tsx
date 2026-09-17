@@ -13,11 +13,15 @@ export interface ChronoSuiteProps {
 
 export function formatClockTime(date: Date, options?: { hour12?: boolean }): string {
   try {
-    return new Intl.DateTimeFormat(undefined, {
+    const raw = new Intl.DateTimeFormat(undefined, {
       hour: 'numeric',
       minute: '2-digit',
       hour12: options?.hour12,
     }).format(date);
+    return raw
+      .replace(/([ap])\.\s*m\./gi, (_, m) => `${m.toUpperCase()}M`)
+      .replace(/[\u202f\u00a0]/g, ' ')
+      .trim();
   } catch (e) {
     let hours = date.getHours();
     const minutes = date.getMinutes().toString().padStart(2, '0');

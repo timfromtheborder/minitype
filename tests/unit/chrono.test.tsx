@@ -37,6 +37,17 @@ describe('ChronoSuite & Clock Formatter', () => {
       const afternoonDate = new Date(2026, 8, 17, 14, 30, 0);
       expect(formatClockTime(afternoonDate, { hour12: false })).toContain('14:30');
     });
+
+    it('formats AM and PM cleanly without periods', () => {
+      const morningDate = new Date(2026, 8, 17, 10, 40, 0);
+      const eveningDate = new Date(2026, 8, 17, 22, 40, 0);
+      const morningFormatted = formatClockTime(morningDate, { hour12: true });
+      const eveningFormatted = formatClockTime(eveningDate, { hour12: true });
+      expect(morningFormatted).not.toMatch(/[ap]\.m\./i);
+      expect(eveningFormatted).not.toMatch(/[ap]\.m\./i);
+      expect(morningFormatted).toContain('AM');
+      expect(eveningFormatted).toContain('PM');
+    });
   });
 
   describe('formatElapsedTime', () => {

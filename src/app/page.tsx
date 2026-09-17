@@ -12,7 +12,7 @@ import { SettingsDrawer } from '@/components/modals/SettingsDrawer';
 import { SessionDrawer } from '@/components/modals/SessionDrawer';
 import { ProjectFilesModal } from '@/components/modals/ProjectFilesModal';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { Settings, FolderOpen, Layers, FileText, Check, Loader2 } from 'lucide-react';
+import { Sliders, FolderOpen, Layers, FileText, Check, Loader2 } from 'lucide-react';
 
 export default function Home() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -189,7 +189,7 @@ export default function Home() {
             title="Settings"
             aria-label="Settings"
           >
-            <Settings className="w-3.5 h-3.5 opacity-70 shrink-0" />
+            <Sliders className="w-3.5 h-3.5 opacity-70 shrink-0" />
             <span>Settings</span>
           </button>
 

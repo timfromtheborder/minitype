@@ -8,7 +8,7 @@ import {
   ManuscriptManifest,
   PhosphorColor,
 } from '@/types';
-import { X, Sliders, Volume2, VolumeX } from 'lucide-react';
+import { CornerUpLeft, Sliders, Volume2, VolumeX } from 'lucide-react';
 import { typewriterAudio } from '@/lib/sound';
 
 interface SettingsDrawerProps {
@@ -136,20 +136,21 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
         }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border/60 pb-3">
-          <div className="flex items-center gap-2">
-            <Sliders className="w-4 h-4 text-muted-foreground" />
-            <h2 className="text-sm font-sans font-semibold tracking-wider uppercase text-foreground">
+        <div className="flex items-center justify-between border-b border-border/60 pb-2 sm:pb-3 gap-2 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <Sliders className="w-4 h-4 text-muted-foreground shrink-0" />
+            <span className="text-xs font-sans font-bold tracking-widest uppercase text-muted-foreground shrink-0">
               Settings
-            </h2>
+            </span>
           </div>
           <button
             type="button"
             onClick={handleClose}
-            className="p-1 rounded-[2px] border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-            title="Close"
+            className="flex items-center gap-1 px-2 py-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-border/60 transition-colors cursor-pointer text-xs shrink-0"
+            title="Return to writing in aperture"
           >
-            <X className="w-4 h-4" />
+            <CornerUpLeft className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline font-sans text-xs font-semibold">Return</span>
           </button>
         </div>
 
@@ -539,7 +540,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.8.9
+              Minitype v0.9.9.0 · by timfromtheborder
             </span>
           </div>
         </div>

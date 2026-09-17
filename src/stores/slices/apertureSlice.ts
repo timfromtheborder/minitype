@@ -116,9 +116,9 @@ export const createApertureSlice: StateCreator<
   },
 
   insertChar: (char: string) => {
-    const state = get();
-    if (state.isLocked || char.length !== 1) return;
+    if (get().isLocked || char.length !== 1) return;
     notifyDraftingActivity(set, get);
+    const state = get();
 
     let lines = [...state.currentPageLines];
     let isHighlighting = state.isHighlighting;
@@ -650,9 +650,9 @@ export const createApertureSlice: StateCreator<
   },
 
   handleEnter: () => {
-    const state = get();
-    if (state.isLocked) return;
+    if (get().isLocked) return;
     notifyDraftingActivity(set, get);
+    const state = get();
 
     let lines = [...state.currentPageLines];
 

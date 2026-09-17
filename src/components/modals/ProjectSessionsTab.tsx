@@ -19,7 +19,11 @@ export function formatSessionDateTime(isoStr?: string | null): string {
     const month = d.toLocaleDateString('en-US', { month: 'short' });
     const day = d.getDate();
     const year = d.getFullYear();
-    const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    const rawTime = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    const time = rawTime
+      .replace(/([ap])\.\s*m\./gi, (_, m) => `${m.toUpperCase()}M`)
+      .replace(/[\u202f\u00a0]/g, ' ')
+      .trim();
     return `${weekday}, ${month} ${day}, ${year}, ${time}`;
   } catch {
     return isoStr || '';

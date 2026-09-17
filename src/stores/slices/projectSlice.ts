@@ -103,18 +103,78 @@ export function ensureActiveSessionOnTyping(
     updatedAt: new Date().toISOString(),
   };
 
+  // If there is at least one prior session (e.g. a session was closed and now resuming typing),
+  // insert the session divider line in the platen if one is not already present.
+  let lines = Array.isArray(state.currentPageLines) ? [...state.currentPageLines] : [];
+  let activeLineIndex = state.activeLineIndex ?? 0;
+  let activeColIndex = state.activeColIndex ?? 0;
+
+  if (normalizedPruned.length > 0 && lines.length > 0) {
+    const lastLine = lines.length > 0 ? lines[lines.length - 1] : null;
+    const prevLine = activeLineIndex > 0 ? lines[activeLineIndex - 1] : null;
+    const hasPrecedingDivider = Boolean(prevLine?.isSessionDivider || lastLine?.isSessionDivider);
+
+    if (!hasPrecedingDivider) {
+      const currentLine = lines[activeLineIndex];
+      if (currentLine && currentLine.cells.length > 0) {
+        lines[activeLineIndex] = { ...currentLine, isCommitted: true, wrapType: 'hard' };
+        const dividerIdx = lines.length;
+        lines.push({
+          id: `${state.manifest.id}-divider-${nextSessionNum}`,
+          lineIndex: dividerIdx,
+          cells: [],
+          isCommitted: true,
+          isSessionDivider: true,
+        });
+        const nextDraftingIdx = lines.length;
+        lines.push(createEmptyLine(state.currentPageNumber, nextDraftingIdx));
+        activeLineIndex = nextDraftingIdx;
+        activeColIndex = 0;
+      } else {
+        // Current active line is empty (e.g. created when closing active session)
+        const dividerIdx = activeLineIndex;
+        lines[dividerIdx] = {
+          id: `${state.manifest.id}-divider-${nextSessionNum}`,
+          lineIndex: dividerIdx,
+          cells: [],
+          isCommitted: true,
+          isSessionDivider: true,
+        };
+        const nextDraftingIdx = lines.length;
+        lines.push(createEmptyLine(state.currentPageNumber, nextDraftingIdx));
+        activeLineIndex = nextDraftingIdx;
+        activeColIndex = 0;
+      }
+    }
+  }
+
   if (state.manifest.id !== 'default-manuscript') {
     saveSession(newSession).catch(console.error);
     if (updatedManifest.mode === 'local') {
       saveManuscript(updatedManifest).catch(console.error);
+      if (Array.isArray(state.currentPageLines)) {
+        savePage({
+          id: `${state.manifest.id}-page-${state.currentPageNumber}`,
+          manuscriptId: state.manifest.id,
+          pageNumber: state.currentPageNumber,
+          lines,
+          completedAt: null,
+        }).catch(console.error);
+      }
     }
   }
 
-  set({
+  const partialUpdate: Partial<TypingStore> = {
     activeSessions: updatedSessions,
     manifest: updatedManifest,
     sessionCommittedLines: 0,
-  });
+  };
+  if (Array.isArray(state.currentPageLines)) {
+    partialUpdate.currentPageLines = lines;
+    partialUpdate.activeLineIndex = activeLineIndex;
+    partialUpdate.activeColIndex = activeColIndex;
+  }
+  set(partialUpdate);
 }
 
 export interface ProjectSlice {

@@ -125,15 +125,14 @@ export const createPaginationSlice: StateCreator<
   },
 
   startNewNotecard: () => {
-    const state = get();
-    if (state.manifest.pageMode !== 'notecard') return;
-    if (state.isLocked) return;
+    if (get().manifest.pageMode !== 'notecard' || get().isLocked) return;
 
     notifyDraftingActivity(set, get);
     flushPendingSave();
 
     typewriterAudio.playPaperFeed();
 
+    const state = get();
     const lines = [...state.currentPageLines];
     if (lines.length > 0 && state.activeLineIndex < lines.length) {
       let activeLine = lines[state.activeLineIndex];

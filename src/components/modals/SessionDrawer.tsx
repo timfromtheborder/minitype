@@ -13,6 +13,7 @@ import {
   BookOpen,
   Lock,
   Download,
+  FileText,
 } from 'lucide-react';
 import {
   countWords,
@@ -334,6 +335,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
         {/* Header: Breadcrumb Title Input + Return Button */}
         <div className="flex items-center justify-between border-b border-border/60 pb-2 sm:pb-3 gap-2 sm:gap-3 shrink-0">
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
+            <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
             <span className="text-xs font-sans font-bold tracking-widest uppercase text-muted-foreground shrink-0">
               Document
             </span>

@@ -3,6 +3,7 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { SessionDrawer } from '@/components/modals/SessionDrawer';
 import { ProjectFilesModal } from '@/components/modals/ProjectFilesModal';
+import { SettingsDrawer } from '@/components/modals/SettingsDrawer';
 import { useTypingStore } from '@/stores/typingStore';
 
 describe('SessionDrawer and ProjectFilesModal Invariants', () => {
@@ -819,6 +820,113 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     expect(state.currentPageLines[1].cells.length).toBe(0);
     expect(state.activeLineIndex).toBe(1);
     expect(state.activeColIndex).toBe(0);
+  });
+
+  it('inserts session divider in platen when typing lazily starts a new session after closing prior session', async () => {
+    const now = new Date().toISOString();
+    const draftLine = 'Draft content for session 1';
+
+    useTypingStore.setState({
+      activeSessions: [
+        {
+          id: 'test-session-1',
+          projectId: 'current',
+          sessionNumber: 1,
+          startedAt: now,
+          completedAt: null,
+          text: draftLine,
+          wordCount: 5,
+        },
+      ],
+      currentPageLines: [
+        {
+          id: 'p1-l0',
+          lineIndex: 0,
+          cells: draftLine.split('').map((char, colIndex) => ({
+            id: `p1-l0-c${colIndex}`,
+            char,
+            state: 'standard' as const,
+            colIndex,
+            lineIndex: 0,
+          })),
+          isCommitted: false,
+        },
+      ],
+      activeLineIndex: 0,
+      activeColIndex: draftLine.length,
+    });
+
+    // Close Session 1
+    await useTypingStore.getState().closeActiveSession();
+    expect(useTypingStore.getState().activeSessions[0].completedAt).not.toBeNull();
+
+    // Now type a character to lazily start Session 2
+    useTypingStore.getState().insertChar('N');
+
+    const state = useTypingStore.getState();
+    expect(state.activeSessions.length).toBe(2);
+    expect(state.activeSessions[1].sessionNumber).toBe(2);
+    expect(state.activeSessions[1].completedAt).toBeNull();
+
+    // Platen must have:
+    // Line 0: Session 1 text (committed)
+    // Line 1: Session divider line (isSessionDivider: true)
+    // Line 2: Session 2 text containing 'N'
+    expect(state.currentPageLines.length).toBe(3);
+    expect(state.currentPageLines[0].isCommitted).toBe(true);
+    expect(state.currentPageLines[1].isSessionDivider).toBe(true);
+    expect(state.currentPageLines[2].cells.map((c) => c.char).join('')).toBe('N');
+    expect(state.activeLineIndex).toBe(2);
+  });
+
+  it('unifies modal headers across Settings, Document, and Project modals, including Return button and author footer', async () => {
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+    const root = createRoot(container);
+
+    // 1. Check SettingsDrawer header and footer
+    await act(async () => {
+      root.render(
+        <SettingsDrawer
+          isOpen={true}
+          onClose={() => {}}
+          manifest={useTypingStore.getState().manifest}
+          onUpdateHeight={() => {}}
+          onUpdatePageSize={() => {}}
+          onUpdateManifest={() => {}}
+        />
+      );
+    });
+
+    const settingsHeader = container.querySelector('h2, span.uppercase');
+    expect(settingsHeader?.textContent).toContain('Settings');
+    const settingsReturnBtn = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Return')
+    );
+    expect(settingsReturnBtn).not.toBeUndefined();
+    expect(container.textContent).toContain('Minitype v0.9.9.0 · by timfromtheborder');
+
+    await act(async () => {
+      root.unmount();
+    });
+
+    // 2. Check SessionDrawer header
+    const root2 = createRoot(container);
+    await act(async () => {
+      root2.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
+    });
+
+    const documentHeader = Array.from(container.querySelectorAll('span')).find((s) =>
+      s.textContent?.includes('Document')
+    );
+    expect(documentHeader).not.toBeUndefined();
+    const documentReturnBtn = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Return')
+    );
+    expect(documentReturnBtn).not.toBeUndefined();
+
+    await act(async () => {
+      root2.unmount();
+    });
   });
 
   it('does not automatically focus or activate the project title input when SessionDrawer or ProjectFilesModal open', async () => {
