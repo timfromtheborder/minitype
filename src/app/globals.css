@@ -104,7 +104,7 @@
   --ring: #FFB000;
   --highlight-bg: #4A3700;
   --highlight-text: #FFDE7A;
-  --struck-color: #FF453A;
+  --struck-color: #FFB000;
   --cursor-color: #FFB000;
 }
 
@@ -129,7 +129,7 @@
   --ring: #33FF33;
   --highlight-bg: #004A00;
   --highlight-text: #A3FFA3;
-  --struck-color: #FF453A;
+  --struck-color: #33FF33;
   --cursor-color: #33FF33;
 }
 
@@ -154,7 +154,7 @@
   --ring: #00E5FF;
   --highlight-bg: #003B47;
   --highlight-text: #B3F7FF;
-  --struck-color: #FF453A;
+  --struck-color: #00E5FF;
   --cursor-color: #00E5FF;
 }
 
@@ -179,7 +179,7 @@
   --ring: #ff1a0d;
   --highlight-bg: #4A0000;
   --highlight-text: #FFA39E;
-  --struck-color: #FF8077;
+  --struck-color: #ff1a0d;
   --cursor-color: #ff1a0d;
 }
 
@@ -639,4 +639,21 @@ html[data-page-mode="notecard"],
 
 .font-serif-clock {
   font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+}
+
+/* Touch device button responsiveness: trigger tactile highlight immediately on tap (:active) */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  button:active:not(:disabled),
+  [role="button"]:active:not([aria-disabled="true"]),
+  [role="switch"]:active,
+  .cursor-pointer:active {
+    opacity: 0.8;
+    filter: brightness(1.18);
+    transform: scale(0.97);
+    transition: transform 50ms ease-out, filter 50ms ease-out, opacity 50ms ease-out;
+  }
 }

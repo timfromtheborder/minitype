@@ -47,4 +47,19 @@ describe('Phosphor & Chrono 4-Tier Persistence', () => {
       expect(readSynchronousSettings()?.phosphorColor).toBe(color);
     }
   });
+
+  it('matches strikeout line color to theme color in all four Terminal themes', async () => {
+    const fs = await import('fs');
+    const path = await import('path');
+    const css = fs.readFileSync(path.resolve(process.cwd(), 'src/app/globals.css'), 'utf-8');
+
+    // Amber
+    expect(css).toMatch(/\[data-theme="dark-amber"\],[\s\S]*?--struck-color:\s*#FFB000;/);
+    // Green
+    expect(css).toMatch(/\[data-phosphor="green"\]\s*\{[\s\S]*?--struck-color:\s*#33FF33;/);
+    // Blue
+    expect(css).toMatch(/\[data-phosphor="blue"\]\s*\{[\s\S]*?--struck-color:\s*#00E5FF;/);
+    // Red
+    expect(css).toMatch(/\[data-phosphor="red"\]\s*\{[\s\S]*?--struck-color:\s*#ff1a0d;/);
+  });
 });

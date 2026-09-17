@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { db } from '@/db';
+import { db, flushPendingSave } from '@/db';
 import { useTypingStore } from '@/stores/typingStore';
 import {
   createLibraryBackup,
@@ -334,17 +334,93 @@ describe('Whole-Library Backup & Restore Engine (Pass B2 / v0.9.7.5.5)', () => {
       const backup = await store.exportFullBackup();
       expect(backup.manuscripts.some((m) => m.id === originalId)).toBe(true);
 
-      // Create another project in memory
+      // Create another project in memory with drafted content
       await store.newProject(true);
       const newProjectId = useTypingStore.getState().manifest.id;
       expect(newProjectId).not.toBe(originalId);
+      for (const ch of 'Second project content.') {
+        store.insertChar(ch);
+      }
+      await flushPendingSave();
 
       // Restore the backup (merge mode)
       await store.restoreFullBackup(backup, 'merge');
 
-      // The active project remains valid and both projects exist in DB
+      // The active project remains valid and both non-empty projects exist in DB
       const allManuscripts = await db.manuscripts.toArray();
       expect(allManuscripts.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('prunes a blank untouched Untitled Project when restoring a backup into a fresh environment', async () => {
+      const store = useTypingStore.getState();
+      // Simulate opening on a fresh device: an untouched Untitled Project is active
+      await store.newProject(true);
+      const blankProjectId = store.manifest.id;
+      expect(store.manifest.title).toContain('Untitled Project');
+      expect(store.currentPageLines[0].cells).toHaveLength(0);
+
+      const backup: MinitypeBackupArchive = {
+        app: 'minitype',
+        schemaVersion: 1,
+        exportedAt: '2026-09-17T01:00:00.000Z',
+        version: CURRENT_BACKUP_VERSION,
+        manuscripts: [
+          {
+            id: 'real-novel',
+            title: 'My Restored Masterpiece',
+            mode: 'local',
+            inboxCount: 0,
+            outboxCount: 0,
+            lastPrintedCharIndex: 0,
+            printedPagesCount: 0,
+            activeApertureHeight: 5,
+            wrapMode: 'soft',
+            pageSize: 54,
+            pageMode: 'scroll',
+            colorScheme: 'typewriter',
+            typeface: 'courier-prime',
+          },
+        ],
+        pages: [
+          {
+            id: 'real-novel-page-1',
+            manuscriptId: 'real-novel',
+            pageNumber: 1,
+            lines: [
+              {
+                id: 'real-novel-l1',
+                lineIndex: 0,
+                cells: [{ id: 'c1', char: 'H', state: 'standard', colIndex: 0, lineIndex: 0 }],
+                isCommitted: false,
+              },
+            ],
+            completedAt: null,
+          },
+        ],
+        sessions: [
+          {
+            id: 'real-novel-session-1',
+            projectId: 'real-novel',
+            sessionNumber: 1,
+            startedAt: '2026-09-17T01:00:00.000Z',
+            completedAt: null,
+            text: 'Hello',
+            wordCount: 1,
+          },
+        ],
+      };
+
+      await store.restoreFullBackup(backup, 'merge');
+
+      // The blank initial project must be pruned from IndexedDB!
+      const allManuscripts = await db.manuscripts.toArray();
+      expect(allManuscripts).toHaveLength(1);
+      expect(allManuscripts[0].id).toBe('real-novel');
+      expect(allManuscripts.some((m) => m.id === blankProjectId)).toBe(false);
+
+      // The active project in the store must now be the restored masterpiece
+      expect(useTypingStore.getState().manifest.id).toBe('real-novel');
+      expect(useTypingStore.getState().manifest.title).toBe('My Restored Masterpiece');
     });
   });
 });

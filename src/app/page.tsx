@@ -131,8 +131,8 @@ export default function Home() {
             onClick={() => setIsPrintOpen(true)}
             className={`flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
               isSpotlight
-                ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground'
-                : 'border-border/70 bg-card hover:bg-muted text-card-foreground'
+                ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground active:bg-card active:text-card-foreground'
+                : 'border-border/70 bg-card hover:bg-muted text-card-foreground active:bg-muted'
             }`}
             title="Project"
             aria-label="Project"
@@ -147,8 +147,8 @@ export default function Home() {
             onClick={() => setIsSettingsOpen(true)}
             className={`flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
               isSpotlight
-                ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground'
-                : 'border-border/70 bg-card hover:bg-muted text-card-foreground'
+                ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground active:bg-card active:text-card-foreground'
+                : 'border-border/70 bg-card hover:bg-muted text-card-foreground active:bg-muted'
             }`}
             title="Settings"
             aria-label="Settings"

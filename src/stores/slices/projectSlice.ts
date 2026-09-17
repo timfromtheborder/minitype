@@ -594,7 +594,14 @@ export const createProjectSlice: StateCreator<
 
   exportFullBackup: async () => {
     await finalizeAndSaveCurrentProject(get, set);
-    return await createLibraryBackup();
+    const archive = await createLibraryBackup();
+    const currentId = get().manifest.id;
+    const allManuscripts = await getAllManuscripts();
+    const currentExists = allManuscripts.some((m) => m.id === currentId);
+    if (!currentExists && allManuscripts.length > 0) {
+      await get().loadProject(allManuscripts[0].id, true);
+    }
+    return archive;
   },
 
   restoreFullBackup: async (archive: MinitypeBackupArchive, mode: 'merge' | 'replace' = 'merge') => {

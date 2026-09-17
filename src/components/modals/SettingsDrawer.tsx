@@ -444,12 +444,39 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
               </button>
             </div>
 
-            {/* Allow backspace strikeout */}
+            {/* Show clock */}
+            <div
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => onUpdateManifest({ showClock: !manifest.showClock })}
+            >
+              <span className="text-muted-foreground">Show clock</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={manifest.showClock ?? false}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUpdateManifest({ showClock: !manifest.showClock });
+                }}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[2px] border transition-colors duration-150 ease-in-out focus:outline-hidden ${
+                  manifest.showClock ? 'bg-primary border-primary' : 'bg-muted/70 border-border/80'
+                }`}
+                title="Show clock"
+              >
+                <span
+                  className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-[1px] shadow-xs transition-transform duration-150 ease-in-out ${
+                    manifest.showClock ? 'translate-x-4 bg-primary-foreground' : 'translate-x-0.5 bg-muted-foreground/70'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Allow backspace */}
             <div
               className="flex items-center justify-between cursor-pointer"
               onClick={() => onUpdateManifest({ allowStrikeout: !allowStrikeout })}
             >
-              <span className="text-muted-foreground">Allow backspace strikeout</span>
+              <span className="text-muted-foreground">Allow backspace</span>
               <button
                 type="button"
                 role="switch"
@@ -461,7 +488,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[2px] border transition-colors duration-150 ease-in-out focus:outline-hidden ${
                   allowStrikeout ? 'bg-primary border-primary' : 'bg-muted/70 border-border/80'
                 }`}
-                title="Allow backspace strikeout"
+                title="Allow backspace"
               >
                 <span
                   className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-[1px] shadow-xs transition-transform duration-150 ease-in-out ${
@@ -493,33 +520,6 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 <span
                   className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-[1px] shadow-xs transition-transform duration-150 ease-in-out ${
                     !isMuted ? 'translate-x-4 bg-primary-foreground' : 'translate-x-0.5 bg-muted-foreground/70'
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* Clock */}
-            <div
-              className="flex items-center justify-between cursor-pointer"
-              onClick={() => onUpdateManifest({ showClock: !manifest.showClock })}
-            >
-              <span className="text-muted-foreground">Clock</span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={manifest.showClock ?? false}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onUpdateManifest({ showClock: !manifest.showClock });
-                }}
-                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[2px] border transition-colors duration-150 ease-in-out focus:outline-hidden ${
-                  manifest.showClock ? 'bg-primary border-primary' : 'bg-muted/70 border-border/80'
-                }`}
-                title="Show clock"
-              >
-                <span
-                  className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-[1px] shadow-xs transition-transform duration-150 ease-in-out ${
-                    manifest.showClock ? 'translate-x-4 bg-primary-foreground' : 'translate-x-0.5 bg-muted-foreground/70'
                   }`}
                 />
               </button>
