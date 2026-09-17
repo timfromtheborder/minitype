@@ -708,25 +708,27 @@ export const createProjectSlice: StateCreator<
         return;
       }
       const lastSession = activeSessions[activeSessions.length - 1];
-      const updatedSession: SessionRecord = {
-        ...lastSession,
-        startedAt: now,
-        completedAt: null,
-        text: '',
-        wordCount: 0,
-      };
-      activeSessions[activeSessions.length - 1] = updatedSession;
-      await saveSession(updatedSession).catch(console.error);
-      const updatedManifest = {
-        ...state.manifest,
-        outboxCount: 0,
-        sessionCount: activeSessions.length,
-        activeSessionId: updatedSession.id,
-      };
-      if (state.manifest.mode === 'local') {
-        await saveManuscript(updatedManifest).catch(console.error);
+      if (lastSession.completedAt === null) {
+        const updatedSession: SessionRecord = {
+          ...lastSession,
+          startedAt: now,
+          completedAt: null,
+          text: '',
+          wordCount: 0,
+        };
+        activeSessions[activeSessions.length - 1] = updatedSession;
+        await saveSession(updatedSession).catch(console.error);
+        const updatedManifest = {
+          ...state.manifest,
+          outboxCount: 0,
+          sessionCount: activeSessions.length,
+          activeSessionId: updatedSession.id,
+        };
+        if (state.manifest.mode === 'local') {
+          await saveManuscript(updatedManifest).catch(console.error);
+        }
+        set({ activeSessions, manifest: updatedManifest });
       }
-      set({ activeSessions, manifest: updatedManifest });
       return;
     }
 
@@ -818,7 +820,48 @@ export const createProjectSlice: StateCreator<
     const activeSessions = [...state.activeSessions];
     const now = new Date().toISOString();
 
-    if (activeSessions.length === 0) return;
+    if (activeSessions.length === 0) {
+      const allPages = [
+        ...state.historicalPages,
+        {
+          pageNumber: state.currentPageNumber,
+          lines: state.currentPageLines,
+          completedAt: null,
+        },
+      ];
+      const fullText = sanitizeManuscript(allPages, {
+        doubleSpaceLinebreaks: false,
+        pageMode: state.manifest.pageMode,
+      });
+      const docTotalWords = countWords(fullText);
+      const session1: SessionRecord = {
+        id: `${state.manifest.id}-session-1`,
+        projectId: state.manifest.id,
+        sessionNumber: 1,
+        startedAt: state.manifest.createdAt || now,
+        completedAt: now,
+        text: fullText,
+        wordCount: docTotalWords,
+        targetReached: false,
+      };
+      activeSessions.push(session1);
+      await saveSession(session1).catch(console.error);
+
+      const updatedManifest: ManuscriptManifest = {
+        ...state.manifest,
+        activeSessionId: undefined,
+        sessionCount: 1,
+        totalWordCount: docTotalWords,
+      };
+      if (state.manifest.mode === 'local') {
+        await saveManuscript(updatedManifest).catch(console.error);
+      }
+      set({
+        activeSessions,
+        manifest: updatedManifest,
+      });
+      return;
+    }
     const lastSession = activeSessions[activeSessions.length - 1];
     if (lastSession.completedAt !== null) return;
 

@@ -283,7 +283,8 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
     await useTypingStore.getState().closeActiveSession();
   };
 
-  const hasActiveSession = Boolean(activeSession && activeSession.wordCount > 0);
+  const hasActiveSession = Boolean(activeSession);
+  const hasActiveDraftedText = Boolean(activeSession && activeSession.wordCount > 0);
 
   const downloadPlainText = (textToExport: string) => {
     const safeTitle = (title.trim() || 'manuscript').replace(/[/\\?%*:|"<>]/g, '-');
@@ -318,7 +319,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
   };
 
   const handleExportClick = () => {
-    if (hasActiveSession) {
+    if (hasActiveDraftedText) {
       setIsConfirmingCloseExport(true);
     } else {
       executeExport(false);
@@ -453,35 +454,38 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
 
           {/* Action Toolbar */}
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-            {/* View Mode Segmented Switch (Icons only to save space) */}
-            <div className="flex items-center border border-border/80 rounded-[2px] bg-background/50 p-0.5 text-[11px] font-sans">
-              <button
-                type="button"
-                onClick={() => useTypingStore.getState().setManifest({ documentViewMode: 'typewriter' })}
-                className={`flex items-center justify-center p-1 sm:p-1.5 rounded-[1px] transition-colors cursor-pointer ${
+            {/* View Mode Toggle Switch (Icons only; tapping anywhere on the box toggles) */}
+            <button
+              type="button"
+              onClick={() => {
+                const nextMode = viewMode === 'manuscript' ? 'typewriter' : 'manuscript';
+                useTypingStore.getState().setManifest({ documentViewMode: nextMode });
+              }}
+              className="h-[28px] flex items-center border border-border/80 rounded-[2px] bg-background/50 p-0.5 cursor-pointer hover:border-foreground/40 transition-colors text-[11px] font-sans shrink-0 select-none"
+              title={`Switch to ${viewMode === 'manuscript' ? 'Typewriter Monospace' : 'Publisher Manuscript Serif'} View`}
+              aria-label={`Toggle document view: ${viewMode === 'manuscript' ? 'Manuscript (Publisher Serif)' : 'Typewriter (Monospace)'}`}
+            >
+              <span
+                className={`h-full flex items-center justify-center px-1.5 rounded-[1px] transition-colors pointer-events-none ${
                   viewMode === 'typewriter'
                     ? 'bg-muted text-foreground font-semibold shadow-2xs'
-                    : 'text-muted-foreground hover:text-foreground'
+                    : 'text-muted-foreground'
                 }`}
                 title="Typewriter Monospace View"
-                aria-label="Typewriter Monospace View"
               >
                 <Type className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => useTypingStore.getState().setManifest({ documentViewMode: 'manuscript' })}
-                className={`flex items-center justify-center p-1 sm:p-1.5 rounded-[1px] transition-colors cursor-pointer ${
+              </span>
+              <span
+                className={`h-full flex items-center justify-center px-1.5 rounded-[1px] transition-colors pointer-events-none ${
                   viewMode === 'manuscript'
                     ? 'bg-muted text-foreground font-semibold shadow-2xs'
-                    : 'text-muted-foreground hover:text-foreground'
+                    : 'text-muted-foreground'
                 }`}
                 title="Publisher Manuscript Serif View"
-                aria-label="Publisher Manuscript Serif View"
               >
                 <BookOpen className="w-3.5 h-3.5" />
-              </button>
-            </div>
+              </span>
+            </button>
 
             {/* Show Sessions Toggle */}
             <button
@@ -489,7 +493,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
               onClick={() => {
                 useTypingStore.getState().setManifest({ showSessionDividers: !showDividers });
               }}
-              className={`flex items-center gap-1.5 px-2 py-1 rounded-[2px] border transition-colors cursor-pointer text-[clamp(10px,0.8em,12px)] font-sans ${
+              className={`h-[28px] flex items-center gap-1.5 px-2 rounded-[2px] border transition-colors cursor-pointer text-[clamp(10px,0.8em,12px)] font-sans shrink-0 ${
                 showDividers
                   ? 'bg-primary/10 border-primary text-foreground font-medium'
                   : 'border-border/80 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground'
@@ -511,7 +515,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                 const isDouble = manifest.doubleSpaceLinebreaks ?? false;
                 useTypingStore.getState().setManifest({ doubleSpaceLinebreaks: !isDouble });
               }}
-              className={`flex items-center gap-1.5 px-2 py-1 rounded-[2px] border transition-colors cursor-pointer text-[clamp(10px,0.8em,12px)] font-sans ${
+              className={`h-[28px] flex items-center gap-1.5 px-2 rounded-[2px] border transition-colors cursor-pointer text-[clamp(10px,0.8em,12px)] font-sans shrink-0 ${
                 manifest.doubleSpaceLinebreaks
                   ? 'bg-primary/10 border-primary text-foreground font-medium'
                   : 'border-border/80 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground'

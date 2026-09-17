@@ -1181,7 +1181,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     container.remove();
   });
 
-  it('renders typewriter/manuscript toggle as icons only without text labels to save space', async () => {
+  it('renders typewriter/manuscript toggle box matching toolbar height and toggles when tapped anywhere', async () => {
     (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
     const testContainer = document.createElement('div');
     document.body.appendChild(testContainer);
@@ -1191,19 +1191,95 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
       root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
     });
 
-    const typewriterBtn = testContainer.querySelector('button[aria-label="Typewriter Monospace View"]');
-    const manuscriptBtn = testContainer.querySelector('button[aria-label="Publisher Manuscript Serif View"]');
+    const toggleBtn = testContainer.querySelector('button[aria-label*="Toggle document view"]');
+    expect(toggleBtn).not.toBeNull();
 
-    expect(typewriterBtn).not.toBeNull();
-    expect(manuscriptBtn).not.toBeNull();
+    // Toggle box matches height with other toolbar buttons (h-[28px])
+    expect(toggleBtn?.className).toContain('h-[28px]');
 
-    // Buttons must not contain text nodes / text labels
-    expect(typewriterBtn?.textContent?.trim()).toBe('');
-    expect(manuscriptBtn?.textContent?.trim()).toBe('');
+    const showSessionsBtn = Array.from(testContainer.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Show Sessions')
+    );
+    expect(showSessionsBtn?.className).toContain('h-[28px]');
 
-    // Both contain icon SVGs
-    expect(typewriterBtn?.querySelector('svg')).not.toBeNull();
-    expect(manuscriptBtn?.querySelector('svg')).not.toBeNull();
+    const doubleSpaceBtn = Array.from(testContainer.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Double-space')
+    );
+    expect(doubleSpaceBtn?.className).toContain('h-[28px]');
+
+    // Contains only icon SVGs without literal text labels
+    expect(toggleBtn?.textContent?.trim()).toBe('');
+    expect(toggleBtn?.querySelectorAll('svg').length).toBe(2);
+
+    // Initially in typewriter mode
+    expect(useTypingStore.getState().manifest.documentViewMode ?? 'typewriter').toBe('typewriter');
+
+    // Tapping anywhere on the box toggles to manuscript
+    await act(async () => {
+      (toggleBtn as HTMLElement).click();
+    });
+    expect(useTypingStore.getState().manifest.documentViewMode).toBe('manuscript');
+
+    // Tapping again toggles back to typewriter
+    await act(async () => {
+      (toggleBtn as HTMLElement).click();
+    });
+    expect(useTypingStore.getState().manifest.documentViewMode).toBe('typewriter');
+
+    await act(async () => {
+      root.unmount();
+    });
+    testContainer.remove();
+  });
+
+  it('allows closing an active session that has 0 words drafted', async () => {
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+    const testContainer = document.createElement('div');
+    document.body.appendChild(testContainer);
+    const root = createRoot(testContainer);
+
+    const now = new Date().toISOString();
+    useTypingStore.setState({
+      activeSessions: [
+        {
+          id: 'test-empty-s1',
+          projectId: 'p-empty-test',
+          sessionNumber: 1,
+          startedAt: now,
+          completedAt: null,
+          text: '',
+          wordCount: 0,
+        },
+      ],
+      manifest: {
+        ...useTypingStore.getState().manifest,
+        id: 'p-empty-test',
+      },
+    });
+
+    await act(async () => {
+      root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
+    });
+
+    // Verify "Close Session" button is enabled despite wordCount being 0
+    const closeBtn = Array.from(testContainer.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Close Session')
+    );
+    expect(closeBtn).toBeDefined();
+    expect(closeBtn?.hasAttribute('disabled')).toBe(false);
+
+    // Click Close Session
+    await act(async () => {
+      closeBtn?.click();
+      await new Promise((r) => setTimeout(r, 100));
+    });
+
+    // Session in store should now be completed
+    const state = useTypingStore.getState();
+    expect(state.activeSessions[0].completedAt).not.toBeNull();
+
+    // In modal, Close Session should now be disabled (no active session remaining)
+    expect(closeBtn?.hasAttribute('disabled')).toBe(true);
 
     await act(async () => {
       root.unmount();
