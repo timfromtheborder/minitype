@@ -241,7 +241,7 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = React.memo(function A
                   key={line.id}
                   className="relative w-full h-[1.25rem] flex items-center justify-center select-none pointer-events-none"
                 >
-                  <div className="w-full border-t border-dashed border-foreground/30" />
+                  <div className="w-full border-t border-dashed border-card-foreground/30" />
                 </div>
               );
             }

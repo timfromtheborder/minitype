@@ -40,17 +40,14 @@ describe('ChronoSuite & Clock Formatter', () => {
   });
 
   describe('formatElapsedTime', () => {
-    it('formats minutes under an hour as +Xm', () => {
-      expect(formatElapsedTime(0)).toBe('+0m');
-      expect(formatElapsedTime(25)).toBe('+25m');
-      expect(formatElapsedTime(59)).toBe('+59m');
-    });
-
-    it('formats times over an hour as +X.XH (e.g. 1 hour and 6 minutes -> +1.1H)', () => {
-      expect(formatElapsedTime(60)).toBe('+1.0H');
-      expect(formatElapsedTime(66)).toBe('+1.1H');
-      expect(formatElapsedTime(90)).toBe('+1.5H');
-      expect(formatElapsedTime(120)).toBe('+2.0H');
+    it('formats elapsed minutes simply as +[n]', () => {
+      expect(formatElapsedTime(0)).toBe('+0');
+      expect(formatElapsedTime(25)).toBe('+25');
+      expect(formatElapsedTime(59)).toBe('+59');
+      expect(formatElapsedTime(60)).toBe('+60');
+      expect(formatElapsedTime(66)).toBe('+66');
+      expect(formatElapsedTime(90)).toBe('+90');
+      expect(formatElapsedTime(120)).toBe('+120');
     });
   });
 
@@ -139,8 +136,8 @@ describe('ChronoSuite & Clock Formatter', () => {
         clockBtn?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       });
 
-      // Now badge should appear with initial "+0m"
-      expect(container.textContent).toContain('+0m');
+      // Now badge should appear with initial "+0"
+      expect(container.textContent).toContain('+0');
 
       const badgeBtn = container.querySelector('button[aria-label*="Session timer started"]');
       expect(badgeBtn).not.toBeNull();
@@ -151,12 +148,12 @@ describe('ChronoSuite & Clock Formatter', () => {
       expect(badgeBtn?.className).toContain('left-0');
       expect(badgeBtn?.className).toContain('animate-timer-slide-up');
 
-      // Advance time by 66 minutes -> should display +1.1H
+      // Advance time by 66 minutes -> should display +66
       await act(async () => {
         vi.advanceTimersByTime(66 * 60 * 1000);
       });
 
-      expect(container.textContent).toContain('+1.1H');
+      expect(container.textContent).toContain('+66');
 
       // Clicking the badge dismisses the timer
       await act(async () => {

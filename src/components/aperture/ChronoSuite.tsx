@@ -44,11 +44,7 @@ export function formatStartTime(date: Date): string {
 }
 
 export function formatElapsedTime(elapsedMinutes: number): string {
-  if (elapsedMinutes < 60) {
-    return `+${elapsedMinutes}m`;
-  }
-  const hours = (elapsedMinutes / 60).toFixed(1);
-  return `+${hours}H`;
+  return `+${elapsedMinutes}`;
 }
 
 export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
