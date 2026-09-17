@@ -1,11 +1,16 @@
 import Dexie, { type EntityTable } from 'dexie';
 import { ManuscriptManifest, PageRecord, SessionRecord } from '@/types';
 
+export interface PersistedSettingsRecord {
+  id: string;
+  settings: Partial<ManuscriptManifest> & { _updatedAt?: number };
+}
+
 export class MinitypeDatabase extends Dexie {
   manuscripts!: EntityTable<ManuscriptManifest, 'id'>;
   pages!: EntityTable<PageRecord, 'id'>;
   sessions!: EntityTable<SessionRecord, 'id'>;
-  settings!: EntityTable<{ id: string; settings: Partial<ManuscriptManifest> }, 'id'>;
+  settings!: EntityTable<PersistedSettingsRecord, 'id'>;
 
   constructor() {
     super('MinitypeDatabase');
@@ -94,7 +99,7 @@ export async function saveManuscript(manifest: ManuscriptManifest): Promise<void
     };
     await db.manuscripts.put(docData);
     notifyPersistenceError(null);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Failed to save manuscript to IndexedDB:', err);
     notifyPersistenceError(err instanceof Error ? err : new Error(String(err)));
     throw err;
@@ -120,8 +125,20 @@ export async function saveSession(session: SessionRecord): Promise<void> {
   try {
     await db.sessions.put(session);
     notifyPersistenceError(null);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Failed to save session to IndexedDB:', err);
+    notifyPersistenceError(err instanceof Error ? err : new Error(String(err)));
+    throw err;
+  }
+}
+
+export async function saveSessions(sessions: SessionRecord[]): Promise<void> {
+  if (sessions.length === 0) return;
+  try {
+    await db.sessions.bulkPut(sessions);
+    notifyPersistenceError(null);
+  } catch (err: unknown) {
+    console.error('Failed to bulkPut sessions to IndexedDB:', err);
     notifyPersistenceError(err instanceof Error ? err : new Error(String(err)));
     throw err;
   }
@@ -181,8 +198,24 @@ export async function savePage(page: PageRecord): Promise<void> {
       id: pageId,
     });
     notifyPersistenceError(null);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Failed to save page to IndexedDB:', err);
+    notifyPersistenceError(err instanceof Error ? err : new Error(String(err)));
+    throw err;
+  }
+}
+
+export async function savePages(pages: PageRecord[]): Promise<void> {
+  if (pages.length === 0) return;
+  const normalizedPages = pages.map((p) => ({
+    ...p,
+    id: p.id || `${p.manuscriptId || 'default'}-page-${p.pageNumber}`,
+  }));
+  try {
+    await db.pages.bulkPut(normalizedPages);
+    notifyPersistenceError(null);
+  } catch (err: unknown) {
+    console.error('Failed to bulkPut pages to IndexedDB:', err);
     notifyPersistenceError(err instanceof Error ? err : new Error(String(err)));
     throw err;
   }
@@ -202,9 +235,12 @@ export async function saveGlobalSettingsToDb(settings: Partial<ManuscriptManifes
     try {
       await db.transaction('rw', db.settings, async () => {
         const existing = await db.settings.get('global');
-        const merged = { ...(existing?.settings || {}), ...settings };
-        if (!(merged as any)._updatedAt) {
-          (merged as any)._updatedAt = Date.now();
+        const merged: PersistedSettingsRecord['settings'] = {
+          ...(existing?.settings || {}),
+          ...settings,
+        };
+        if (!merged._updatedAt) {
+          merged._updatedAt = Date.now();
         }
         await db.settings.put({ id: 'global', settings: merged });
       });
@@ -255,10 +291,10 @@ export async function flushPendingSave(): Promise<void> {
   pendingPagesMap.clear();
 
   try {
-    await Promise.all(pagesToSave.map((p) => savePage(p)));
+    await savePages(pagesToSave);
     notifyPersistenceError(null);
     notifySaveStatus('saved');
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Failed to flush debounced pages to IndexedDB:', err);
     notifyPersistenceError(err instanceof Error ? err : new Error(String(err)));
   }

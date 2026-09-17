@@ -23,8 +23,7 @@ import {
 } from '@/db';
 import { createEmptyLine, getPageLineLimit } from '@/lib/paginationTransition';
 import { persistSettings } from '../settingsPersistence';
-import { triggerVisualSaveOnTyping, markProjectDirty } from './persistenceSlice';
-import { ensureActiveSessionOnTyping } from './projectSlice';
+import { notifyDraftingActivity, triggerVisualSaveOnTyping, markProjectDirty } from '../draftingPipeline';
 
 export interface ApertureSlice {
   activeLineIndex: number;
@@ -117,9 +116,7 @@ export const createApertureSlice: StateCreator<
   insertChar: (char: string) => {
     const state = get();
     if (state.isLocked || char.length !== 1) return;
-    triggerVisualSaveOnTyping(set, get);
-    ensureActiveSessionOnTyping(set, get);
-    markProjectDirty(set, get);
+    notifyDraftingActivity(set, get);
 
     let lines = [...state.currentPageLines];
     let isHighlighting = state.isHighlighting;
@@ -617,9 +614,7 @@ export const createApertureSlice: StateCreator<
   handleEnter: () => {
     const state = get();
     if (state.isLocked) return;
-    triggerVisualSaveOnTyping(set, get);
-    ensureActiveSessionOnTyping(set, get);
-    markProjectDirty(set, get);
+    notifyDraftingActivity(set, get);
 
     let lines = [...state.currentPageLines];
 

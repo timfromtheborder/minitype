@@ -1,5 +1,9 @@
-import { CharacterCell, LineRecord, PageRecord, PageMode } from '@/types';
+import { CharacterCell, LineRecord, PageRecord, PageMode, ManuscriptManifest, SessionRecord } from '@/types';
 import { createCellId, MAX_COLUMNS } from './wrap';
+import { sanitizeManuscript } from './sanitize';
+import { countWords, reconcileSessionsWithText, pruneZeroContentSessions } from './projectSerializer';
+import { createEmptyLine } from './paginationTransition';
+import { SETTING_KEYS } from '@/stores/settingsPersistence';
 
 export interface ParsedManuscript {
   lines: LineRecord[];
@@ -381,4 +385,246 @@ export function partitionManuscriptLines(
     currentPageLines: activeLines,
   };
 }
+
+export interface NormalizedProjectSnapshot {
+  manifest: ManuscriptManifest;
+  cleanText: string;
+  totalWordCount: number;
+  partitioned: PartitionedManuscript;
+  normalizedSessions: SessionRecord[];
+  removedSessionIds: string[];
+  fallbackSettings: Partial<ManuscriptManifest>;
+}
+
+export interface HydrateProjectOptions {
+  mode?: 'rehydrate' | 'load';
+  globalSettings?: Partial<ManuscriptManifest>;
+  columnLimit?: number;
+  explicitSyncSettings?: Partial<ManuscriptManifest>;
+  explicitDbSettings?: Partial<ManuscriptManifest>;
+}
+
+/**
+ * Unified canonical helper to normalize, sanitize, partition, and reconcile
+ * a manuscript project snapshot into platen lines, historical pages, and sessions.
+ * Guarantees 100% behavioral parity between cold boot reload and project switching.
+ */
+export function hydrateProjectSnapshot(
+  projectData: {
+    manifest: ManuscriptManifest;
+    pages: PageRecord[];
+    sessions: SessionRecord[];
+  },
+  options: HydrateProjectOptions = {}
+): NormalizedProjectSnapshot {
+  const { manifest: loadedManifest, pages, sessions: existingSessions } = projectData;
+  const {
+    mode = 'rehydrate',
+    globalSettings = {},
+    columnLimit = MAX_COLUMNS,
+    explicitSyncSettings,
+    explicitDbSettings,
+  } = options;
+
+  // 1. Sanitize manuscript text (remove strikeouts) and heal duplicates
+  const rawCleanText = sanitizeManuscript(pages, {
+    doubleSpaceLinebreaks: false,
+    pageMode: loadedManifest.pageMode,
+  });
+  const cleanText = healDuplicatedManuscriptText(rawCleanText);
+
+  // 2. Determine effective page mode & size
+  const effectivePageMode = globalSettings.pageMode || loadedManifest.pageMode || 'scroll';
+  const effectivePageSize = globalSettings.pageSize || loadedManifest.pageSize || 54;
+
+  // 3. Parse into platen lines
+  const parsed = textToManuscriptLines(cleanText, 1, columnLimit);
+
+  // 4. Partition lines based on page mode
+  let partitioned: PartitionedManuscript;
+
+  if (effectivePageMode === 'notecard') {
+    const lastPage = pages && pages.length > 1 ? pages[pages.length - 1] : null;
+    const isLastPageEmptyCard =
+      lastPage !== null &&
+      lastPage.completedAt === null &&
+      (!lastPage.lines || lastPage.lines.every((l) => !l.cells || l.cells.length === 0));
+
+    if (mode === 'load' || (isLastPageEmptyCard && lastPage)) {
+      const contentLines = parsed.lines.filter((l) => l.cells.length > 0 || l.isCommitted);
+      if (contentLines.length === 0) {
+        partitioned = {
+          historicalPages: [],
+          currentPageNumber: 1,
+          currentPageLines: [createEmptyLine(1, 0)],
+        };
+      } else {
+        const historicalPages: PageRecord[] = [];
+        for (let i = 0; i < contentLines.length; i += 10) {
+          const chunk = contentLines.slice(i, i + 10);
+          const pageNum = historicalPages.length + 1;
+          historicalPages.push({
+            id: `${loadedManifest.id}-page-${pageNum}`,
+            manuscriptId: loadedManifest.id,
+            pageNumber: pageNum,
+            lines: chunk.map((l, lIdx) => ({
+              ...l,
+              id: `p${pageNum}-line-${lIdx}`,
+              lineIndex: lIdx,
+              isCommitted: true,
+            })),
+            completedAt: new Date().toISOString(),
+          });
+        }
+        const nextCardNum = historicalPages.length + 1;
+        partitioned = {
+          historicalPages,
+          currentPageNumber: nextCardNum,
+          currentPageLines: [createEmptyLine(nextCardNum, 0)],
+        };
+      }
+    } else {
+      partitioned = partitionManuscriptLines(
+        parsed.lines,
+        effectivePageMode,
+        effectivePageSize,
+        loadedManifest.id
+      );
+    }
+  } else {
+    partitioned = partitionManuscriptLines(
+      parsed.lines,
+      effectivePageMode,
+      effectivePageSize,
+      loadedManifest.id
+    );
+
+    const shouldInsertDivider =
+      effectivePageMode === 'scroll' &&
+      cleanText.trim() !== '' &&
+      (
+        (pages && pages.some((p) => p.lines && p.lines.some((l) => l.isSessionDivider))) ||
+        (existingSessions && existingSessions.some((s) => s.isImported)) ||
+        (existingSessions && existingSessions.length > 1 && existingSessions.some((s) => s.completedAt !== null))
+      );
+
+    if (shouldInsertDivider) {
+      const contentLines = parsed.lines.slice(0, parsed.activeLineIndex);
+      if (contentLines.length > 0) {
+        const linesWithDivider: LineRecord[] = [...contentLines];
+        const dividerIdx = linesWithDivider.length;
+        linesWithDivider.push({
+          id: `${loadedManifest.id}-divider-hydrated`,
+          lineIndex: dividerIdx,
+          cells: [],
+          isCommitted: true,
+          isSessionDivider: true,
+        });
+        const nextDraftingIdx = linesWithDivider.length;
+        linesWithDivider.push(createEmptyLine(1, nextDraftingIdx));
+        partitioned = {
+          historicalPages: [],
+          currentPageNumber: 1,
+          currentPageLines: linesWithDivider,
+        };
+      }
+    }
+  }
+
+  // 5. Session reconciliation & zero-content pruning
+  let rawSessions: SessionRecord[] = [];
+  if (existingSessions && existingSessions.length > 0) {
+    rawSessions = [...existingSessions];
+  } else if (cleanText.trim() !== '') {
+    rawSessions = [
+      {
+        id: `${loadedManifest.id}-session-1`,
+        projectId: loadedManifest.id,
+        sessionNumber: 1,
+        startedAt: loadedManifest.createdAt || new Date().toISOString(),
+        completedAt: loadedManifest.updatedAt || new Date().toISOString(),
+        text: cleanText,
+        wordCount: countWords(cleanText),
+      },
+    ];
+  }
+
+  // If there is only 1 session and its text is empty, populate it with cleanText
+  if (rawSessions.length === 1 && (!rawSessions[0].text || rawSessions[0].text.trim() === '') && cleanText.trim() !== '') {
+    rawSessions[0] = {
+      ...rawSessions[0],
+      text: cleanText,
+      wordCount: rawSessions[0].wordCount || countWords(cleanText),
+    };
+  }
+
+  const reconciled = reconcileSessionsWithText(rawSessions, cleanText);
+  const { pruned, removedIds } = pruneZeroContentSessions(reconciled);
+
+  // Renumber contiguously and guarantee immutability on historical sessions
+  const normalizedSessions = pruned.map((s, idx) => ({
+    ...s,
+    sessionNumber: idx + 1,
+    completedAt: s.completedAt || loadedManifest.updatedAt || s.startedAt,
+  }));
+
+  const docTotalWords = countWords(cleanText);
+
+  // 6. Settings fallback from loadedManifest
+  const fallbackSettings: Partial<ManuscriptManifest> = {};
+  const loadedSettings = loadedManifest as Record<string, any>;
+  const syncSettings = (explicitSyncSettings || {}) as Record<string, any>;
+  const dbSettings = (explicitDbSettings || {}) as Record<string, any>;
+  const gSettings = (globalSettings || {}) as Record<string, any>;
+
+  for (const key of SETTING_KEYS) {
+    if (
+      syncSettings[key] === undefined &&
+      dbSettings[key] === undefined &&
+      gSettings[key] === undefined &&
+      loadedSettings[key] !== undefined
+    ) {
+      (fallbackSettings as Record<string, any>)[key] = loadedSettings[key];
+    }
+  }
+
+  // 7. Compose finalized manifest
+  const updatedManifest: ManuscriptManifest = {
+    activeApertureHeight: globalSettings.activeApertureHeight || loadedManifest.activeApertureHeight || 1,
+    wrapMode: globalSettings.wrapMode || loadedManifest.wrapMode || 'soft',
+    pageSize: effectivePageSize,
+    pageMode: effectivePageMode,
+    colorScheme: globalSettings.colorScheme || loadedManifest.colorScheme || 'typewriter',
+    typeface: globalSettings.typeface || loadedManifest.typeface || 'courier-prime',
+    ...globalSettings,
+    ...fallbackSettings,
+    id: loadedManifest.id,
+    title: loadedManifest.title || 'Untitled Project',
+    mode: 'local',
+    inboxCount: loadedManifest.inboxCount ?? 0,
+    outboxCount: 0,
+    lastPrintedCharIndex: loadedManifest.lastPrintedCharIndex ?? 0,
+    printedPagesCount: loadedManifest.printedPagesCount ?? 0,
+    sessionWordTarget: loadedManifest.sessionWordTarget,
+    showSessionTargetTracker: loadedManifest.showSessionTargetTracker ?? globalSettings.showSessionTargetTracker,
+    activeSessionId:
+      loadedManifest.activeSessionId ||
+      (normalizedSessions.length > 0 ? normalizedSessions[normalizedSessions.length - 1].id : ''),
+    sessionCount: normalizedSessions.length,
+    totalWordCount: docTotalWords,
+    createdAt: loadedManifest.createdAt || new Date().toISOString(),
+    updatedAt: loadedManifest.updatedAt || new Date().toISOString(),
+  };
+
+  return {
+    manifest: updatedManifest,
+    cleanText,
+    totalWordCount: docTotalWords,
+    partitioned,
+    normalizedSessions,
+    removedSessionIds: removedIds,
+    fallbackSettings,
+  };
+}
+
 

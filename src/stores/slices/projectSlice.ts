@@ -11,7 +11,9 @@ import { createLibraryBackup, restoreLibraryBackup } from '@/lib/backup';
 import {
   saveManuscript,
   savePage,
+  savePages,
   saveSession,
+  saveSessions,
   deleteSession,
   getAllManuscripts,
   loadManuscriptProject,
@@ -33,6 +35,7 @@ import {
   healDuplicatedManuscriptText,
   textToManuscriptLines,
   partitionManuscriptLines,
+  hydrateProjectSnapshot,
   type PartitionedManuscript,
 } from '@/lib/importer';
 import {
@@ -42,49 +45,12 @@ import {
   reconcileSessionsWithText,
   parseProjectFile,
   stripSessionMarkers,
+  pruneZeroContentSessions,
 } from '@/lib/projectSerializer';
 import { MAX_COLUMNS } from '@/lib/wrap';
 import { markProjectDirty, finalizeAndSaveCurrentProject } from './persistenceSlice';
 
-export function pruneZeroContentSessions(sessions: SessionRecord[]): {
-  pruned: SessionRecord[];
-  removedIds: string[];
-} {
-  const removedIds: string[] = [];
-  const pruned: SessionRecord[] = [];
-
-  for (let i = 0; i < sessions.length; i++) {
-    const s = sessions[i];
-    const clean = (s.text || '').trim();
-    const isCompleted = !!s.completedAt;
-    const words =
-      isCompleted && s.wordCount !== undefined && s.wordCount > 0
-        ? s.wordCount
-        : countWords(clean);
-    const isZeroContent = words === 0;
-
-    if (isZeroContent && (sessions.length > 1 || pruned.length > 0)) {
-      removedIds.push(s.id);
-    } else {
-      pruned.push({ ...s, text: clean, wordCount: words });
-    }
-  }
-
-  if (pruned.length === 0 && sessions.length > 0) {
-    const first = sessions[0];
-    const clean = (first.text || '').trim();
-    const isCompleted = !!first.completedAt;
-    const words =
-      isCompleted && first.wordCount !== undefined && first.wordCount > 0
-        ? first.wordCount
-        : countWords(clean);
-    pruned.push({ ...first, text: clean, wordCount: words });
-    const idx = removedIds.indexOf(first.id);
-    if (idx >= 0) removedIds.splice(idx, 1);
-  }
-
-  return { pruned, removedIds };
-}
+export { pruneZeroContentSessions };
 
 export function ensureActiveSessionOnTyping(
   set: (partial: Partial<TypingStore> | ((state: TypingStore) => Partial<TypingStore>)) => void,
@@ -350,187 +316,48 @@ export const createProjectSlice: StateCreator<
     const data = await loadManuscriptProject(id);
     if (!data) return;
 
-    const { manifest: loadedManifest, pages, sessions: existingSessions } = data;
-
-    // Requirement: When a file is loaded, strikeouts should be removed
-    const rawCleanText = sanitizeManuscript(pages, {
-      doubleSpaceLinebreaks: false,
-      pageMode: loadedManifest.pageMode,
-    });
-    const cleanText = healDuplicatedManuscriptText(rawCleanText);
-
     const state = get();
     const globalSettings = extractSettings(readSynchronousSettings() || state.manifest);
-    const effectivePageMode = globalSettings.pageMode || loadedManifest.pageMode || 'scroll';
-    const effectivePageSize = globalSettings.pageSize || loadedManifest.pageSize || 54;
     const columnLimit = state.activeColumnLimit ?? MAX_COLUMNS;
-    // Parse into platen lines with a fresh empty line at the end
-    const parsed = textToManuscriptLines(cleanText, 1, columnLimit);
 
-    let partitioned: PartitionedManuscript;
-    if (effectivePageMode === 'notecard') {
-      const contentLines = parsed.lines.filter((l) => l.cells.length > 0 || l.isCommitted);
-      if (contentLines.length === 0) {
-        partitioned = {
-          historicalPages: [],
-          currentPageNumber: 1,
-          currentPageLines: [createEmptyLine(1, 0)],
-        };
-      } else {
-        const historicalPages: PageRecord[] = [];
-        for (let i = 0; i < contentLines.length; i += 10) {
-          const chunk = contentLines.slice(i, i + 10);
-          const pageNum = historicalPages.length + 1;
-          historicalPages.push({
-            id: `${loadedManifest.id}-page-${pageNum}`,
-            manuscriptId: loadedManifest.id,
-            pageNumber: pageNum,
-            lines: chunk.map((l, lIdx) => ({
-              ...l,
-              id: `p${pageNum}-line-${lIdx}`,
-              lineIndex: lIdx,
-              isCommitted: true,
-            })),
-            completedAt: new Date().toISOString(),
-          });
-        }
-        const nextCardNum = historicalPages.length + 1;
-        partitioned = {
-          historicalPages,
-          currentPageNumber: nextCardNum,
-          currentPageLines: [createEmptyLine(nextCardNum, 0)],
-        };
-      }
-    } else {
-      partitioned = partitionManuscriptLines(
-        parsed.lines,
-        effectivePageMode,
-        effectivePageSize,
-        loadedManifest.id
-      );
-      const shouldInsertDivider =
-        effectivePageMode === 'scroll' &&
-        cleanText.trim() !== '' &&
-        (
-          (pages && pages.some((p) => p.lines && p.lines.some((l) => l.isSessionDivider))) ||
-          (existingSessions && existingSessions.some((s) => s.isImported)) ||
-          (existingSessions && existingSessions.length > 1 && existingSessions.some((s) => s.completedAt !== null))
-        );
+    const snapshot = hydrateProjectSnapshot(data, {
+      mode: 'load',
+      globalSettings,
+      columnLimit,
+    });
 
-      if (shouldInsertDivider) {
-        const contentLines = parsed.lines.slice(0, parsed.activeLineIndex);
-        if (contentLines.length > 0) {
-          const linesWithDivider: LineRecord[] = [...contentLines];
-          const dividerIdx = linesWithDivider.length;
-          linesWithDivider.push({
-            id: `${loadedManifest.id}-divider-load`,
-            lineIndex: dividerIdx,
-            cells: [],
-            isCommitted: true,
-            isSessionDivider: true,
-          });
-          const nextDraftingIdx = linesWithDivider.length;
-          linesWithDivider.push(createEmptyLine(1, nextDraftingIdx));
-          partitioned = {
-            historicalPages: [],
-            currentPageNumber: 1,
-            currentPageLines: linesWithDivider,
-          };
-        }
-      }
-    }
-
-    // Prepare sessions: if none exist in db, generate Session 1 from cleanText
-    // Prepare sessions: if none exist in db, generate Session 1 from cleanText ONLY if there is text
-    let rawSessions: SessionRecord[] = [];
-    if (existingSessions && existingSessions.length > 0) {
-      rawSessions = [...existingSessions];
-    } else if (cleanText.trim() !== '') {
-      rawSessions = [
-        {
-          id: `${id}-session-1`,
-          projectId: id,
-          sessionNumber: 1,
-          startedAt: loadedManifest.createdAt || new Date().toISOString(),
-          completedAt: loadedManifest.updatedAt || new Date().toISOString(),
-          text: cleanText,
-          wordCount: countWords(cleanText),
-        },
-      ];
-    }
-
-    // If there is only 1 session and its text is empty, populate it with cleanText
-    if (rawSessions.length === 1 && (!rawSessions[0].text || rawSessions[0].text.trim() === '') && cleanText.trim() !== '') {
-      rawSessions[0] = {
-        ...rawSessions[0],
-        text: cleanText,
-        wordCount: rawSessions[0].wordCount || countWords(cleanText),
-      };
-    }
-
-    // Reconcile existing sessions against true cleanText to fix any slice/offset corruption
-    const reconciled = reconcileSessionsWithText(rawSessions, cleanText);
-
-    // Prune any 0-content sessions on load
-    const { pruned, removedIds } = pruneZeroContentSessions(reconciled);
-    for (const remId of removedIds) {
+    for (const remId of snapshot.removedSessionIds) {
       await deleteSession(remId).catch(console.error);
     }
 
-    // Ensure all prior sessions are finalized so historical sessions are immutable (Invariant 7 & 8),
-    // and renumber contiguously to eliminate gaps from any pruned sessions
-    const sessions = pruned.map((s, idx) => ({
-      ...s,
-      sessionNumber: idx + 1,
-      completedAt: s.completedAt || loadedManifest.updatedAt || s.startedAt,
-    }));
-    for (const s of sessions) {
-      saveSession(s).catch(console.error);
-    }
-
-    // CRITICAL: Global settings are preserved across document changes!
-    const updatedManifest: ManuscriptManifest = {
-      ...state.manifest,
-      ...globalSettings,
-      id: loadedManifest.id,
-      title: loadedManifest.title || 'Untitled Project',
-      mode: 'local',
-      outboxCount: 0,
-      lastPrintedCharIndex: loadedManifest.lastPrintedCharIndex ?? 0,
-      printedPagesCount: loadedManifest.printedPagesCount ?? 0,
-      activeSessionId: (sessions.length > 0 ? sessions[sessions.length - 1]?.id : '') || '',
-      sessionCount: sessions.length,
-      totalWordCount: countWords(cleanText),
-      sessionWordTarget: loadedManifest.sessionWordTarget,
-      createdAt: loadedManifest.createdAt || new Date().toISOString(),
-      updatedAt: loadedManifest.updatedAt || new Date().toISOString(), // PRESERVE existing timestamp!
-    };
+    await saveSessions(snapshot.normalizedSessions).catch(console.error);
 
     if (typeof document !== 'undefined') {
-      if (updatedManifest.colorScheme) {
-        document.documentElement.setAttribute('data-theme', updatedManifest.colorScheme);
+      if (snapshot.manifest.colorScheme) {
+        document.documentElement.setAttribute('data-theme', snapshot.manifest.colorScheme);
       }
-      if (updatedManifest.textSize) {
-        document.documentElement.setAttribute('data-text-size', updatedManifest.textSize);
+      if (snapshot.manifest.textSize) {
+        document.documentElement.setAttribute('data-text-size', snapshot.manifest.textSize);
       }
-      if (updatedManifest.activeApertureHeight) {
-        document.documentElement.setAttribute('data-aperture-height', String(updatedManifest.activeApertureHeight));
+      if (snapshot.manifest.activeApertureHeight) {
+        document.documentElement.setAttribute('data-aperture-height', String(snapshot.manifest.activeApertureHeight));
       }
     }
 
-    if (cleanText.trim() !== '' || pages.length > 0) {
+    if (snapshot.cleanText.trim() !== '' || data.pages.length > 0) {
       // Prune stale pages from IndexedDB and sync valid pages
-      await pruneStalePagesForManuscript(loadedManifest.id, partitioned.currentPageNumber);
-      for (const hp of partitioned.historicalPages) {
-        savePage(hp).catch(console.error);
-      }
-      savePage({
-        id: `${loadedManifest.id}-page-${partitioned.currentPageNumber}`,
-        manuscriptId: loadedManifest.id,
-        pageNumber: partitioned.currentPageNumber,
-        lines: partitioned.currentPageLines,
-        completedAt: null,
-      }).catch(console.error);
+      await pruneStalePagesForManuscript(data.manifest.id, snapshot.partitioned.currentPageNumber);
+      const allPagesToSave = [
+        ...snapshot.partitioned.historicalPages,
+        {
+          id: `${data.manifest.id}-page-${snapshot.partitioned.currentPageNumber}`,
+          manuscriptId: data.manifest.id,
+          pageNumber: snapshot.partitioned.currentPageNumber,
+          lines: snapshot.partitioned.currentPageLines,
+          completedAt: null,
+        },
+      ];
+      await savePages(allPagesToSave).catch(console.error);
     }
 
     if (typeof window !== 'undefined') {
@@ -538,13 +365,13 @@ export const createProjectSlice: StateCreator<
     }
 
     set({
-      manifest: updatedManifest,
-      currentPageNumber: partitioned.currentPageNumber,
-      historicalPages: partitioned.historicalPages,
-      currentPageLines: partitioned.currentPageLines,
-      activeLineIndex: Math.max(0, partitioned.currentPageLines.length - 1),
+      manifest: snapshot.manifest,
+      currentPageNumber: snapshot.partitioned.currentPageNumber,
+      historicalPages: snapshot.partitioned.historicalPages,
+      currentPageLines: snapshot.partitioned.currentPageLines,
+      activeLineIndex: Math.max(0, snapshot.partitioned.currentPageLines.length - 1),
       activeColIndex: 0,
-      activeSessions: sessions,
+      activeSessions: snapshot.normalizedSessions,
       isHighlighting: false,
       highlightHead: null,
       isLocked: false,
@@ -699,13 +526,8 @@ export const createProjectSlice: StateCreator<
     };
 
     await saveManuscript(newManifest).catch(console.error);
-    for (const hp of historicalPages) {
-      await savePage(hp).catch(console.error);
-    }
-    await savePage(newPage).catch(console.error);
-    for (const s of allSessions) {
-      await saveSession(s).catch(console.error);
-    }
+    await savePages([...historicalPages, newPage]).catch(console.error);
+    await saveSessions(allSessions).catch(console.error);
 
     if (typeof window !== 'undefined') {
       localStorage.setItem(ACTIVE_PROJECT_KEY, newId);

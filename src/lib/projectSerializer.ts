@@ -333,3 +333,47 @@ export function parseProjectFile(rawText: string, projectId: string): SessionRec
 
   return sessions;
 }
+
+/**
+ * Prunes zero-content sessions (e.g. empty uncompleted sessions left behind),
+ * preserving completed sessions or at least 1 session if all are empty.
+ */
+export function pruneZeroContentSessions(sessions: SessionRecord[]): {
+  pruned: SessionRecord[];
+  removedIds: string[];
+} {
+  const pruned: SessionRecord[] = [];
+  const removedIds: string[] = [];
+
+  for (const s of sessions) {
+    const clean = (s.text || '').trim();
+    const isCompleted = !!s.completedAt;
+    const words =
+      isCompleted && s.wordCount !== undefined && s.wordCount > 0
+        ? s.wordCount
+        : countWords(clean);
+    const isZeroContent = words === 0;
+
+    if (isZeroContent && (sessions.length > 1 || pruned.length > 0)) {
+      removedIds.push(s.id);
+    } else {
+      pruned.push({ ...s, text: clean, wordCount: words });
+    }
+  }
+
+  if (pruned.length === 0 && sessions.length > 0) {
+    const first = sessions[0];
+    const clean = (first.text || '').trim();
+    const isCompleted = !!first.completedAt;
+    const words =
+      isCompleted && first.wordCount !== undefined && first.wordCount > 0
+        ? first.wordCount
+        : countWords(clean);
+    pruned.push({ ...first, text: clean, wordCount: words });
+    const idx = removedIds.indexOf(first.id);
+    if (idx >= 0) removedIds.splice(idx, 1);
+  }
+
+  return { pruned, removedIds };
+}
+

@@ -15,7 +15,7 @@ This document outlines the near-term feature, polish, safety, architectural, per
 | **v0.9.7.5.4** | **Hotfix/Polish** | Wake Lock Permanence, File List Optimization & Target Isolation | 5-minute permanent wake lock, conditional modal rendering, target bug fix | **Complete** |
 | **v0.9.7.5.5** | **Pass B2** | Data Safety (Full Backup & Restore) | Full-library JSON import/export archive | **Complete** |
 | **v0.9.7.6** | **Tier 2 (Pass A)** | Platen Rendering Optimization & Typing Engine Isolation | Zero-CLS platen, single-frame themes, cursor overlay | **Complete** |
-| **v0.9.7.6.1** | **Tier 2 (Pass B)** | Storage Architecture, Hydrator Consolidation & Batching | Unified hydrator parity, Dexie `bulkPut()`, schema typing | Planned |
+| **v0.9.7.6.1** | **Tier 2 (Pass B)** | Storage Architecture, Hydrator Consolidation & Batching | Unified hydrator parity, Dexie `bulkPut()`, schema typing | **Complete** |
 | **v0.9.7.6.2** | **Tier 2 (Pass C)** | Large-Scale Concurrency, Web Worker & Stress Profiling | 50k-word stress test, Web Worker background word count | Planned |
 | **v0.9.8.0** | **Pass C1** | Chrono Suite, Terminal Multi-Phosphor Easter Egg & Keyboard Shortcuts | Digital clock & session elapsed timer, color swatches, platen resize hotkeys | Future |
 | **v0.9.8.1** | **Pass C2** | Unified Session Drawer, Redaction Blinders & 3-Deck Architecture | Document/Session tab merge, block masking `[█]`, 3-button deck, remove Paragraph mode | Future |

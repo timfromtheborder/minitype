@@ -12,8 +12,7 @@ import { saveManuscript, savePage, flushPendingSave } from '@/db';
 import { createEmptyLine, applyPageModeTransition } from '@/lib/paginationTransition';
 import { persistSettings } from '../settingsPersistence';
 import { typewriterAudio } from '@/lib/sound';
-import { triggerVisualSaveOnTyping, markProjectDirty } from './persistenceSlice';
-import { ensureActiveSessionOnTyping } from './projectSlice';
+import { notifyDraftingActivity } from '../draftingPipeline';
 
 export interface PaginationSlice {
   currentPageNumber: number;
@@ -130,9 +129,7 @@ export const createPaginationSlice: StateCreator<
     if (state.manifest.pageMode !== 'notecard') return;
     if (state.isLocked) return;
 
-    triggerVisualSaveOnTyping(set, get);
-    ensureActiveSessionOnTyping(set, get);
-    markProjectDirty(set, get);
+    notifyDraftingActivity(set, get);
     flushPendingSave();
 
     typewriterAudio.playPaperFeed();
