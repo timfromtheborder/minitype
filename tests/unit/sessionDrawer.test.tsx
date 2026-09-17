@@ -401,7 +401,11 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
 
     // Click Manuscript button
     const buttons = Array.from(container.querySelectorAll('button'));
-    const manuscriptBtn = buttons.find((b) => b.textContent?.includes('Manuscript'));
+    const manuscriptBtn = buttons.find((b) =>
+      b.getAttribute('aria-label')?.includes('Manuscript') ||
+      b.getAttribute('title')?.includes('Manuscript') ||
+      b.textContent?.includes('Manuscript')
+    );
     expect(manuscriptBtn).toBeDefined();
 
     await act(async () => {
@@ -412,7 +416,11 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     expect(textPreview?.className).toContain('font-manuscript-serif');
 
     // Click Typewriter button
-    const typewriterBtn = buttons.find((b) => b.textContent?.includes('Typewriter'));
+    const typewriterBtn = buttons.find((b) =>
+      b.getAttribute('aria-label')?.includes('Typewriter') ||
+      b.getAttribute('title')?.includes('Typewriter') ||
+      b.textContent?.includes('Typewriter')
+    );
     expect(typewriterBtn).toBeDefined();
 
     await act(async () => {
@@ -1171,5 +1179,102 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     });
     clickSpy.mockRestore();
     container.remove();
+  });
+
+  it('renders typewriter/manuscript toggle as icons only without text labels to save space', async () => {
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+    const testContainer = document.createElement('div');
+    document.body.appendChild(testContainer);
+    const root = createRoot(testContainer);
+
+    await act(async () => {
+      root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
+    });
+
+    const typewriterBtn = testContainer.querySelector('button[aria-label="Typewriter Monospace View"]');
+    const manuscriptBtn = testContainer.querySelector('button[aria-label="Publisher Manuscript Serif View"]');
+
+    expect(typewriterBtn).not.toBeNull();
+    expect(manuscriptBtn).not.toBeNull();
+
+    // Buttons must not contain text nodes / text labels
+    expect(typewriterBtn?.textContent?.trim()).toBe('');
+    expect(manuscriptBtn?.textContent?.trim()).toBe('');
+
+    // Both contain icon SVGs
+    expect(typewriterBtn?.querySelector('svg')).not.toBeNull();
+    expect(manuscriptBtn?.querySelector('svg')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+    });
+    testContainer.remove();
+  });
+
+  it('preserves document scroll position in memory across modal close and reopen', async () => {
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+    const testContainer = document.createElement('div');
+    document.body.appendChild(testContainer);
+    const root = createRoot(testContainer);
+
+    useTypingStore.setState({
+      manifest: {
+        ...useTypingStore.getState().manifest,
+        id: 'scroll-test-doc-99',
+      },
+    });
+
+    await act(async () => {
+      root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
+    });
+
+    const scrollContainer = testContainer.querySelector('.overflow-y-auto[style*="overflow-anchor"]');
+    expect(scrollContainer).not.toBeNull();
+
+    // Mock scrollTop on HTMLElement.prototype so JSDOM retains scroll positions across re-renders
+    const originalScrollTopDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollTop');
+    Object.defineProperty(HTMLElement.prototype, 'scrollTop', {
+      configurable: true,
+      get() {
+        return (this as any)._scrollTop ?? 0;
+      },
+      set(val) {
+        (this as any)._scrollTop = val;
+      },
+    });
+
+    // Simulate user scrolling to 350px
+    (scrollContainer as HTMLElement).scrollTop = 350;
+    await act(async () => {
+      scrollContainer?.dispatchEvent(new Event('scroll'));
+    });
+
+    // Close / unmount modal
+    await act(async () => {
+      root.render(<SessionDrawer isOpen={false} onClose={() => {}} />);
+    });
+
+    // Reopen modal for the same document
+    await act(async () => {
+      root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
+    });
+
+    const reopenedScrollContainer = testContainer.querySelector('.overflow-y-auto[style*="overflow-anchor"]');
+    expect(reopenedScrollContainer).not.toBeNull();
+
+    // Verify scrollTop is restored to 350px
+    expect((reopenedScrollContainer as HTMLElement).scrollTop).toBe(350);
+
+    // Restore original HTMLElement.prototype.scrollTop descriptor
+    if (originalScrollTopDescriptor) {
+      Object.defineProperty(HTMLElement.prototype, 'scrollTop', originalScrollTopDescriptor);
+    } else {
+      delete (HTMLElement.prototype as any).scrollTop;
+    }
+
+    await act(async () => {
+      root.unmount();
+    });
+    testContainer.remove();
   });
 });

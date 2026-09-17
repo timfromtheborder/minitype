@@ -22,6 +22,9 @@ import {
 } from '@/lib/projectSerializer';
 import { formatSessionDateTime } from './ProjectSessionsTab';
 
+// Persist scroll position per document ID while in memory across modal reopens
+const documentScrollPositions = new Map<string, number>();
+
 export interface SessionDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -120,6 +123,19 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
     storeCurrentPageNumber,
     storeCurrentPageLines,
   ]);
+
+  // Restore scroll position specifically for the currently open document
+  useEffect(() => {
+    if (isOpen && scrollContainerRef.current && manifest.id) {
+      const savedPos = documentScrollPositions.get(manifest.id) ?? 0;
+      scrollContainerRef.current.scrollTop = savedPos;
+      requestAnimationFrame(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = savedPos;
+        }
+      });
+    }
+  }, [isOpen, manifest.id]);
 
   // Focus trap & Escape key listener
   useEffect(() => {
@@ -437,33 +453,33 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
 
           {/* Action Toolbar */}
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-            {/* View Mode Segmented Switch */}
+            {/* View Mode Segmented Switch (Icons only to save space) */}
             <div className="flex items-center border border-border/80 rounded-[2px] bg-background/50 p-0.5 text-[11px] font-sans">
               <button
                 type="button"
                 onClick={() => useTypingStore.getState().setManifest({ documentViewMode: 'typewriter' })}
-                className={`flex items-center gap-1 px-2 py-0.5 rounded-[1px] transition-colors cursor-pointer ${
+                className={`flex items-center justify-center p-1 sm:p-1.5 rounded-[1px] transition-colors cursor-pointer ${
                   viewMode === 'typewriter'
                     ? 'bg-muted text-foreground font-semibold shadow-2xs'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
                 title="Typewriter Monospace View"
+                aria-label="Typewriter Monospace View"
               >
-                <Type className="w-3 h-3" />
-                <span>Typewriter</span>
+                <Type className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"
                 onClick={() => useTypingStore.getState().setManifest({ documentViewMode: 'manuscript' })}
-                className={`flex items-center gap-1 px-2 py-0.5 rounded-[1px] transition-colors cursor-pointer ${
+                className={`flex items-center justify-center p-1 sm:p-1.5 rounded-[1px] transition-colors cursor-pointer ${
                   viewMode === 'manuscript'
                     ? 'bg-muted text-foreground font-semibold shadow-2xs'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
                 title="Publisher Manuscript Serif View"
+                aria-label="Publisher Manuscript Serif View"
               >
-                <BookOpen className="w-3 h-3" />
-                <span>Manuscript</span>
+                <BookOpen className="w-3.5 h-3.5" />
               </button>
             </div>
 
@@ -515,6 +531,11 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
         {/* Chronological Stream of Permanently Expanded Contiguous Sessions */}
         <div
           ref={scrollContainerRef}
+          onScroll={(e) => {
+            if (manifest.id) {
+              documentScrollPositions.set(manifest.id, e.currentTarget.scrollTop);
+            }
+          }}
           style={{ overflowAnchor: 'none' }}
           className="flex-1 min-h-0 overflow-y-auto square-scrollbar border border-border/80 bg-card text-card-foreground p-3 sm:p-5 space-y-3 rounded-[2px] [overflow-anchor:none]"
         >

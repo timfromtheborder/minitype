@@ -107,13 +107,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   const allowStrikeout = manifest.allowStrikeout ?? true;
 
   const handleSelectScheme = (newScheme: ColorScheme) => {
-    if (typeof document !== 'undefined' && 'startViewTransition' in document) {
-      (document as unknown as { startViewTransition: (cb: () => void) => void }).startViewTransition(() => {
-        onUpdateManifest({ colorScheme: newScheme });
-      });
-    } else {
-      onUpdateManifest({ colorScheme: newScheme });
-    }
+    onUpdateManifest({ colorScheme: newScheme });
   };
 
   const handleClose = () => {
@@ -600,7 +594,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.9.6 · by timfromtheborder
+              Minitype v0.9.9.7 · by timfromtheborder
             </span>
           </div>
         </div>
