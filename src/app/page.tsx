@@ -95,6 +95,7 @@ export default function Home() {
         <ChronoSuite
           showClock={manifest.showClock}
           typeface={manifest.typeface}
+          colorScheme={colorScheme}
           isPaused={isPrintOpen || isSettingsOpen}
         />
       </div>

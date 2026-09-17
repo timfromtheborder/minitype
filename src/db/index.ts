@@ -91,6 +91,8 @@ export async function saveManuscript(manifest: ManuscriptManifest): Promise<void
       sessionWordTarget: manifest.sessionWordTarget,
       doubleSpaceLinebreaks: manifest.doubleSpaceLinebreaks,
       allowStrikeout: manifest.allowStrikeout,
+      showClock: manifest.showClock,
+      phosphorColor: manifest.phosphorColor,
       activeSessionId: manifest.activeSessionId,
       sessionCount: manifest.sessionCount ?? 1,
       totalWordCount: manifest.totalWordCount ?? 0,

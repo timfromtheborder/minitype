@@ -529,16 +529,13 @@ html[data-page-mode="notecard"],
    ========================================================================== */
 @keyframes session-box-pulse {
   0% {
-    opacity: 0.6;
-    transform: scale(0.95);
+    opacity: 0.35;
   }
   50% {
     opacity: 1;
-    transform: scale(1.1);
   }
   100% {
     opacity: 0.85;
-    transform: scale(1);
   }
 }
 
@@ -628,14 +625,18 @@ html[data-page-mode="notecard"],
 @keyframes timer-slide-up-fade {
   0% {
     opacity: 0;
-    transform: translate(-50%, 0.75rem);
+    transform: translateY(0.75rem);
   }
   100% {
     opacity: 1;
-    transform: translate(-50%, 0);
+    transform: translateY(0);
   }
 }
 
 .animate-timer-slide-up {
   animation: timer-slide-up-fade 250ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.font-serif-clock {
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
 }

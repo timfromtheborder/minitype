@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ClockFormat, Typeface } from '@/types';
+import { ClockFormat, Typeface, ColorScheme } from '@/types';
 
 export interface ChronoSuiteProps {
   showClock?: boolean;
   clockFormat?: ClockFormat;
   typeface?: Typeface;
+  colorScheme?: ColorScheme;
   isPaused?: boolean;
 }
 
@@ -42,9 +43,18 @@ export function formatStartTime(date: Date): string {
   }
 }
 
+export function formatElapsedTime(elapsedMinutes: number): string {
+  if (elapsedMinutes < 60) {
+    return `+${elapsedMinutes}m`;
+  }
+  const hours = (elapsedMinutes / 60).toFixed(1);
+  return `+${hours}H`;
+}
+
 export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
   showClock = true,
   typeface = 'courier-prime',
+  colorScheme = 'typewriter',
   isPaused = false,
 }) => {
   const [now, setNow] = useState<Date>(() => new Date());
@@ -83,9 +93,16 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
   const formattedStartTime = timerStartTime
     ? formatStartTime(new Date(timerStartTime))
     : '';
+  const formattedElapsed = formatElapsedTime(elapsedMinutes);
 
-  const fontClass =
-    typeface === 'courier-prime'
+  const isSerifTheme =
+    colorScheme === 'typewriter' ||
+    colorScheme === 'high-contrast' ||
+    colorScheme === 'low-contrast';
+
+  const fontClass = isSerifTheme
+    ? 'font-serif-clock tracking-widest font-normal'
+    : typeface === 'courier-prime'
       ? 'font-mono'
       : typeface === 'jetbrains-mono'
         ? 'font-mono tracking-wider'
@@ -94,26 +111,26 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
           : 'font-mono';
 
   return (
-    <div className={`relative flex flex-col items-center justify-center select-none ${fontClass}`}>
-      {/* Session Timer: exact same size as clock, faded out, no border/bg/button aesthetic, slide-up & fade-in */}
+    <div className={`relative inline-flex flex-col items-start justify-center select-none ${fontClass}`}>
+      {/* Session Timer: justified with the clock so numbers align vertically */}
       {timerStartTime !== null && (
         <button
           key={timerStartTime}
           type="button"
           onClick={handleTimerBadgeClick}
-          className="absolute bottom-full mb-2 left-1/2 text-xl sm:text-2xl font-mono uppercase tracking-widest text-foreground/45 hover:text-foreground/60 transition-colors cursor-pointer bg-transparent border-none p-0 shadow-none outline-none whitespace-nowrap animate-timer-slide-up select-none"
+          className="absolute bottom-full mb-2 left-0 text-left text-xl sm:text-2xl uppercase tracking-widest text-foreground/45 hover:text-foreground/60 transition-colors cursor-pointer bg-transparent border-none p-0 shadow-none outline-none whitespace-nowrap animate-timer-slide-up select-none"
           aria-label={`Session timer started at ${formattedStartTime}, elapsed ${elapsedMinutes} minutes. Click to dismiss.`}
         >
           <span>{formattedStartTime}</span>
-          <span className="ml-2">+{elapsedMinutes}m</span>
+          <span className="ml-2.5">{formattedElapsed}</span>
         </button>
       )}
 
-      {/* Clock Display: 100% larger, 25% brighter than timer, no tooltip */}
+      {/* Clock Display: centered anchor, justified with the timer */}
       <button
         type="button"
         onClick={handleClockClick}
-        className="text-xl sm:text-2xl text-foreground/75 hover:text-foreground transition-colors cursor-pointer tracking-widest font-mono uppercase bg-transparent border-none p-0 shadow-none outline-none whitespace-nowrap select-none"
+        className="text-left text-xl sm:text-2xl text-foreground/75 hover:text-foreground transition-colors cursor-pointer tracking-widest uppercase bg-transparent border-none p-0 shadow-none outline-none whitespace-nowrap select-none"
         aria-label={`Current time: ${formattedCurrentTime}. Click to start session timer.`}
       >
         {formattedCurrentTime}

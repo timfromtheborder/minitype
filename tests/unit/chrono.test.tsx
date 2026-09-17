@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ChronoSuite, formatClockTime, formatStartTime } from '@/components/aperture/ChronoSuite';
+import { ChronoSuite, formatClockTime, formatStartTime, formatElapsedTime } from '@/components/aperture/ChronoSuite';
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -39,6 +39,21 @@ describe('ChronoSuite & Clock Formatter', () => {
     });
   });
 
+  describe('formatElapsedTime', () => {
+    it('formats minutes under an hour as +Xm', () => {
+      expect(formatElapsedTime(0)).toBe('+0m');
+      expect(formatElapsedTime(25)).toBe('+25m');
+      expect(formatElapsedTime(59)).toBe('+59m');
+    });
+
+    it('formats times over an hour as +X.XH (e.g. 1 hour and 6 minutes -> +1.1H)', () => {
+      expect(formatElapsedTime(60)).toBe('+1.0H');
+      expect(formatElapsedTime(66)).toBe('+1.1H');
+      expect(formatElapsedTime(90)).toBe('+1.5H');
+      expect(formatElapsedTime(120)).toBe('+2.0H');
+    });
+  });
+
   describe('ChronoSuite component', () => {
     it('renders null when showClock is false', async () => {
       const root = createRoot(container);
@@ -47,6 +62,43 @@ describe('ChronoSuite & Clock Formatter', () => {
       });
 
       expect(container.children.length).toBe(0);
+    });
+
+    it('applies elegant serif font for manuscript, paperwhite, and overcast themes', async () => {
+      const serifThemes = ['typewriter', 'high-contrast', 'low-contrast'] as const;
+
+      for (const theme of serifThemes) {
+        const root = createRoot(container);
+        await act(async () => {
+          root.render(<ChronoSuite showClock={true} colorScheme={theme} />);
+        });
+
+        const wrapper = container.querySelector('div');
+        expect(wrapper?.className).toContain('font-serif-clock');
+
+        await act(async () => {
+          root.unmount();
+        });
+      }
+    });
+
+    it('keeps mono font for terminal, spotlight, and charcoal themes', async () => {
+      const monoThemes = ['dark-amber', 'spotlight', 'dark-mode'] as const;
+
+      for (const theme of monoThemes) {
+        const root = createRoot(container);
+        await act(async () => {
+          root.render(<ChronoSuite showClock={true} colorScheme={theme} />);
+        });
+
+        const wrapper = container.querySelector('div');
+        expect(wrapper?.className).toContain('font-mono');
+        expect(wrapper?.className).not.toContain('font-serif-clock');
+
+        await act(async () => {
+          root.unmount();
+        });
+      }
     });
 
     it('renders clock time 100% larger and updates on timer intervals', async () => {
@@ -71,7 +123,7 @@ describe('ChronoSuite & Clock Formatter', () => {
       expect(container.textContent).toMatch(/10:16/);
     });
 
-    it('stamps session timer on clock click and positions badge absolutely above clock', async () => {
+    it('stamps session timer on clock click and positions badge justified above clock', async () => {
       vi.setSystemTime(new Date(2026, 8, 17, 14, 0, 0));
 
       const root = createRoot(container);
@@ -93,17 +145,18 @@ describe('ChronoSuite & Clock Formatter', () => {
       const badgeBtn = container.querySelector('button[aria-label*="Session timer started"]');
       expect(badgeBtn).not.toBeNull();
       expect(badgeBtn?.getAttribute('title')).toBeNull();
-      // Verify non-shifting absolute positioning above clock and slide-up animation
+      // Verify non-shifting left-justified positioning above clock and slide-up animation
       expect(badgeBtn?.className).toContain('absolute');
       expect(badgeBtn?.className).toContain('bottom-full');
+      expect(badgeBtn?.className).toContain('left-0');
       expect(badgeBtn?.className).toContain('animate-timer-slide-up');
 
-      // Advance time by 25 minutes
+      // Advance time by 66 minutes -> should display +1.1H
       await act(async () => {
-        vi.advanceTimersByTime(25 * 60 * 1000);
+        vi.advanceTimersByTime(66 * 60 * 1000);
       });
 
-      expect(container.textContent).toContain('+25m');
+      expect(container.textContent).toContain('+1.1H');
 
       // Clicking the badge dismisses the timer
       await act(async () => {

@@ -64,7 +64,12 @@ export const SessionTargetTracker: React.FC = React.memo(function SessionTargetT
   return (
     <div
       ref={containerRef}
-      style={{ height: `${barHeight}px` }}
+      style={{
+        height: `${barHeight}px`,
+        transform: 'translateZ(0)',
+        willChange: 'opacity',
+        contain: 'layout paint',
+      }}
       className="w-full flex flex-row items-stretch gap-0 border border-border/60 rounded-t-[2px] overflow-hidden bg-background/30 pointer-events-none select-none"
     >
       {Array.from({ length: boxCount }).map((_, idx) => {
