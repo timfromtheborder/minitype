@@ -68,55 +68,53 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
 }) => {
   const [now, setNow] = useState<Date>(() => new Date());
   const [timerStartTime, setTimerStartTime] = useState<number | null>(null);
-  const [pomodoroPhase, setPomodoroPhase] = useState<'work' | 'break'>('work');
-  const [pomodoroSeconds, setPomodoroSeconds] = useState<number>(25 * 60);
   const [isMounted, setIsMounted] = useState<boolean>(false);
 
-  // Update clock and countdown every second
+  // Update clock and countdown continuously in realtime every second
   useEffect(() => {
     setIsMounted(true);
     setNow(new Date());
     const timer = setInterval(() => {
       setNow(new Date());
-      setPomodoroSeconds((prev) => {
-        if (timerStartTime === null || isPaused) return prev;
-        if (prev > 1) {
-          return prev - 1;
-        }
-        // At 0: transition between work (25m) and break (5m)
-        if (pomodoroPhase === 'work') {
-          setPomodoroPhase('break');
-          return 5 * 60;
-        } else {
-          setPomodoroPhase('work');
-          return 25 * 60;
-        }
-      });
     }, 1000);
     return () => clearInterval(timer);
-  }, [timerStartTime, isPaused, pomodoroPhase]);
+  }, []);
 
   const elapsedMinutes = useMemo(() => {
     if (!timerStartTime) return 0;
     return Math.max(0, Math.floor((now.getTime() - timerStartTime) / 60000));
   }, [timerStartTime, now]);
 
+  // Pomodoro countdown derived continuously in realtime from wall-clock time
+  const { pomodoroPhase, pomodoroSeconds } = useMemo(() => {
+    if (timerStartTime === null) {
+      return { pomodoroPhase: 'work' as const, pomodoroSeconds: 25 * 60 };
+    }
+    const elapsedSeconds = Math.max(0, Math.floor((now.getTime() - timerStartTime) / 1000));
+    const cycleSeconds = elapsedSeconds % (30 * 60); // 30-minute recurring loop (25m work, 5m break)
+    if (cycleSeconds < 25 * 60) {
+      return {
+        pomodoroPhase: 'work' as const,
+        pomodoroSeconds: 25 * 60 - cycleSeconds,
+      };
+    } else {
+      return {
+        pomodoroPhase: 'break' as const,
+        pomodoroSeconds: 30 * 60 - cycleSeconds,
+      };
+    }
+  }, [timerStartTime, now]);
+
   const handleClockClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     // Tapping clock stamps start time in snapshot mode or restarts at 25:00 in pomodoro mode
     setTimerStartTime(Date.now());
-    if (timerStyle === 'pomodoro') {
-      setPomodoroPhase('work');
-      setPomodoroSeconds(25 * 60);
-    }
-  }, [timerStyle]);
+  }, []);
 
   const handleTimerBadgeClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     // Tapping timer badge dismisses/clears it
     setTimerStartTime(null);
-    setPomodoroPhase('work');
-    setPomodoroSeconds(25 * 60);
   }, []);
 
   if (!showClock) {

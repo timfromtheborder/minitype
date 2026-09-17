@@ -285,5 +285,28 @@ describe('ChronoSuite & Clock Formatter', () => {
       expect(container.querySelector('button[aria-label*="Pomodoro countdown"]')).toBeNull();
       expect(container.querySelector('button[aria-label*="Pomodoro break"]')).toBeNull();
     });
+
+    it('pomodoro timer continues counting down in realtime even when isPaused is true (modals open)', async () => {
+      const root = createRoot(container);
+      await act(async () => {
+        root.render(<ChronoSuite showClock={true} timerStyle="pomodoro" isPaused={true} />);
+      });
+
+      const clockBtn = container.querySelector('button[aria-label*="time"]');
+      await act(async () => {
+        clockBtn?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      });
+
+      const badgeBtn = container.querySelector('button[aria-label*="Pomodoro countdown"]');
+      expect(badgeBtn?.textContent).toBe('25:00');
+
+      // Advance 120 seconds while isPaused={true}
+      await act(async () => {
+        vi.advanceTimersByTime(120 * 1000);
+      });
+
+      // Should have advanced 2 minutes in realtime (23:00)
+      expect(badgeBtn?.textContent).toBe('23:00');
+    });
   });
 });

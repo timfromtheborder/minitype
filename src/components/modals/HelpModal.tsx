@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { HelpCircle, CornerUpLeft, Terminal, Type, Clock, Settings, Layers, ShieldCheck, Zap } from 'lucide-react';
+import { HelpCircle, CornerUpLeft, HardDrive, Settings, Terminal } from 'lucide-react';
 
 export interface HelpModalProps {
   isOpen: boolean;
@@ -67,7 +67,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
       <div
         ref={modalRef}
         tabIndex={-1}
-        className="w-full max-w-3xl h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] landscape:h-[calc(100dvh-3.5rem)] landscape:max-h-[calc(100dvh-3.5rem)] sm:h-[620px] sm:max-h-[620px] my-auto rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-col select-none relative overflow-hidden p-3 sm:p-5 gap-3 focus:outline-none"
+        className="w-full max-w-2xl h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] landscape:h-[calc(100dvh-3.5rem)] landscape:max-h-[calc(100dvh-3.5rem)] sm:h-[580px] sm:max-h-[580px] my-auto rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-col select-none relative overflow-hidden p-3 sm:p-5 gap-3 focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header: Unified Icon, Label & Return Button */}
@@ -92,124 +92,82 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Scrollable Content Stream */}
-        <div className="flex-1 overflow-y-auto square-scrollbar pr-1 flex flex-col gap-6 text-xs font-sans text-foreground/90 select-text leading-relaxed">
-          {/* Section 1: The Minitype Method */}
+        <div className="flex-1 overflow-y-auto square-scrollbar pr-1 flex flex-col gap-5 text-xs font-sans text-foreground/90 select-text leading-relaxed">
+          {/* Section 1: Saving, Importing & Exporting */}
           <section className="flex flex-col gap-2">
             <div className="flex items-center gap-2 text-primary font-semibold text-xs tracking-wider uppercase">
-              <Zap className="w-3.5 h-3.5" />
-              <h3>The Minitype Method</h3>
+              <HardDrive className="w-3.5 h-3.5" />
+              <h3>Saving, Import & Export</h3>
             </div>
-            <p className="text-foreground/80">
-              Minitype is a distraction-free, forward-momentum drafting tool modeled on mechanical typewriter constraints. It is designed to silence the inner editor and build uninterrupted writing flow.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-[11px]">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
               <div className="p-2.5 rounded-[2px] border border-border/70 bg-muted/20 flex flex-col gap-1">
-                <span className="font-semibold text-foreground">Strict Monospace Grid</span>
-                <span className="text-foreground/70">Locked to exactly 70 columns (35 in mobile portrait). No native text boxes, inputs, or contenteditables.</span>
+                <span className="font-semibold text-foreground">Local Auto-Save</span>
+                <span className="text-foreground/75 leading-normal">
+                  All text saves automatically to your browser (LocalStorage and IndexedDB) on every keystroke. Works completely offline without an account.
+                </span>
               </div>
               <div className="p-2.5 rounded-[2px] border border-border/70 bg-muted/20 flex flex-col gap-1">
-                <span className="font-semibold text-foreground">No Pointer / No Paste</span>
-                <span className="text-foreground/70">Clicking the aperture will not move the cursor. Clipboard pasting is blocked to protect raw writing momentum.</span>
+                <span className="font-semibold text-foreground">Exporting</span>
+                <span className="text-foreground/75 leading-normal">
+                  Download clean <code className="font-mono text-[10px]">.txt</code> plaintext from Document or Project modals. Download full project/library <code className="font-mono text-[10px]">.json</code> backups from Project.
+                </span>
+              </div>
+              <div className="p-2.5 rounded-[2px] border border-border/70 bg-muted/20 flex flex-col gap-1">
+                <span className="font-semibold text-foreground">Importing</span>
+                <span className="text-foreground/75 leading-normal">
+                  Restore previously exported <code className="font-mono text-[10px]">.json</code> project/library backups or import <code className="font-mono text-[10px]">.txt</code> files from the Project modal.
+                </span>
               </div>
             </div>
           </section>
 
-          {/* Section 2: Strikeout & Backspace Mechanics */}
-          <section className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-primary font-semibold text-xs tracking-wider uppercase">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <h3>Backspace & Strikeout Mechanics</h3>
-            </div>
-            <p className="text-foreground/80">
-              Backward character erasure is strictly disabled. The <kbd className="px-1 py-0.5 border border-border/80 bg-muted/40 rounded-[2px] font-mono text-[10px]">Delete</kbd> key is locked.
-            </p>
-            <ul className="list-disc list-inside space-y-1 text-foreground/75 text-[11px] pl-1">
-              <li>
-                <strong className="text-foreground">Highlight Mode:</strong> Pressing <kbd className="px-1 py-0.5 border border-border/80 bg-muted/40 rounded-[2px] font-mono text-[10px]">Backspace</kbd> steps backward cell-by-cell. Holding <kbd className="px-1 py-0.5 border border-border/80 bg-muted/40 rounded-[2px] font-mono text-[10px]">Alt</kbd> or <kbd className="px-1 py-0.5 border border-border/80 bg-muted/40 rounded-[2px] font-mono text-[10px]">Ctrl</kbd> steps word-by-word.
-              </li>
-              <li>
-                <strong className="text-foreground">Physical Strikeout:</strong> Typing any printable character or pressing <kbd className="px-1 py-0.5 border border-border/80 bg-muted/40 rounded-[2px] font-mono text-[10px]">Enter</kbd> permanently strikes through the highlighted cells (<code className="font-mono text-[11px]">---</code>), unhighlights, and resumes forward drafting.
-              </li>
-              <li>
-                <strong className="text-foreground">Carriage Return Cancel:</strong> Pressing Backspace on a fresh empty newline cancels the carriage return, plays a mechanical strike sound, and restores the cursor to the end of the previous line.
-              </li>
-            </ul>
-          </section>
-
-          {/* Section 3: Aperture & Page Modes */}
-          <section className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-primary font-semibold text-xs tracking-wider uppercase">
-              <Layers className="w-3.5 h-3.5" />
-              <h3>Aperture & Page Modes</h3>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
-              <div className="p-2.5 rounded-[2px] border border-border/70 bg-muted/20 flex flex-col gap-1">
-                <span className="font-semibold text-foreground">Scroll Mode</span>
-                <span className="text-foreground/70">Continuous drafting roll. When the aperture is full, the oldest line in the visible window fades to maintain forward focus.</span>
-              </div>
-              <div className="p-2.5 rounded-[2px] border border-border/70 bg-muted/20 flex flex-col gap-1">
-                <span className="font-semibold text-foreground">Notecard Mode</span>
-                <span className="text-foreground/70">Platen locks to exactly 10 lines per card, replicating index-card drafting. Your prior aperture height is restored when returning to Scroll mode.</span>
-              </div>
-            </div>
-          </section>
-
-          {/* Section 4: Sessions & Document Modal */}
-          <section className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-primary font-semibold text-xs tracking-wider uppercase">
-              <Type className="w-3.5 h-3.5" />
-              <h3>Sessions & Documents</h3>
-            </div>
-            <p className="text-foreground/80">
-              Minitype organizes your writing into immutable historical drafting sessions. Active sessions start lazily on your first typed character and are demarcated in the platen by inline dashed dividers.
-            </p>
-            <ul className="list-disc list-inside space-y-1 text-foreground/75 text-[11px] pl-1">
-              <li><strong className="text-foreground">Publishing Standard Counting:</strong> Word counts match MS Word / Scrivener standards, treating hyphens, em-dashes, and slashes as genuine word boundaries.</li>
-              <li><strong className="text-foreground">Document Modal:</strong> Press <kbd className="px-1 py-0.5 border border-border/80 bg-muted/40 rounded-[2px] font-mono text-[10px]">Ctrl + D</kbd> to inspect your full manuscript, toggle between Typewriter and Manuscript paragraph views, and close or start sessions.</li>
-              <li><strong className="text-foreground">Plaintext Export:</strong> Download your sanitized document anytime as a clean <code className="font-mono text-[11px]">.txt</code> file from the Document modal.</li>
-            </ul>
-          </section>
-
-          {/* Section 5: Clock & Pomodoro Suite */}
-          <section className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-primary font-semibold text-xs tracking-wider uppercase">
-              <Clock className="w-3.5 h-3.5" />
-              <h3>Clock & Timer Suite</h3>
-            </div>
-            <p className="text-foreground/80">
-              The clock in the top deck provides two distinct focus timer styles (configurable in Settings):
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
-              <div className="p-2.5 rounded-[2px] border border-border/70 bg-muted/20 flex flex-col gap-1">
-                <span className="font-semibold text-foreground">Snapshot Timer</span>
-                <span className="text-foreground/70">Clicking the clock stamps the start time and increments elapsed minutes (e.g. <code className="font-mono text-[10px]">10:40 +15</code>). Click badge to dismiss.</span>
-              </div>
-              <div className="p-2.5 rounded-[2px] border border-border/70 bg-muted/20 flex flex-col gap-1">
-                <span className="font-semibold text-foreground">Pomodoro Countdown</span>
-                <span className="text-foreground/70">25-minute focus countdown (<code className="font-mono text-[10px]">25:00</code>) with a 1-minute warning flash, followed by a 5-minute inverted break. Tap clock to restart at 25:00; tap badge to dismiss.</span>
-              </div>
-            </div>
-          </section>
-
-          {/* Section 6: Settings Guide */}
+          {/* Section 2: Settings Reference */}
           <section className="flex flex-col gap-2">
             <div className="flex items-center gap-2 text-primary font-semibold text-xs tracking-wider uppercase">
               <Settings className="w-3.5 h-3.5" />
-              <h3>Settings & Customization</h3>
+              <h3>Settings Reference</h3>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
-              <div className="p-2.5 rounded-[2px] border border-border/70 bg-muted/20 flex flex-col gap-1">
-                <span className="font-semibold text-foreground">Themes & Phosphor</span>
-                <span className="text-foreground/70">7 visual themes including Typewriter, Dark Amber, Spotlight, Dark Mode, High/Low Contrast, and customizable Phosphor CRT color palettes.</span>
+            <div className="border border-border/70 rounded-[2px] divide-y divide-border/50 text-[11px]">
+              <div className="p-2 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
+                <span className="font-semibold text-foreground sm:w-40 shrink-0">Aperture</span>
+                <span className="text-foreground/75">Number of visible drafting lines shown on screen (1 to 10 lines).</span>
               </div>
-              <div className="p-2.5 rounded-[2px] border border-border/70 bg-muted/20 flex flex-col gap-1">
-                <span className="font-semibold text-foreground">Sound & Aesthetics</span>
-                <span className="text-foreground/70">Procedural Web Audio synthesis for mechanical key strikes, carriage bells, and paper feed. Toggle text size (S–XL) and typefaces.</span>
+              <div className="p-2 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
+                <span className="font-semibold text-foreground sm:w-40 shrink-0">Text Size</span>
+                <span className="text-foreground/75">Font size scale for drafting (S, M, L, XL).</span>
+              </div>
+              <div className="p-2 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
+                <span className="font-semibold text-foreground sm:w-40 shrink-0">Page Mode</span>
+                <span className="text-foreground/75"><strong>Scroll</strong> for continuous drafting; <strong>Notecard</strong> for fixed 10-line index cards.</span>
+              </div>
+              <div className="p-2 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
+                <span className="font-semibold text-foreground sm:w-40 shrink-0">Theme</span>
+                <span className="text-foreground/75">Color palette (Manuscript, Spotlight, Paperwhite, Terminal, Overcast, Charcoal).</span>
+              </div>
+              <div className="p-2 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
+                <span className="font-semibold text-foreground sm:w-40 shrink-0">Show document stats</span>
+                <span className="text-foreground/75">Displays word, line, and page counts below the typing frame.</span>
+              </div>
+              <div className="p-2 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
+                <span className="font-semibold text-foreground sm:w-40 shrink-0">Session target tracker</span>
+                <span className="text-foreground/75">Sets a target word count with a live progress bar above the platen.</span>
+              </div>
+              <div className="p-2 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
+                <span className="font-semibold text-foreground sm:w-40 shrink-0">Show clock & Timer style</span>
+                <span className="text-foreground/75">Shows the clock above the platen. Choose <strong>Snapshot</strong> (tap clock to stamp time and count elapsed minutes) or <strong>Pomodoro</strong> (25m focus countdown followed by 5m break).</span>
+              </div>
+              <div className="p-2 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
+                <span className="font-semibold text-foreground sm:w-40 shrink-0">Allow backspace</span>
+                <span className="text-foreground/75">When enabled, Backspace steps backward to strike out text. When disabled, drafting is forward-only.</span>
+              </div>
+              <div className="p-2 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
+                <span className="font-semibold text-foreground sm:w-40 shrink-0">Typing sounds</span>
+                <span className="text-foreground/75">Mechanical typewriter audio effects for keystrokes, return bells, and line feeds.</span>
               </div>
             </div>
           </section>
 
-          {/* Section 7: Keyboard Shortcuts */}
+          {/* Section 3: Keyboard Shortcuts */}
           <section className="flex flex-col gap-2 pt-1">
             <div className="flex items-center gap-2 text-primary font-semibold text-xs tracking-wider uppercase">
               <Terminal className="w-3.5 h-3.5" />
@@ -287,7 +245,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
                   <tr>
                     <td className="p-2">Strike out highlighted text</td>
                     <td className="p-2 text-right font-mono">
-                      <kbd className="px-1.5 py-0.5 border border-border/80 bg-muted/30 rounded-[2px]">Any character</kbd>{' '}
+                      <kbd className="px-1.5 py-0.5 border border-border/80 bg-muted/30 rounded-[2px]">Any key</kbd>{' '}
                       <span className="opacity-50">or</span>{' '}
                       <kbd className="px-1.5 py-0.5 border border-border/80 bg-muted/30 rounded-[2px]">Enter</kbd>
                     </td>

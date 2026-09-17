@@ -41,14 +41,14 @@ describe('HelpModal', () => {
     expect(returnBtn).not.toBeNull();
     expect(returnBtn?.textContent).toContain('Return');
 
-    // Check key instructions sections
-    expect(container.textContent).toContain('The Minitype Method');
-    expect(container.textContent).toContain('Backspace & Strikeout Mechanics');
-    expect(container.textContent).toContain('Aperture & Page Modes');
-    expect(container.textContent).toContain('Sessions & Documents');
-    expect(container.textContent).toContain('Clock & Timer Suite');
-    expect(container.textContent).toContain('Settings & Customization');
+    // Check concise instructions sections
+    expect(container.textContent).toContain('Saving, Import & Export');
+    expect(container.textContent).toContain('Settings Reference');
     expect(container.textContent).toContain('Keyboard Shortcuts');
+
+    // Verify verbosity, method philosophy, and phosphor easter egg are omitted
+    expect(container.textContent).not.toContain('The Minitype Method');
+    expect(container.textContent).not.toContain('phosphor');
 
     // Check shortcuts table
     expect(container.textContent).toContain('Highlight character backward');
