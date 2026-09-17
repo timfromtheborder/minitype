@@ -17,7 +17,7 @@ This document outlines the near-term feature, polish, safety, architectural, per
 | **v0.9.7.6** | **Tier 2 (Pass A)** | Platen Rendering Optimization & Typing Engine Isolation | Zero-CLS platen, single-frame themes, cursor overlay | **Complete** |
 | **v0.9.7.6.1** | **Tier 2 (Pass B)** | Storage Architecture, Hydrator Consolidation & Batching | Unified hydrator parity, Dexie `bulkPut()`, schema typing | **Complete** |
 | **v0.9.7.6.2** | **Tier 2 (Pass C)** | Large-Scale Concurrency, Web Worker & Stress Profiling | 60k-word stress test, Web Worker background word count, platen windowing, instant Enter | **Complete** |
-| **v0.9.8.0** | **Pass C1** | Chrono Suite, Terminal Multi-Phosphor Easter Egg & Keyboard Shortcuts | Digital clock & session elapsed timer, color swatches, platen resize hotkeys | Future |
+| **v0.9.8.0** | **Pass C1** | Chrono Suite, Terminal Multi-Phosphor Easter Egg & Keyboard Shortcuts | Digital clock & session elapsed timer, color swatches, platen resize hotkeys | **Complete** |
 | **v0.9.8.1** | **Pass C2** | Unified Session Drawer, Redaction Blinders & 3-Deck Architecture | Document/Session tab merge, block masking `[█]`, 3-button deck, remove Paragraph mode | Future |
 
 ---
@@ -233,14 +233,17 @@ Post-Tier 2 milestone focusing on environmental immersion, writing session pacin
   * Tapping the timer badge itself dismisses/clears it away.
 
 ### 2. Expanded Keyboard Shortcuts & Platen Resize Controls
-* **Platen Capacity Adjustment:**
-  * `Cmd/Ctrl + [`: Shrink platen capacity (decrease aperture lines, down to 1).
-  * `Cmd/Ctrl + ]`: Expand platen capacity (increase aperture lines, up to 10).
+* **Direct Platen Height Selection:**
+  * `Cmd/Ctrl + 1` through `9`: Directly set platen capacity to 1–9 lines.
+  * `Cmd/Ctrl + 0`: Directly set platen capacity to 10 lines.
+* **Stepped Platen Capacity Adjustment:**
+  * `Cmd/Ctrl + [`: Shrink platen capacity (decrease aperture lines, clamped down to 1).
+  * `Cmd/Ctrl + ]`: Expand platen capacity (increase aperture lines, clamped up to 10).
 * **Modal & Action Shortcuts:**
   * `Cmd/Ctrl + P`: Open Project/Manuscript modal.
   * `Cmd/Ctrl + ,`: Open Settings drawer.
   * `Cmd/Ctrl + Shift + N`: Start a new drafting session.
-  * All keyboard shortcuts respect active dialog states and input field focus.
+  * All keyboard shortcuts respect active dialog states, input field focus, and IME composition.
 
 ### 3. Terminal Multi-Phosphor Easter Egg Color Picker
 * **Interactive Palette Selector:**

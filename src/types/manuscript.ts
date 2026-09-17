@@ -18,6 +18,8 @@ export type TextSize = 's' | 'm' | 'l' | 'xl';
 export type ManuscriptMode = 'local';
 
 export type ScreenWakeLockPolicy = 'always' | '5-min' | 'off';
+export type PhosphorColor = 'amber' | 'green' | 'blue' | 'red';
+export type ClockFormat = '12h' | '24h';
 
 export interface ManuscriptManifest {
   id: string;
@@ -41,6 +43,9 @@ export interface ManuscriptManifest {
   doubleSpaceLinebreaks?: boolean;
   allowStrikeout?: boolean;
   keepScreenAwake?: ScreenWakeLockPolicy;
+  showClock?: boolean;
+  clockFormat?: ClockFormat;
+  phosphorColor?: PhosphorColor;
   activeSessionId?: string;
   sessionCount?: number;
   totalWordCount?: number;

@@ -119,6 +119,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                   if (finalS.allowStrikeout !== undefined) {
                     document.documentElement.setAttribute('data-allow-strikeout', String(finalS.allowStrikeout));
                   }
+                  if (finalS.showClock !== undefined) {
+                    document.documentElement.setAttribute('data-show-clock', String(finalS.showClock));
+                  }
+                  if (finalS.clockFormat) {
+                    document.documentElement.setAttribute('data-clock-format', String(finalS.clockFormat));
+                  }
+                  if (finalS.phosphorColor) {
+                    document.documentElement.setAttribute('data-phosphor', String(finalS.phosphorColor));
+                  }
                   if (candidates[0] && candidates[0].t) {
                     document.documentElement.setAttribute('data-updated-at', String(candidates[0].t));
                   }

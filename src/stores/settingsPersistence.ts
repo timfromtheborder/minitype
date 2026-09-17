@@ -14,6 +14,9 @@ export const SETTING_KEYS = [
   'showSessionTargetTracker',
   'doubleSpaceLinebreaks',
   'allowStrikeout',
+  'showClock',
+  'clockFormat',
+  'phosphorColor',
 ] as const;
 
 export const SETTINGS_KEY = 'minitype_global_settings';
@@ -40,6 +43,9 @@ export const DEFAULT_MANIFEST: ManuscriptManifest = {
   sessionWordTarget: undefined,
   doubleSpaceLinebreaks: false,
   allowStrikeout: true,
+  showClock: true,
+  clockFormat: '12h',
+  phosphorColor: 'amber',
   sessionCount: 0,
   totalWordCount: 0,
   createdAt: '2026-01-01T00:00:00.000Z',
@@ -136,6 +142,9 @@ export function readSynchronousSettings(): (Partial<ManuscriptManifest> & { _upd
       const doubleSpace = document.documentElement.getAttribute('data-double-space');
       const allowStrikeout = document.documentElement.getAttribute('data-allow-strikeout');
       const keepScreenAwake = document.documentElement.getAttribute('data-keep-screen-awake') as any;
+      const showClock = document.documentElement.getAttribute('data-show-clock');
+      const clockFormat = document.documentElement.getAttribute('data-clock-format') as any;
+      const phosphorColor = document.documentElement.getAttribute('data-phosphor') as any;
 
       const fallback: any = { _updatedAt: parseInt(updatedAt, 10) };
       if (theme) fallback.colorScheme = theme;
@@ -147,6 +156,9 @@ export function readSynchronousSettings(): (Partial<ManuscriptManifest> & { _upd
       if (doubleSpace !== null && doubleSpace !== undefined) fallback.doubleSpaceLinebreaks = doubleSpace === 'true';
       if (allowStrikeout !== null && allowStrikeout !== undefined) fallback.allowStrikeout = allowStrikeout === 'true';
       if (keepScreenAwake) fallback.keepScreenAwake = keepScreenAwake;
+      if (showClock !== null && showClock !== undefined) fallback.showClock = showClock === 'true';
+      if (clockFormat) fallback.clockFormat = clockFormat;
+      if (phosphorColor) fallback.phosphorColor = phosphorColor;
       return fallback;
     }
   }
@@ -267,6 +279,9 @@ export function persistSettings(manifest: Partial<ManuscriptManifest>): void {
       setAttrIfChanged('data-double-space', merged.doubleSpaceLinebreaks);
       setAttrIfChanged('data-allow-strikeout', merged.allowStrikeout);
       setAttrIfChanged('data-keep-screen-awake', merged.keepScreenAwake);
+      setAttrIfChanged('data-show-clock', merged.showClock);
+      setAttrIfChanged('data-clock-format', merged.clockFormat);
+      setAttrIfChanged('data-phosphor', merged.phosphorColor);
       setAttrIfChanged('data-updated-at', merged._updatedAt);
     }
   } catch (e) {

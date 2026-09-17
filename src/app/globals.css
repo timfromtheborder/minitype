@@ -82,7 +82,8 @@
 }
 
 /* 2. Dark Amber (CRT phosphor amber terminal) */
-[data-theme="dark-amber"] {
+[data-theme="dark-amber"],
+[data-theme="dark-amber"][data-phosphor="amber"] {
   --background: #121212;
   --foreground: #FFB000;
   --card: #1A1710;
@@ -105,6 +106,81 @@
   --highlight-text: #FFDE7A;
   --struck-color: #FF453A;
   --cursor-color: #FFB000;
+}
+
+[data-theme="dark-amber"][data-phosphor="green"] {
+  --background: #121212;
+  --foreground: #33FF33;
+  --card: #101A10;
+  --card-foreground: #33FF33;
+  --popover: #0E180E;
+  --popover-foreground: #33FF33;
+  --primary: #33FF33;
+  --primary-foreground: #121212;
+  --secondary: #102610;
+  --secondary-foreground: #33FF33;
+  --muted: #0D240D;
+  --muted-foreground: #22AA22;
+  --accent: #083308;
+  --accent-foreground: #33FF33;
+  --destructive: #FF453A;
+  --border: #0B3D0B;
+  --input: #0B3D0B;
+  --ring: #33FF33;
+  --highlight-bg: #004A00;
+  --highlight-text: #A3FFA3;
+  --struck-color: #FF453A;
+  --cursor-color: #33FF33;
+}
+
+[data-theme="dark-amber"][data-phosphor="blue"] {
+  --background: #121212;
+  --foreground: #00E5FF;
+  --card: #10181A;
+  --card-foreground: #00E5FF;
+  --popover: #0E1618;
+  --popover-foreground: #00E5FF;
+  --primary: #00E5FF;
+  --primary-foreground: #121212;
+  --secondary: #102326;
+  --secondary-foreground: #00E5FF;
+  --muted: #0D2124;
+  --muted-foreground: #0099B3;
+  --accent: #082D33;
+  --accent-foreground: #00E5FF;
+  --destructive: #FF453A;
+  --border: #0B363D;
+  --input: #0B363D;
+  --ring: #00E5FF;
+  --highlight-bg: #003B47;
+  --highlight-text: #B3F7FF;
+  --struck-color: #FF453A;
+  --cursor-color: #00E5FF;
+}
+
+[data-theme="dark-amber"][data-phosphor="red"] {
+  --background: #121212;
+  --foreground: #FF3B30;
+  --card: #1A1010;
+  --card-foreground: #FF3B30;
+  --popover: #180E0E;
+  --popover-foreground: #FF3B30;
+  --primary: #FF3B30;
+  --primary-foreground: #121212;
+  --secondary: #261010;
+  --secondary-foreground: #FF3B30;
+  --muted: #240D0D;
+  --muted-foreground: #B3241C;
+  --accent: #330808;
+  --accent-foreground: #FF3B30;
+  --destructive: #FF8077;
+  --border: #3D0B0B;
+  --input: #3D0B0B;
+  --ring: #FF3B30;
+  --highlight-bg: #4A0000;
+  --highlight-text: #FFA39E;
+  --struck-color: #FF8077;
+  --cursor-color: #FF3B30;
 }
 
 /* 3. Spotlight Theme: very dark gray bg, light-gray box, black font */

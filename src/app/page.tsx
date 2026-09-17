@@ -6,15 +6,23 @@ import { useWakeLock } from '@/hooks/useWakeLock';
 import { useTypingStore } from '@/stores/typingStore';
 import { ApertureFrame } from '@/components/aperture/ApertureFrame';
 import { DocumentStats } from '@/components/aperture/DocumentStats';
+import { ChronoSuite } from '@/components/aperture/ChronoSuite';
 import { SessionTargetTracker } from '@/components/stages/SessionTargetTracker';
 import { SettingsDrawer } from '@/components/modals/SettingsDrawer';
 import { PrintModal } from '@/components/modals/PrintModal';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { Settings, FileText, Check, Loader2 } from 'lucide-react';
 
 export default function Home() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   useTypingEngine({ isPaused: isPrintOpen || isSettingsOpen });
+
+  useKeyboardShortcuts({
+    isPaused: isPrintOpen || isSettingsOpen,
+    onToggleSettings: () => setIsSettingsOpen((p) => !p),
+    onToggleProject: () => setIsPrintOpen((p) => !p),
+  });
 
   const colorScheme = useTypingStore((s) => s.manifest.colorScheme);
   const textSize = useTypingStore((s) => s.manifest.textSize);
@@ -51,8 +59,17 @@ export default function Home() {
       if (pageMode && document.documentElement.getAttribute('data-page-mode') !== pageMode) {
         document.documentElement.setAttribute('data-page-mode', pageMode);
       }
+      if (manifest.phosphorColor && document.documentElement.getAttribute('data-phosphor') !== manifest.phosphorColor) {
+        document.documentElement.setAttribute('data-phosphor', manifest.phosphorColor);
+      }
+      if (manifest.showClock !== undefined && document.documentElement.getAttribute('data-show-clock') !== String(manifest.showClock)) {
+        document.documentElement.setAttribute('data-show-clock', String(manifest.showClock));
+      }
+      if (manifest.clockFormat && document.documentElement.getAttribute('data-clock-format') !== manifest.clockFormat) {
+        document.documentElement.setAttribute('data-clock-format', manifest.clockFormat);
+      }
     }
-  }, [colorScheme, textSize, activeApertureHeight, pageMode]);
+  }, [colorScheme, textSize, activeApertureHeight, pageMode, manifest.phosphorColor, manifest.showClock, manifest.clockFormat]);
 
 
   const handlePrintedComplete = React.useCallback(
@@ -76,6 +93,16 @@ export default function Home() {
       {/* Exactly Centered Monospace Aperture */}
       <section className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
         <div className="relative flex flex-col items-center">
+          {/* Chrono Suite (Digital Clock & Session Timer) */}
+          <div className="mb-2.5">
+            <ChronoSuite
+              showClock={manifest.showClock}
+              clockFormat={manifest.clockFormat}
+              typeface={manifest.typeface}
+              isPaused={isPrintOpen || isSettingsOpen}
+            />
+          </div>
+
           {/* Platen Container with anchored Target Tracker */}
           <div className="relative">
             {showSessionTargetTracker !== false && (sessionWordTarget ?? 0) > 0 && (
