@@ -682,6 +682,60 @@ class TypewriterAudio {
       osc2.stop(t2 + duration2 + 0.02);
     } catch {}
   }
+
+  /**
+   * Crystal clean descending two-tone chime when Pomodoro work session resumes.
+   * Exact reverse of the time's up chime: plays high tone (C6) then low tone (G5).
+   */
+  public playPomodoroResumeChime() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    try {
+      const t = ctx.currentTime;
+      const duration1 = 0.38;
+      const duration2 = 0.65;
+
+      // Note 1 (C6 - 1046.5Hz)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(1046.5, t);
+
+      // Smooth anti-click attack and complete fade to zero
+      gain1.gain.setValueAtTime(0.0001, t);
+      gain1.gain.linearRampToValueAtTime(0.15, t + 0.004);
+      gain1.gain.exponentialRampToValueAtTime(0.00005, t + duration1);
+      gain1.gain.linearRampToValueAtTime(0, t + duration1 + 0.01);
+
+      osc1.connect(gain1);
+      gain1.connect(this.getMasterBus(ctx));
+
+      // Note 2 (G5 - 783.99Hz) delayed by 120ms
+      const t2 = t + 0.12;
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(783.99, t2);
+
+      // Smooth anti-click attack and complete fade to zero
+      gain2.gain.setValueAtTime(0.0001, t2);
+      gain2.gain.linearRampToValueAtTime(0.13, t2 + 0.004);
+      gain2.gain.exponentialRampToValueAtTime(0.00005, t2 + duration2);
+      gain2.gain.linearRampToValueAtTime(0, t2 + duration2 + 0.01);
+
+      osc2.connect(gain2);
+      gain2.connect(this.getMasterBus(ctx));
+
+      this.cleanupNodes(osc1, gain1);
+      this.cleanupNodes(osc2, gain2);
+
+      osc1.start(t);
+      osc1.stop(t + duration1 + 0.02);
+      osc2.start(t2);
+      osc2.stop(t2 + duration2 + 0.02);
+    } catch {}
+  }
 }
 
 export const typewriterAudio = new TypewriterAudio();

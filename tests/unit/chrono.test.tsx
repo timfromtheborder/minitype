@@ -220,6 +220,7 @@ describe('ChronoSuite & Clock Formatter', () => {
       const beepSpy = vi.spyOn(typewriterAudio, 'playPomodoroBeep');
       const doubleBeepSpy = vi.spyOn(typewriterAudio, 'playPomodoroDoubleBeep');
       const chimeSpy = vi.spyOn(typewriterAudio, 'playPomodoroChime');
+      const resumeChimeSpy = vi.spyOn(typewriterAudio, 'playPomodoroResumeChime');
 
       const root = createRoot(container);
       await act(async () => {
@@ -269,14 +270,14 @@ describe('ChronoSuite & Clock Formatter', () => {
       expect(badgeBtn?.textContent).toBe('01:00');
       expect(chimeSpy).toHaveBeenCalledTimes(1);
 
-      // Advance 60 seconds to complete break and resume work session -> single beep played
+      // Advance 60 seconds to complete break and resume work session -> reversed chime played
       await act(async () => {
         vi.advanceTimersByTime(60 * 1000);
       });
       badgeBtn = container.querySelector('button[aria-label*="Pomodoro countdown"]');
       expect(badgeBtn).not.toBeNull();
       expect(badgeBtn?.textContent).toBe('02:00');
-      expect(beepSpy).toHaveBeenCalledTimes(1);
+      expect(resumeChimeSpy).toHaveBeenCalledTimes(1);
 
       // Clicking the clock restarts pomodoro at 02:00 work phase
       await act(async () => {
@@ -296,6 +297,7 @@ describe('ChronoSuite & Clock Formatter', () => {
       beepSpy.mockRestore();
       doubleBeepSpy.mockRestore();
       chimeSpy.mockRestore();
+      resumeChimeSpy.mockRestore();
     });
 
     it('renders theme-specific break badge styling for manuscript, paperwhite, and newsprint', async () => {
@@ -339,6 +341,7 @@ describe('ChronoSuite & Clock Formatter', () => {
       const beepSpy = vi.spyOn(typewriterAudio, 'playPomodoroBeep');
       const doubleBeepSpy = vi.spyOn(typewriterAudio, 'playPomodoroDoubleBeep');
       const chimeSpy = vi.spyOn(typewriterAudio, 'playPomodoroChime');
+      const resumeChimeSpy = vi.spyOn(typewriterAudio, 'playPomodoroResumeChime');
 
       const root = createRoot(container);
       await act(async () => {
@@ -358,10 +361,12 @@ describe('ChronoSuite & Clock Formatter', () => {
       expect(beepSpy).not.toHaveBeenCalled();
       expect(doubleBeepSpy).not.toHaveBeenCalled();
       expect(chimeSpy).not.toHaveBeenCalled();
+      expect(resumeChimeSpy).not.toHaveBeenCalled();
 
       beepSpy.mockRestore();
       doubleBeepSpy.mockRestore();
       chimeSpy.mockRestore();
+      resumeChimeSpy.mockRestore();
     });
 
     it('pomodoro timer continues counting down in realtime even when isPaused is true (modals open)', async () => {

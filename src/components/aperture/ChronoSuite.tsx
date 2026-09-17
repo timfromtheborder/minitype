@@ -115,8 +115,8 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
 
   // Pomodoro Audio Alerts:
   // - 1-minute remaining warning: double heart monitor bleep
-  // - Time's up (work hits 0, transitions to break): two-tone chime
-  // - Actual resume (break hits 0, work resumes): single heart monitor bleep
+  // - Time's up (work hits 0, transitions to break): two-tone chime (G5 -> C6)
+  // - Actual resume (break hits 0, work resumes): reversed two-tone chime (C6 -> G5)
   const prevPhaseRef = useRef<'work' | 'break' | null>(null);
   const hasPlayedBeepRef = useRef<boolean>(false);
   const prevStartTimeRef = useRef<number | null>(null);
@@ -158,9 +158,9 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
         }
         hasPlayedBeepRef.current = false;
       } else if (prevPhaseRef.current === 'break' && pomodoroPhase === 'work') {
-        // Break hit 0 and resumed work session (actual resume): single beep
+        // Break hit 0 and resumed work session (actual resume): reversed chime
         if (pomodoroSoundEnabled !== false) {
-          typewriterAudio.playPomodoroBeep();
+          typewriterAudio.playPomodoroResumeChime();
         }
         hasPlayedBeepRef.current = false;
       }
