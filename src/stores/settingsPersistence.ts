@@ -172,6 +172,13 @@ export function persistSettings(manifest: Partial<ManuscriptManifest>): void {
     const settings = extractSettings(manifest);
     if (Object.keys(settings).length === 0) return;
 
+    // Instantaneous paint: update theme attribute immediately on document before serialization
+    if (typeof document !== 'undefined' && settings.colorScheme) {
+      if (document.documentElement.getAttribute('data-theme') !== settings.colorScheme) {
+        document.documentElement.setAttribute('data-theme', settings.colorScheme);
+      }
+    }
+
     // Invalidate in-memory cache if localStorage was cleared
     let existing = inMemorySettingsCache;
     try {
@@ -238,35 +245,26 @@ export function persistSettings(manifest: Partial<ManuscriptManifest>): void {
       navigator.storage.persist().catch(() => {});
     }
 
-    // 7. Synchronous DOM attribute updates
+    // 7. Synchronous DOM attribute updates (diffed to avoid redundant style invalidations)
     if (typeof document !== 'undefined') {
-      if (merged.colorScheme) {
-        document.documentElement.setAttribute('data-theme', merged.colorScheme);
-      }
-      if (merged.textSize) {
-        document.documentElement.setAttribute('data-text-size', merged.textSize);
-      }
-      if (merged.activeApertureHeight) {
-        document.documentElement.setAttribute('data-aperture-height', String(merged.activeApertureHeight));
-      }
-      if (merged.pageMode) {
-        document.documentElement.setAttribute('data-page-mode', merged.pageMode);
-      }
-      if (merged.pageSize) {
-        document.documentElement.setAttribute('data-page-size', String(merged.pageSize));
-      }
-      if (merged.showStats !== undefined) {
-        document.documentElement.setAttribute('data-show-stats', String(merged.showStats));
-      }
-      if (merged.doubleSpaceLinebreaks !== undefined) {
-        document.documentElement.setAttribute('data-double-space', String(merged.doubleSpaceLinebreaks));
-      }
-      if (merged.allowStrikeout !== undefined) {
-        document.documentElement.setAttribute('data-allow-strikeout', String(merged.allowStrikeout));
-      }
-      if (merged._updatedAt) {
-        document.documentElement.setAttribute('data-updated-at', String(merged._updatedAt));
-      }
+      const setAttrIfChanged = (name: string, val: any) => {
+        if (val !== undefined && val !== null) {
+          const str = String(val);
+          if (document.documentElement.getAttribute(name) !== str) {
+            document.documentElement.setAttribute(name, str);
+          }
+        }
+      };
+
+      setAttrIfChanged('data-theme', merged.colorScheme);
+      setAttrIfChanged('data-text-size', merged.textSize);
+      setAttrIfChanged('data-aperture-height', merged.activeApertureHeight);
+      setAttrIfChanged('data-page-mode', merged.pageMode);
+      setAttrIfChanged('data-page-size', merged.pageSize);
+      setAttrIfChanged('data-show-stats', merged.showStats);
+      setAttrIfChanged('data-double-space', merged.doubleSpaceLinebreaks);
+      setAttrIfChanged('data-allow-strikeout', merged.allowStrikeout);
+      setAttrIfChanged('data-updated-at', merged._updatedAt);
     }
   } catch (e) {
     console.error('Failed to save settings:', e);

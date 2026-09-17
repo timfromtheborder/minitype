@@ -30,19 +30,22 @@ export default function Home() {
   const activeApertureHeight = useTypingStore((s) => s.manifest.activeApertureHeight);
   const pageMode = useTypingStore((s) => s.manifest.pageMode);
 
+  const handleCloseSettings = React.useCallback(() => setIsSettingsOpen(false), []);
+  const handleClosePrint = React.useCallback(() => setIsPrintOpen(false), []);
+
   // Sync active palette data-theme, data-text-size, data-aperture-height, and data-page-mode attribute with document root
   useEffect(() => {
     if (typeof document !== 'undefined') {
-      if (colorScheme) {
+      if (colorScheme && document.documentElement.getAttribute('data-theme') !== colorScheme) {
         document.documentElement.setAttribute('data-theme', colorScheme);
       }
-      if (textSize) {
+      if (textSize && document.documentElement.getAttribute('data-text-size') !== textSize) {
         document.documentElement.setAttribute('data-text-size', textSize);
       }
-      if (activeApertureHeight) {
+      if (activeApertureHeight && document.documentElement.getAttribute('data-aperture-height') !== String(activeApertureHeight)) {
         document.documentElement.setAttribute('data-aperture-height', String(activeApertureHeight));
       }
-      if (pageMode) {
+      if (pageMode && document.documentElement.getAttribute('data-page-mode') !== pageMode) {
         document.documentElement.setAttribute('data-page-mode', pageMode);
       }
     }
@@ -65,7 +68,7 @@ export default function Home() {
   return (
     <main
       suppressHydrationWarning
-      className="relative w-full h-[100dvh] max-h-[100dvh] overflow-hidden p-2.5 sm:p-6 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] transition-colors duration-300 bg-background text-foreground font-sans select-none"
+      className="relative w-full h-[100dvh] max-h-[100dvh] overflow-hidden p-2.5 sm:p-6 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] bg-background text-foreground font-sans select-none"
     >
       {/* Exactly Centered Monospace Aperture */}
       <section className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
@@ -143,7 +146,7 @@ export default function Home() {
       {/* Settings Drawer Modal */}
       <SettingsDrawer
         isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
+        onClose={handleCloseSettings}
         manifest={manifest}
         onUpdateHeight={setApertureHeight}
         onUpdatePageSize={setPageSize}
@@ -153,7 +156,7 @@ export default function Home() {
       {/* Project Modal */}
       <PrintModal
         isOpen={isPrintOpen}
-        onClose={() => setIsPrintOpen(false)}
+        onClose={handleClosePrint}
         onPrintedComplete={handlePrintedComplete}
         onClearText={clearText}
       />

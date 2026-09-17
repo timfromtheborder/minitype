@@ -243,7 +243,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                     key={scheme.id}
                     type="button"
                     onClick={() => onUpdateManifest({ colorScheme: scheme.id as ColorScheme })}
-                    className={`py-2 px-3 rounded-[2px] border text-left flex items-center justify-between transition-all cursor-pointer ${
+                    className={`py-2 px-3 rounded-[2px] border text-left flex items-center justify-between transition-colors duration-100 cursor-pointer ${
                       isSelected
                         ? 'border-primary ring-1 ring-primary bg-primary/10 text-foreground font-semibold shadow-xs'
                         : 'border-border/80 hover:bg-muted/60 text-muted-foreground hover:text-foreground'
@@ -265,7 +265,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
 
                     {/* Functional Square Radio Button Indicator */}
                     <div
-                      className={`w-3.5 h-3.5 rounded-[2px] border flex items-center justify-center transition-all shrink-0 ml-1.5 ${
+                      className={`w-3.5 h-3.5 rounded-[2px] border flex items-center justify-center transition-colors duration-100 shrink-0 ml-1.5 ${
                         isSelected
                           ? 'border-primary bg-primary'
                           : 'border-muted-foreground/40 bg-transparent'
@@ -395,7 +395,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.7.5
+              Minitype v0.9.7.5.1
             </span>
           </div>
         </div>

@@ -164,6 +164,8 @@ export interface ProjectSlice {
   syncSessionStats: (fullText?: string, words?: number) => void;
 }
 
+let debouncedSaveManuscriptTimer: ReturnType<typeof setTimeout> | null = null;
+
 export const createProjectSlice: StateCreator<
   TypingStore,
   [],
@@ -180,7 +182,19 @@ export const createProjectSlice: StateCreator<
       }
       const updated = { ...state.manifest, ...newManifest, mode: 'local' as const };
       persistSettings(updated);
-      saveManuscript(updated).catch(console.error);
+
+      if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'test') {
+        if (debouncedSaveManuscriptTimer) {
+          clearTimeout(debouncedSaveManuscriptTimer);
+        }
+        debouncedSaveManuscriptTimer = setTimeout(() => {
+          saveManuscript(updated).catch(console.error);
+          debouncedSaveManuscriptTimer = null;
+        }, 150);
+      } else {
+        saveManuscript(updated).catch(console.error);
+      }
+
       return { manifest: updated };
     });
   },
