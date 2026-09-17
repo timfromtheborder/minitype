@@ -78,4 +78,31 @@ describe('HelpModal', () => {
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('allows collapsing and expanding categories independently', async () => {
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(<HelpModal isOpen={true} onClose={vi.fn()} />);
+    });
+
+    const settingsBtn = Array.from(container.querySelectorAll('button')).find((btn) =>
+      btn.textContent?.includes('Settings Reference')
+    );
+    expect(settingsBtn).toBeDefined();
+    expect(container.textContent).toContain('Aperture');
+
+    // Click to collapse
+    await act(async () => {
+      settingsBtn?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(settingsBtn?.getAttribute('aria-expanded')).toBe('false');
+    expect(container.textContent).not.toContain('Aperture');
+
+    // Click to expand again
+    await act(async () => {
+      settingsBtn?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(settingsBtn?.getAttribute('aria-expanded')).toBe('true');
+    expect(container.textContent).toContain('Aperture');
+  });
 });

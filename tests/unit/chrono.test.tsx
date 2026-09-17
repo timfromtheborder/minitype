@@ -303,8 +303,8 @@ describe('ChronoSuite & Clock Formatter', () => {
 
       const themes = [
         { theme: 'typewriter' as const, expectedClass: 'bg-card' },
-        { theme: 'high-contrast' as const, expectedClass: 'bg-[#E6E6E6]' },
-        { theme: 'low-contrast' as const, expectedClass: 'bg-[#808080]' },
+        { theme: 'high-contrast' as const, expectedClass: 'bg-[#1A1A1A]' },
+        { theme: 'low-contrast' as const, expectedClass: 'bg-[#58626E]' },
         { theme: 'dark-mode' as const, expectedClass: 'bg-foreground' },
       ];
 
@@ -327,6 +327,7 @@ describe('ChronoSuite & Clock Formatter', () => {
         const badgeBtn = container.querySelector('button[aria-label*="Pomodoro break"]');
         expect(badgeBtn).not.toBeNull();
         expect(badgeBtn?.className).toContain(expectedClass);
+        expect(badgeBtn?.className).toContain('border-none');
 
         await act(async () => {
           root.unmount();

@@ -210,20 +210,20 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
           : 'font-mono';
 
   // Pomodoro break badge appearance:
-  // - manuscript (typewriter): matches platen bg (#EFE9DE) with dark text
-  // - paperwhite (high-contrast): 90% gray (#E6E6E6) with black text
-  // - newsprint (low-contrast): ~50% gray (#808080) with white text
-  // - others: inverted bg-foreground text-background
+  // - manuscript (typewriter): matches platen bg (#EFE9DE) with dark text, no border
+  // - paperwhite (high-contrast): 10% gray (#1A1A1A) with white text, no border
+  // - newsprint (low-contrast): slate-blue gray (#58626E) with white text to match theme color, no border
+  // - others: inverted bg-foreground text-background, no border
   const breakBadgeStyle = useMemo(() => {
     switch (effectiveColorScheme) {
       case 'typewriter':
-        return 'bg-card text-card-foreground border border-border/80';
+        return 'bg-card text-card-foreground border-none';
       case 'high-contrast':
-        return 'bg-[#E6E6E6] text-black border border-[#D0D0D0]';
+        return 'bg-[#1A1A1A] text-white border-none';
       case 'low-contrast':
-        return 'bg-[#808080] text-white border border-[#646A71]';
+        return 'bg-[#58626E] text-white border-none';
       default:
-        return 'bg-foreground text-background border border-transparent';
+        return 'bg-foreground text-background border-none';
     }
   }, [effectiveColorScheme]);
 
@@ -246,14 +246,14 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
           type="button"
           suppressHydrationWarning
           onClick={handleTimerBadgeClick}
-          className={`absolute bottom-full mb-2 left-0 text-left text-xl sm:text-2xl uppercase tracking-widest transition-all cursor-pointer shadow-none outline-none whitespace-nowrap animate-timer-slide-up select-none ${
+          className={`absolute bottom-full mb-2 left-0 text-left text-xl sm:text-2xl uppercase tracking-widest transition-all cursor-pointer border-none shadow-none outline-none whitespace-nowrap animate-timer-slide-up select-none ${
             isBreakPhase
               ? `${breakBadgeStyle} px-1.5 py-0.5 rounded-[2px] font-bold ${
                   isBreakMinuteFlash ? 'opacity-50' : 'opacity-100'
                 }`
               : isPomodoroWarning
-              ? 'border-none text-foreground font-bold animate-pulse p-0'
-              : 'border-none text-foreground/45 hover:text-foreground/60 p-0'
+              ? 'text-foreground font-bold animate-pulse p-0'
+              : 'text-foreground/45 hover:text-foreground/60 p-0'
           }`}
           aria-label={
             timerStyle === 'pomodoro'
