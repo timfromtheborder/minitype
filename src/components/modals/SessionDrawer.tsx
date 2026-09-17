@@ -14,6 +14,8 @@ import {
   Lock,
   Download,
   FileText,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
 import {
   countWords,
@@ -419,25 +421,59 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                 Session Target
               </div>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <input
-                  type="number"
-                  min={0}
-                  max={99999}
-                  step={50}
-                  placeholder="Off"
-                  value={sessionWordTarget && sessionWordTarget > 0 ? sessionWordTarget : ''}
-                  onChange={(e) => {
-                    const val = e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0);
-                    useTypingStore.getState().setManifest({ sessionWordTarget: val > 0 ? val : undefined });
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      window.getSelection()?.removeAllRanges();
-                    }
-                  }}
-                  className="w-16 sm:w-20 px-1.5 py-0.5 text-xs font-mono font-bold text-right rounded-[2px] border border-border/80 bg-background text-foreground focus:outline-hidden focus:border-primary"
-                  title="Target words per session (enter 0 or clear to turn off)"
-                />
+                <div className="h-[26px] flex items-center rounded-[2px] border border-border/80 bg-background focus-within:border-primary transition-colors overflow-hidden">
+                  <input
+                    type="number"
+                    min={0}
+                    max={99999}
+                    step={50}
+                    placeholder="Off"
+                    value={sessionWordTarget && sessionWordTarget > 0 ? sessionWordTarget : ''}
+                    onChange={(e) => {
+                      const val = e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0);
+                      useTypingStore.getState().setManifest({ sessionWordTarget: val > 0 ? val : undefined });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        window.getSelection()?.removeAllRanges();
+                      }
+                    }}
+                    className="w-14 sm:w-16 h-full px-1.5 text-xs font-mono font-bold text-right bg-transparent text-foreground focus:outline-hidden [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    title="Target words per session (enter 0 or clear to turn off)"
+                  />
+                  <div className="flex flex-col h-full border-l border-border/80 divide-y divide-border/60 shrink-0 w-4 sm:w-4.5 bg-muted/20">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const current = sessionWordTarget ?? 0;
+                        const next = Math.min(99999, Math.floor(current / 50) * 50 + 50);
+                        useTypingStore.getState().setManifest({ sessionWordTarget: next });
+                      }}
+                      className="flex-1 flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none"
+                      title="Increment target by 50"
+                      aria-label="Increment target"
+                    >
+                      <ChevronUp className="w-2.5 h-2.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const current = sessionWordTarget ?? 0;
+                        if (current <= 50) {
+                          useTypingStore.getState().setManifest({ sessionWordTarget: undefined });
+                        } else {
+                          const next = Math.max(50, Math.ceil(current / 50) * 50 - 50);
+                          useTypingStore.getState().setManifest({ sessionWordTarget: next });
+                        }
+                      }}
+                      className="flex-1 flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none"
+                      title="Decrement target by 50"
+                      aria-label="Decrement target"
+                    >
+                      <ChevronDown className="w-2.5 h-2.5" />
+                    </button>
+                  </div>
+                </div>
                 {sessionWordTarget && sessionWordTarget > 0 ? (
                   <button
                     type="button"

@@ -1374,4 +1374,64 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     });
     testContainer.remove();
   });
+
+  it('supports incrementing and decrementing session target with custom arrow buttons matching theme', async () => {
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+    const testContainer = document.createElement('div');
+    document.body.appendChild(testContainer);
+    const root = createRoot(testContainer);
+
+    useTypingStore.setState({
+      manifest: {
+        ...useTypingStore.getState().manifest,
+        sessionWordTarget: undefined,
+      },
+    });
+
+    await act(async () => {
+      root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
+    });
+
+    const incBtn = testContainer.querySelector('button[aria-label="Increment target"]') as HTMLButtonElement;
+    const decBtn = testContainer.querySelector('button[aria-label="Decrement target"]') as HTMLButtonElement;
+    const input = testContainer.querySelector('input[type="number"]') as HTMLInputElement;
+
+    expect(incBtn).not.toBeNull();
+    expect(decBtn).not.toBeNull();
+    expect(input).not.toBeNull();
+    expect(input.value).toBe('');
+
+    // Increment from Off -> 50
+    await act(async () => {
+      incBtn.click();
+    });
+    expect(useTypingStore.getState().manifest.sessionWordTarget).toBe(50);
+    expect(input.value).toBe('50');
+
+    // Increment again -> 100
+    await act(async () => {
+      incBtn.click();
+    });
+    expect(useTypingStore.getState().manifest.sessionWordTarget).toBe(100);
+    expect(input.value).toBe('100');
+
+    // Decrement -> 50
+    await act(async () => {
+      decBtn.click();
+    });
+    expect(useTypingStore.getState().manifest.sessionWordTarget).toBe(50);
+    expect(input.value).toBe('50');
+
+    // Decrement again -> Off (undefined)
+    await act(async () => {
+      decBtn.click();
+    });
+    expect(useTypingStore.getState().manifest.sessionWordTarget).toBeUndefined();
+    expect(input.value).toBe('');
+
+    await act(async () => {
+      root.unmount();
+    });
+    testContainer.remove();
+  });
 });
