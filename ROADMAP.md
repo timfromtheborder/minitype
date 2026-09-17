@@ -13,7 +13,7 @@ This document outlines the near-term feature, polish, safety, architectural, per
 | **v0.9.7.5.2** | **Pass B1** | Mobile Ergonomics, Orientation Clamping, Screen Wake Lock & PWA Readiness | Wake Lock API, PWA manifest, iOS app header, dialog focus traps, a11y | **Complete** |
 | **v0.9.7.5.3** | **Pass B1.1** | Lossless 70/35-Col Text Re-flow Engine | Bidirectional cell re-flow, exact cursor mapping, 0 scaling, round-trip fidelity | **Complete** |
 | **v0.9.7.5.4** | **Hotfix/Polish** | Wake Lock Permanence, File List Optimization & Target Isolation | 5-minute permanent wake lock, conditional modal rendering, target bug fix | **Complete** |
-| **v0.9.7.5.5** | **Pass B2** | Data Safety (Full Backup/Restore) & Manuscript View | Full-library JSON import/export, serif publishing layout | Planned |
+| **v0.9.7.5.5** | **Pass B2** | Data Safety (Full Backup & Restore) | Full-library JSON import/export archive | Planned |
 | **v0.9.7.6** | **Tier 2 (Pass A)** | Platen Rendering Optimization & Typing Engine Isolation | Zero-CLS platen, single-frame themes, cursor overlay | Planned |
 | **v0.9.7.6.1** | **Tier 2 (Pass B)** | Storage Architecture, Hydrator Consolidation & Batching | Unified hydrator parity, Dexie `bulkPut()`, schema typing | Planned |
 | **v0.9.7.6.2** | **Tier 2 (Pass C)** | Large-Scale Concurrency, Web Worker & Stress Profiling | 50k-word stress test, Web Worker background word count | Planned |
@@ -140,19 +140,13 @@ Polish and bugfix release focused on wake lock ergonomics, modal render isolatio
 
 ---
 
-## [v0.9.7.5.5] — Pass B2: Data Safety (Full Backup/Restore) & Manuscript View
+## [v0.9.7.5.5] — Pass B2: Data Safety (Full Backup & Restore)
 
-Dedicated pass to implement full-library backup/restore and publisher-standard reader preview layout.
+Dedicated pass to implement full-library backup and restore:
 
 ### 1. Data Safety: Whole-Library JSON Backup & Restore
 * **Catalog Export (Backup All):** Add a single-click action in the Projects tab or Settings drawer that serializes all manuscripts, pages, sessions, and preferences from IndexedDB into a portable, timestamped `.json` archive.
 * **Catalog Import (Restore):** Allow uploading a backup `.json` file to restore or merge projects across devices without backend dependence. Includes schema validation, ID collision handling, and corrupt-data guardrails.
-
-### 2. Manuscript View Toggle (Document Tab)
-* **View Modes in Document Tab:** Add a segmented toggle in `PrintModal.tsx` between:
-  1. **Plaintext View:** Current monospace typewriter output.
-  2. **Manuscript View:** Formatted reader/publishing preview featuring traditional serif typography (e.g. Georgia / Times), 0.5-inch paragraph indentations, proportional line height (`1.5`–`1.6`), and clean paragraph separation.
-* **Export & Print Parity:** Ensure print stylesheets and copy actions respect the active view formatting.
 
 ---
 
@@ -267,7 +261,7 @@ Major architectural evolution uniting drafting history, manuscript preview, anti
   * **Metadata Headers:** Timestamps, dates, and word counts are displayed compactly along the top border of each session card.
 * **Unified Drawer Controls:**
   * Session target tracker, double-space toggle, and export/print actions are all cleanly integrated into this single drawer.
-  * Traditional serif **Manuscript View** toggle (with 0.5-inch paragraph indents and proportional line height) remains accessible directly within the drawer.
+  * **Manuscript View / Reader Mode Integration:** Folded into this milestone from Pass B2 to eliminate redundancy and layout overlap. Evaluates providing a traditional serif publishing preview (e.g. Georgia/Times, 0.5-inch paragraph indents, proportional `1.5`–`1.6` line height) directly within this drawer or establishing it as a dedicated full-manuscript view/compile mode entirely.
 * **Session Management:**
   * Add explicit **Close Session** action (finalizes the current drafting session without immediately starting a new one).
   * Add ability to reset/clear current session text or delete individual sessions with confirmation.
