@@ -182,9 +182,9 @@ export async function finalizeAndSaveCurrentProject(get: any, set: any): Promise
       await saveSession(finalized).catch(console.error);
     }
 
-    // Save all surviving sessions to Dexie
-    for (const s of sessions) {
-      await saveSession(s).catch(console.error);
+    // Save all surviving sessions to Dexie via bulkPut
+    if (sessions.length > 0) {
+      await saveSessions(sessions).catch(console.error);
     }
   }
 
@@ -209,7 +209,7 @@ export async function finalizeAndSaveCurrentProject(get: any, set: any): Promise
       lines: freshState.currentPageLines,
       completedAt: null,
     };
-    await savePages([...freshState.historicalPages, curPage]).catch(console.error);
+    await savePage(curPage).catch(console.error);
     await pruneStalePagesForManuscript(freshState.manifest.id, freshState.currentPageNumber).catch(console.error);
   }
 
@@ -258,6 +258,7 @@ export const createPersistenceSlice: StateCreator<
       activeSessions: [],
       sessionCommittedLines: 0,
       isProjectDirty: false,
+      committedDocWords: 0,
     });
   },
 
@@ -403,17 +404,28 @@ export const createPersistenceSlice: StateCreator<
         if (snapshot.cleanText.trim() !== '' || (pages && pages.length > 0)) {
           // Prune stale pages from IndexedDB and sync valid pages
           await pruneStalePagesForManuscript(loadedManifest.id, snapshot.partitioned.currentPageNumber);
-          const allPagesToSave = [
-            ...snapshot.partitioned.historicalPages,
-            {
+          const completedPagesCount = (pages || []).filter((p) => p.completedAt !== null).length;
+          if (snapshot.partitioned.historicalPages.length !== completedPagesCount) {
+            const allPagesToSave = [
+              ...snapshot.partitioned.historicalPages,
+              {
+                id: `${loadedManifest.id}-page-${snapshot.partitioned.currentPageNumber}`,
+                manuscriptId: loadedManifest.id,
+                pageNumber: snapshot.partitioned.currentPageNumber,
+                lines: snapshot.partitioned.currentPageLines,
+                completedAt: null,
+              },
+            ];
+            await savePages(allPagesToSave).catch(console.error);
+          } else {
+            await savePage({
               id: `${loadedManifest.id}-page-${snapshot.partitioned.currentPageNumber}`,
               manuscriptId: loadedManifest.id,
               pageNumber: snapshot.partitioned.currentPageNumber,
               lines: snapshot.partitioned.currentPageLines,
               completedAt: null,
-            },
-          ];
-          await savePages(allPagesToSave).catch(console.error);
+            }).catch(console.error);
+          }
         }
 
         const activeLineIdx = Math.max(0, snapshot.partitioned.currentPageLines.length - 1);
@@ -431,6 +443,7 @@ export const createPersistenceSlice: StateCreator<
           isLocked: false,
           lockReason: null,
           sessionCommittedLines: 0,
+          committedDocWords: snapshot.committedDocWords,
         });
       } catch (e) {
         console.error('Failed to rehydrate project from IndexedDB:', e);

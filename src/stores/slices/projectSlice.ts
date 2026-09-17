@@ -30,7 +30,8 @@ import {
   ACTIVE_PROJECT_KEY,
   getInitialManifest,
 } from '../settingsPersistence';
-import { sanitizeManuscript } from '@/lib/sanitize';
+import { sanitizeManuscript, sanitizeLine } from '@/lib/sanitize';
+import { wordCountClient } from '@/workers/wordCountClient';
 import {
   healDuplicatedManuscriptText,
   textToManuscriptLines,
@@ -78,9 +79,7 @@ export function ensureActiveSessionOnTyping(
     sessionNumber: idx + 1,
   }));
   if (state.manifest.id !== 'default-manuscript') {
-    for (const s of normalizedPruned) {
-      saveSession(s).catch(console.error);
-    }
+    saveSessions(normalizedPruned).catch(console.error);
   }
 
   const nextSessionNum = normalizedPruned.length + 1;
@@ -207,6 +206,7 @@ export const createProjectSlice: StateCreator<
       manifest: updatedManifest,
       saveState: 'saved',
       sessionCommittedLines: 0,
+      committedDocWords: 0,
     });
   },
 
@@ -303,6 +303,7 @@ export const createProjectSlice: StateCreator<
       saveState: 'saved',
       sessionCommittedLines: 0,
       isProjectDirty: false,
+      committedDocWords: 0,
     });
   },
 
@@ -347,17 +348,28 @@ export const createProjectSlice: StateCreator<
     if (snapshot.cleanText.trim() !== '' || data.pages.length > 0) {
       // Prune stale pages from IndexedDB and sync valid pages
       await pruneStalePagesForManuscript(data.manifest.id, snapshot.partitioned.currentPageNumber);
-      const allPagesToSave = [
-        ...snapshot.partitioned.historicalPages,
-        {
+      const completedPagesCount = (data.pages || []).filter((p) => p.completedAt !== null).length;
+      if (snapshot.partitioned.historicalPages.length !== completedPagesCount) {
+        const allPagesToSave = [
+          ...snapshot.partitioned.historicalPages,
+          {
+            id: `${data.manifest.id}-page-${snapshot.partitioned.currentPageNumber}`,
+            manuscriptId: data.manifest.id,
+            pageNumber: snapshot.partitioned.currentPageNumber,
+            lines: snapshot.partitioned.currentPageLines,
+            completedAt: null,
+          },
+        ];
+        await savePages(allPagesToSave).catch(console.error);
+      } else {
+        await savePage({
           id: `${data.manifest.id}-page-${snapshot.partitioned.currentPageNumber}`,
           manuscriptId: data.manifest.id,
           pageNumber: snapshot.partitioned.currentPageNumber,
           lines: snapshot.partitioned.currentPageLines,
           completedAt: null,
-        },
-      ];
-      await savePages(allPagesToSave).catch(console.error);
+        }).catch(console.error);
+      }
     }
 
     if (typeof window !== 'undefined') {
@@ -380,6 +392,7 @@ export const createProjectSlice: StateCreator<
       saveState: 'saved',
       sessionCommittedLines: 0,
       isProjectDirty: false,
+      committedDocWords: snapshot.committedDocWords,
     });
   },
 
@@ -667,6 +680,8 @@ export const createProjectSlice: StateCreator<
       const updatedManifest = {
         ...state.manifest,
         outboxCount: 0,
+        sessionCount: activeSessions.length,
+        activeSessionId: updatedSession.id,
       };
       if (state.manifest.mode === 'local') {
         await saveManuscript(updatedManifest).catch(console.error);
@@ -752,6 +767,7 @@ export const createProjectSlice: StateCreator<
       activeSessions,
       manifest: updatedManifest,
       sessionCommittedLines: 0,
+      committedDocWords: countWords(fullText),
     });
   },
 
@@ -759,8 +775,95 @@ export const createProjectSlice: StateCreator<
     const state = get();
     if (!state.activeSessions || state.activeSessions.length === 0) return;
 
-    let text = fullText;
-    if (text === undefined) {
+    if (fullText !== undefined && words !== undefined) {
+      const docTotalWords = words;
+      const text = fullText;
+      const sessions = [...state.activeSessions];
+      const lastIdx = sessions.length - 1;
+      const last = sessions[lastIdx];
+
+      if (!last.completedAt) {
+        const { currentSessionWords } = resolveActiveSessionStats(sessions, docTotalWords);
+        const priorSessions = sessions.slice(0, lastIdx);
+        const activeText = getActiveSessionText(text, priorSessions);
+        const target = state.manifest.sessionWordTarget;
+        const targetReached = Boolean(
+          target && target > 0 && currentSessionWords >= target
+        );
+
+        sessions[lastIdx] = {
+          ...last,
+          text: activeText,
+          wordCount: currentSessionWords,
+          targetReached,
+        };
+
+        const updatedManifest = {
+          ...state.manifest,
+          totalWordCount: docTotalWords,
+        };
+
+        const activeLines = state.currentPageLines;
+        const activeLine = activeLines.length > 0 ? activeLines[state.activeLineIndex] : null;
+        const activeWords = activeLine && !activeLine.isCommitted
+          ? countWords(sanitizeLine(activeLine).trim())
+          : 0;
+        const calibratedCommittedWords = Math.max(0, docTotalWords - activeWords);
+
+        set({
+          activeSessions: sessions,
+          manifest: updatedManifest,
+          committedDocWords: calibratedCommittedWords,
+        });
+
+        if (state.manifest.mode === 'local' && state.manifest.id !== 'default-manuscript') {
+          saveSession(sessions[lastIdx]).catch(console.error);
+          saveManuscript(updatedManifest).catch(console.error);
+        }
+      }
+      return;
+    }
+
+    // Instant delta-based word count update (< 0.05ms)
+    const activeLines = state.currentPageLines;
+    const activeLine = activeLines.length > 0 ? activeLines[state.activeLineIndex] : null;
+    const activeWords = activeLine && !activeLine.isCommitted
+      ? countWords(sanitizeLine(activeLine).trim())
+      : 0;
+    const committedWords = state.committedDocWords !== undefined
+      ? state.committedDocWords
+      : Math.max(0, (state.manifest.totalWordCount ?? 0) - activeWords);
+    const immediateTotalWords = committedWords + activeWords;
+
+    const sessions = [...state.activeSessions];
+    const lastIdx = sessions.length - 1;
+    const last = sessions[lastIdx];
+
+    if (!last.completedAt) {
+      const { currentSessionWords } = resolveActiveSessionStats(sessions, immediateTotalWords);
+      const target = state.manifest.sessionWordTarget;
+      const targetReached = Boolean(
+        target && target > 0 && currentSessionWords >= target
+      );
+
+      sessions[lastIdx] = {
+        ...last,
+        wordCount: currentSessionWords,
+        targetReached,
+      };
+
+      const updatedManifest = {
+        ...state.manifest,
+        totalWordCount: immediateTotalWords,
+      };
+
+      set({
+        activeSessions: sessions,
+        manifest: updatedManifest,
+        committedDocWords: committedWords,
+      });
+
+      // Offload full manuscript compilation, sanitization, and Unicode regex counting to Web Worker
       const allPages = [
         ...state.historicalPages,
         {
@@ -769,47 +872,20 @@ export const createProjectSlice: StateCreator<
           completedAt: null,
         },
       ];
-      text = sanitizeManuscript(allPages, {
-        doubleSpaceLinebreaks: false,
-        pageMode: state.manifest.pageMode,
-      });
-    }
 
-    const docTotalWords = words !== undefined ? words : countWords(text);
-    const sessions = [...state.activeSessions];
-    const lastIdx = sessions.length - 1;
-    const last = sessions[lastIdx];
-
-    if (!last.completedAt) {
-      const { currentSessionWords } = resolveActiveSessionStats(sessions, docTotalWords);
-      const priorSessions = sessions.slice(0, lastIdx);
-      const activeText = getActiveSessionText(text, priorSessions);
-      const target = state.manifest.sessionWordTarget;
-      const targetReached = Boolean(
-        target && target > 0 && currentSessionWords >= target
-      );
-
-      sessions[lastIdx] = {
-        ...last,
-        text: activeText,
-        wordCount: currentSessionWords,
-        targetReached,
-      };
-
-      const updatedManifest = {
-        ...state.manifest,
-        totalWordCount: docTotalWords,
-      };
-
-      set({
-        activeSessions: sessions,
-        manifest: updatedManifest,
-      });
-
-      if (state.manifest.mode === 'local' && state.manifest.id !== 'default-manuscript') {
-        saveSession(sessions[lastIdx]).catch(console.error);
-        saveManuscript(updatedManifest).catch(console.error);
-      }
+      wordCountClient
+        .calculateStats(
+          allPages,
+          state.manifest.pageMode,
+          sessions,
+          state.manifest.sessionWordTarget
+        )
+        .then((workerResult) => {
+          const curState = get();
+          if (curState.manifest.id !== state.manifest.id) return;
+          curState.syncSessionStats(workerResult.fullText, workerResult.docTotalWords);
+        })
+        .catch(console.error);
     }
   },
 });

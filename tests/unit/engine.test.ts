@@ -2895,6 +2895,11 @@ describe('Typing Engine & State Machine Invariants', () => {
       `Line 15`.split('').forEach((c) => store.insertChar(c));
       await store.flushSave();
 
+      const beforeSwitchState = useTypingStore.getState();
+      expect(beforeSwitchState.historicalPages[0].lines[9].cells.map(c => c.char).join('')).toBe('Line 10');
+      expect(beforeSwitchState.currentPageLines).toHaveLength(5);
+      expect(beforeSwitchState.currentPageLines[4].cells.map(c => c.char).join('')).toBe('Line 15');
+
       const projAId = useTypingStore.getState().manifest.id;
 
       // Create and switch to Project B

@@ -190,8 +190,12 @@ export async function loadManuscriptProject(
   }
 }
 
+const pendingPagesMap = new Map<string, PageRecord>();
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+
 export async function savePage(page: PageRecord): Promise<void> {
   const pageId = page.id || `${page.manuscriptId || 'default'}-page-${page.pageNumber}`;
+  pendingPagesMap.delete(pageId);
   try {
     await db.pages.put({
       ...page,
@@ -207,10 +211,14 @@ export async function savePage(page: PageRecord): Promise<void> {
 
 export async function savePages(pages: PageRecord[]): Promise<void> {
   if (pages.length === 0) return;
-  const normalizedPages = pages.map((p) => ({
-    ...p,
-    id: p.id || `${p.manuscriptId || 'default'}-page-${p.pageNumber}`,
-  }));
+  const normalizedPages = pages.map((p) => {
+    const pageId = p.id || `${p.manuscriptId || 'default'}-page-${p.pageNumber}`;
+    pendingPagesMap.delete(pageId);
+    return {
+      ...p,
+      id: pageId,
+    };
+  });
   try {
     await db.pages.bulkPut(normalizedPages);
     notifyPersistenceError(null);
@@ -261,8 +269,6 @@ export async function getGlobalSettingsFromDb(): Promise<Partial<ManuscriptManif
   }
 }
 
-let saveTimer: ReturnType<typeof setTimeout> | null = null;
-const pendingPagesMap = new Map<string, PageRecord>();
 
 export function debounceSavePage(page: PageRecord, delayMs = 2000): void {
   const pageId = page.id || `${page.manuscriptId || 'default'}-page-${page.pageNumber}`;

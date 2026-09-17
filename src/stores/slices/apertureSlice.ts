@@ -24,6 +24,8 @@ import {
 import { createEmptyLine, getPageLineLimit } from '@/lib/paginationTransition';
 import { persistSettings } from '../settingsPersistence';
 import { notifyDraftingActivity, triggerVisualSaveOnTyping, markProjectDirty } from '../draftingPipeline';
+import { sanitizeLine } from '@/lib/sanitize';
+import { countWords } from '@/lib/projectSerializer';
 
 export interface ApertureSlice {
   activeLineIndex: number;
@@ -177,10 +179,21 @@ export const createApertureSlice: StateCreator<
         cells: [...lineCells, newCell],
       };
 
-      if (state.manifest.mode === 'local') {
+      const activeLineText = sanitizeLine(lines[activeLineIndex]).trim();
+      const activeWords = countWords(activeLineText);
+      const currentManifest = get().manifest;
+      const committedWords = state.committedDocWords !== undefined
+        ? state.committedDocWords
+        : Math.max(0, (currentManifest.totalWordCount ?? 0) - activeWords);
+      const totalWords = committedWords + activeWords;
+      const updatedManifest = totalWords !== currentManifest.totalWordCount
+        ? { ...currentManifest, totalWordCount: totalWords }
+        : currentManifest;
+
+      if (currentManifest.mode === 'local') {
         const pageToSave: PageRecord = {
-          id: `${state.manifest.id}-page-${state.currentPageNumber}`,
-          manuscriptId: state.manifest.id,
+          id: `${currentManifest.id}-page-${state.currentPageNumber}`,
+          manuscriptId: currentManifest.id,
           pageNumber: state.currentPageNumber,
           lines: lines,
           completedAt: null,
@@ -189,15 +202,15 @@ export const createApertureSlice: StateCreator<
       }
 
       set({
+        manifest: updatedManifest,
         currentPageLines: lines,
         activeColIndex: colCount + 1,
         isHighlighting: false,
         highlightHead: null,
+        committedDocWords: committedWords,
       });
       return;
     }
-
-    flushPendingSave();
 
     // Line boundary reached (soft wrap triggered)
     const wrapResult = wrapLine(
@@ -211,7 +224,7 @@ export const createApertureSlice: StateCreator<
 
     lines[activeLineIndex] = wrapResult.updatedCurrentLine;
 
-    // Save committed line if in local mode
+    // Save committed line if in local mode (debounced to avoid blocking keystroke)
     if (state.manifest.mode === 'local') {
       const pageToSave: PageRecord = {
         id: `${state.manifest.id}-page-${state.currentPageNumber}`,
@@ -220,7 +233,7 @@ export const createApertureSlice: StateCreator<
         lines: lines,
         completedAt: null,
       };
-      savePage(pageToSave).catch(console.error);
+      debounceSavePage(pageToSave);
     }
 
     // Check if advancing to the next line completes the page
@@ -229,6 +242,11 @@ export const createApertureSlice: StateCreator<
     const pageLineLimit = getPageLineLimit(state.manifest.pageMode, state.manifest.pageSize);
     const newSessionCommitted = (state.sessionCommittedLines || 0) + 1;
     const newOutbox = isScrollMode ? 0 : Math.floor(newSessionCommitted / 10);
+
+    const committedWordsAdded = countWords(sanitizeLine(lines[activeLineIndex]).trim());
+    const newCommittedDocWords = (state.committedDocWords ?? 0) + committedWordsAdded;
+    const nextLineWords = countWords(wrapResult.nextLineCells.map((c) => c.char).join('').trim());
+    const newTotalWords = newCommittedDocWords + nextLineWords;
 
     if (nextLineIndex >= pageLineLimit) {
       if (state.manifest.pageMode === 'notecard') {
@@ -263,9 +281,11 @@ export const createApertureSlice: StateCreator<
         }).catch(console.error);
       }
 
+      const currentManifest = get().manifest;
       const updatedManifest = {
-        ...state.manifest,
+        ...currentManifest,
         outboxCount: newOutbox,
+        totalWordCount: newTotalWords,
       };
       if (updatedManifest.mode === 'local') {
         saveManuscript(updatedManifest).catch(console.error);
@@ -284,6 +304,7 @@ export const createApertureSlice: StateCreator<
         lockReason: null,
         pendingWrappedCells: null,
         sessionCommittedLines: newSessionCommitted,
+        committedDocWords: newCommittedDocWords,
       });
       return;
     }
@@ -297,9 +318,11 @@ export const createApertureSlice: StateCreator<
     };
     lines.push(nextLineRecord);
 
-    const updatedManifest = newOutbox !== state.manifest.outboxCount
-      ? { ...state.manifest, outboxCount: newOutbox }
-      : state.manifest;
+    const currentManifest = get().manifest;
+    const updatedManifest = {
+      ...(newOutbox !== currentManifest.outboxCount ? { ...currentManifest, outboxCount: newOutbox } : currentManifest),
+      totalWordCount: newTotalWords,
+    };
 
     set({
       manifest: updatedManifest,
@@ -309,6 +332,7 @@ export const createApertureSlice: StateCreator<
       isHighlighting: false,
       highlightHead: null,
       sessionCommittedLines: newSessionCommitted,
+      committedDocWords: newCommittedDocWords,
     });
   },
 
@@ -389,12 +413,19 @@ export const createApertureSlice: StateCreator<
             });
           }
 
+          const uncommittedLineWords = countWords(sanitizeLine(prevLine).trim());
+          const newCommittedWords = Math.max(
+            0,
+            (state.committedDocWords ?? (state.manifest.totalWordCount ?? 0)) - uncommittedLineWords
+          );
+
           set({
             currentPageLines: lines,
             activeLineIndex: prevLineIndex,
             activeColIndex: prevLine.cells.length,
             isHighlighting: false,
             highlightHead: null,
+            committedDocWords: newCommittedWords,
           });
           return;
         }
@@ -466,6 +497,12 @@ export const createApertureSlice: StateCreator<
         const newSessionCommitted = Math.max(0, (state.sessionCommittedLines || 0) - 1);
         const newOutbox = isScrollMode ? 0 : Math.floor(newSessionCommitted / 10);
 
+        const uncommittedLineWords = lastLine ? countWords(sanitizeLine(lastLine).trim()) : 0;
+        const newCommittedWords = Math.max(
+          0,
+          (state.committedDocWords ?? (state.manifest.totalWordCount ?? 0)) - uncommittedLineWords
+        );
+
         set({
           manifest: {
             ...state.manifest,
@@ -479,6 +516,7 @@ export const createApertureSlice: StateCreator<
           isHighlighting: false,
           highlightHead: null,
           sessionCommittedLines: newSessionCommitted,
+          committedDocWords: newCommittedWords,
         });
         return;
       }
@@ -669,14 +707,16 @@ export const createApertureSlice: StateCreator<
     }
 
     // Enter without active highlight: commits current line and advances to line N+1
-    flushPendingSave();
-
     const currentLine = lines[state.activeLineIndex] || createEmptyLine(state.currentPageNumber, state.activeLineIndex);
     lines[state.activeLineIndex] = {
       ...currentLine,
       isCommitted: true,
       wrapType: 'hard',
     };
+
+    const committedLineText = sanitizeLine(lines[state.activeLineIndex]).trim();
+    const lineWords = countWords(committedLineText);
+    const newCommittedWords = (state.committedDocWords ?? 0) + lineWords;
 
     const nextLineIndex = state.activeLineIndex + 1;
     const isParagraphMode = state.manifest.pageMode === 'paragraph';
@@ -716,9 +756,11 @@ export const createApertureSlice: StateCreator<
         }).catch(console.error);
       }
 
+      const currentManifest = get().manifest;
       const updatedManifest = {
-        ...state.manifest,
+        ...currentManifest,
         outboxCount: newOutbox,
+        totalWordCount: newCommittedWords,
       };
       persistSettings(updatedManifest);
       if (updatedManifest.mode === 'local') {
@@ -737,6 +779,7 @@ export const createApertureSlice: StateCreator<
         isLocked: false,
         lockReason: null,
         sessionCommittedLines: newSessionCommitted,
+        committedDocWords: newCommittedWords,
       });
       return;
     }
@@ -752,12 +795,14 @@ export const createApertureSlice: StateCreator<
         lines,
         completedAt: null,
       };
-      savePage(pageToSave).catch(console.error);
+      debounceSavePage(pageToSave);
     }
 
-    const updatedManifest = newOutbox !== state.manifest.outboxCount
-      ? { ...state.manifest, outboxCount: newOutbox }
-      : state.manifest;
+    const currentManifest = get().manifest;
+    const updatedManifest = {
+      ...(newOutbox !== currentManifest.outboxCount ? { ...currentManifest, outboxCount: newOutbox } : currentManifest),
+      totalWordCount: newCommittedWords,
+    };
 
     set({
       manifest: updatedManifest,
@@ -767,6 +812,7 @@ export const createApertureSlice: StateCreator<
       isHighlighting: false,
       highlightHead: null,
       sessionCommittedLines: newSessionCommitted,
+      committedDocWords: newCommittedWords,
     });
   },
 

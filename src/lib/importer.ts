@@ -1,6 +1,6 @@
 import { CharacterCell, LineRecord, PageRecord, PageMode, ManuscriptManifest, SessionRecord } from '@/types';
 import { createCellId, MAX_COLUMNS } from './wrap';
-import { sanitizeManuscript } from './sanitize';
+import { sanitizeManuscript, sanitizeLine } from './sanitize';
 import { countWords, reconcileSessionsWithText, pruneZeroContentSessions } from './projectSerializer';
 import { createEmptyLine } from './paginationTransition';
 import { SETTING_KEYS } from '@/stores/settingsPersistence';
@@ -260,6 +260,8 @@ export function healDuplicatedManuscriptText(rawText: string): string {
   return text;
 }
 
+export const SCROLL_CHUNK_SIZE = 60;
+
 /**
  * Partitions parsed manuscript lines into completed historical pages and active drafting lines,
  * strictly conforming to the manuscript's pageMode ('scroll', 'page', 'notecard', 'paragraph')
@@ -272,10 +274,47 @@ export function partitionManuscriptLines(
   manifestId: string = 'manuscript'
 ): PartitionedManuscript {
   if (pageMode === 'scroll' || !pageMode) {
+    if (lines.length <= SCROLL_CHUNK_SIZE) {
+      return {
+        historicalPages: [],
+        currentPageNumber: 1,
+        currentPageLines: lines,
+      };
+    }
+
+    const historicalPages: PageRecord[] = [];
+    let chunkStart = 0;
+    let pageNum = 1;
+
+    while (chunkStart + SCROLL_CHUNK_SIZE < lines.length) {
+      const chunk = lines.slice(chunkStart, chunkStart + SCROLL_CHUNK_SIZE);
+      const pLines = chunk.map((l, lIdx) => ({
+        ...l,
+        id: `p${pageNum}-line-${lIdx}`,
+        lineIndex: lIdx,
+        isCommitted: true,
+      }));
+      historicalPages.push({
+        id: `${manifestId}-page-${pageNum}`,
+        manuscriptId: manifestId,
+        pageNumber: pageNum,
+        lines: pLines,
+        completedAt: new Date().toISOString(),
+      });
+      chunkStart += SCROLL_CHUNK_SIZE;
+      pageNum++;
+    }
+
+    const remaining = lines.slice(chunkStart).map((l, lIdx) => ({
+      ...l,
+      id: `p${pageNum}-line-${lIdx}`,
+      lineIndex: lIdx,
+    }));
+
     return {
-      historicalPages: [],
-      currentPageNumber: 1,
-      currentPageLines: lines,
+      historicalPages,
+      currentPageNumber: pageNum,
+      currentPageLines: remaining.length > 0 ? remaining : [createEmptyLine(pageNum, 0)],
     };
   }
 
@@ -390,6 +429,7 @@ export interface NormalizedProjectSnapshot {
   manifest: ManuscriptManifest;
   cleanText: string;
   totalWordCount: number;
+  committedDocWords: number;
   partitioned: PartitionedManuscript;
   normalizedSessions: SessionRecord[];
   removedSessionIds: string[];
@@ -616,10 +656,18 @@ export function hydrateProjectSnapshot(
     updatedAt: loadedManifest.updatedAt || new Date().toISOString(),
   };
 
+  const activeLines = partitioned.currentPageLines;
+  const activeLine = activeLines.length > 0 ? activeLines[activeLines.length - 1] : null;
+  const activeLineWords = activeLine && !activeLine.isCommitted
+    ? countWords(sanitizeLine(activeLine).trim())
+    : 0;
+  const committedDocWords = Math.max(0, docTotalWords - activeLineWords);
+
   return {
     manifest: updatedManifest,
     cleanText,
     totalWordCount: docTotalWords,
+    committedDocWords,
     partitioned,
     normalizedSessions,
     removedSessionIds: removedIds,

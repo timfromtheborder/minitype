@@ -29,6 +29,7 @@ export interface TypingEngineState {
   saveState: SaveState;
   activeSessions: SessionRecord[];
   isProjectDirty: boolean;
+  committedDocWords?: number;
 }
 
 export interface TypingEngineActions {
