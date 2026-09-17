@@ -730,18 +730,93 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
       root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
     });
 
-    // Completed session text is visible in main body
+    // Completed session text is visible in main body without divider headers
     expect(container.querySelector('.whitespace-pre-wrap')?.textContent).toContain(completedText);
+    expect(container.querySelector('.whitespace-pre-wrap')?.textContent).not.toContain('Session 1');
 
-    // Active session card remains distinctly demarcated beneath the body
+    // Active session card remains distinctly demarcated beneath the body AND shows its banner even when dividers are off
     const activeCard = container.querySelector('[data-active-session="true"]');
     expect(activeCard).not.toBeNull();
+    expect(activeCard?.textContent).toContain('Session 2');
+    expect(activeCard?.textContent).toContain('Active');
     expect(activeCard?.textContent).toContain('[ 4 words drafted · Locked until session closed ]');
     // Active draft text is hidden
     expect(container.textContent).not.toContain(activeText);
 
+    // When closed, session joins the body, and with Show Sessions off, neither session has a divider
+    const buttons = Array.from(container.querySelectorAll('button'));
+    const closeBtn = buttons.find((b) => b.textContent?.includes('Close Session'));
+    expect(closeBtn).toBeDefined();
+
+    await act(async () => {
+      closeBtn?.click();
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    expect(container.querySelector('[data-active-session="true"]')).toBeNull();
+    expect(container.textContent).not.toContain('Session 1');
+    expect(container.textContent).not.toContain('Session 2');
+    expect(container.textContent).toContain(completedText);
+    expect(container.textContent).toContain(activeText);
+
     await act(async () => {
       root.unmount();
     });
+  });
+
+  it('forces a linebreak in the platen when closing an active session with drafting content', async () => {
+    const now = new Date().toISOString();
+    const draftLine = 'Drafting on platen line zero.';
+
+    useTypingStore.setState({
+      manifest: {
+        ...useTypingStore.getState().manifest,
+        id: 'platen-break-1',
+        title: 'Platen Break Test',
+      },
+      historicalPages: [],
+      currentPageNumber: 1,
+      currentPageLines: [
+        {
+          id: 'p1-line-0',
+          lineIndex: 0,
+          cells: Array.from(draftLine).map((ch, i) => ({
+            id: `p1-l0-c${i}`,
+            char: ch,
+            state: 'standard',
+            colIndex: i,
+            lineIndex: 0,
+          })),
+          isCommitted: false,
+        },
+      ],
+      activeLineIndex: 0,
+      activeColIndex: draftLine.length,
+      activeSessions: [
+        {
+          id: 'platen-break-1-session-1',
+          projectId: 'platen-break-1',
+          sessionNumber: 1,
+          startedAt: now,
+          completedAt: null,
+          text: draftLine,
+          wordCount: 5,
+        },
+      ],
+    });
+
+    // Close the active session
+    await useTypingStore.getState().closeActiveSession();
+
+    const state = useTypingStore.getState();
+    // Prior drafting line must be committed with hard line break
+    expect(state.currentPageLines[0].isCommitted).toBe(true);
+    expect(state.currentPageLines[0].wrapType).toBe('hard');
+
+    // Platen must have advanced to a fresh empty drafting line
+    expect(state.currentPageLines.length).toBe(2);
+    expect(state.currentPageLines[1].cells.length).toBe(0);
+    expect(state.activeLineIndex).toBe(1);
+    expect(state.activeColIndex).toBe(0);
   });
 });

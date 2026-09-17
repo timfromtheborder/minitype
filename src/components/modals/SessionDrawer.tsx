@@ -245,6 +245,14 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
       setTimeout(() => setIsPulsingActive(false), 600);
     }
     await useTypingStore.getState().startNewSession();
+    setTimeout(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTo({
+          top: scrollContainerRef.current.scrollHeight,
+          behavior: 'smooth',
+        });
+      }
+    }, 100);
   };
 
   const handleCloseActiveSession = async () => {
@@ -538,7 +546,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                     completedSessions.length > 0 ? 'mt-6' : 'mt-2'
                   } ${isPulsingActive ? 'bg-primary/15 ring-1 ring-primary/40' : ''}`}
                 >
-                  {showDividers && (() => {
+                  {(() => {
                     const isActiveTargetMet = Boolean(
                       sessionWordTarget && sessionWordTarget > 0 && activeSession.wordCount >= sessionWordTarget
                     );

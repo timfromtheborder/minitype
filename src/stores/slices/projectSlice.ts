@@ -22,7 +22,7 @@ import {
   pruneStalePagesForManuscript,
   flushPendingSave,
 } from '@/db';
-import { createEmptyLine, applyPageModeTransition } from '@/lib/paginationTransition';
+import { createEmptyLine, applyPageModeTransition, getPageLineLimit } from '@/lib/paginationTransition';
 import {
   readSynchronousSettings,
   extractSettings,
@@ -762,11 +762,89 @@ export const createProjectSlice: StateCreator<
     const lastSession = activeSessions[activeSessions.length - 1];
     if (lastSession.completedAt !== null) return;
 
+    // Force a linebreak in the platen if the active line has characters or drafting content
+    let lines = [...state.currentPageLines];
+    let activeLineIndex = state.activeLineIndex;
+    let activeColIndex = state.activeColIndex;
+    let historicalPages = [...state.historicalPages];
+    let currentPageNumber = state.currentPageNumber;
+    let currentLine = lines[activeLineIndex] || createEmptyLine(currentPageNumber, activeLineIndex);
+
+    if (state.isHighlighting) {
+      currentLine = {
+        ...currentLine,
+        cells: currentLine.cells.map((c) =>
+          c.state === 'highlighted' ? { ...c, state: 'struck' as const, isStruck: true } : c
+        ),
+      };
+    }
+
+    if (currentLine.cells.length > 0) {
+      lines[activeLineIndex] = {
+        ...currentLine,
+        isCommitted: true,
+        wrapType: 'hard',
+      };
+
+      const nextLineIndex = activeLineIndex + 1;
+      const pageLineLimit = getPageLineLimit(state.manifest.pageMode, state.manifest.pageSize);
+      const shouldCompletePage = nextLineIndex >= pageLineLimit;
+
+      if (shouldCompletePage) {
+        const completedPage: PageRecord = {
+          id: `${state.manifest.id}-page-${currentPageNumber}`,
+          manuscriptId: state.manifest.id,
+          pageNumber: currentPageNumber,
+          lines,
+          completedAt: now,
+        };
+        historicalPages.push(completedPage);
+        currentPageNumber += 1;
+        const firstLine = createEmptyLine(currentPageNumber, 0);
+        lines = [firstLine];
+        activeLineIndex = 0;
+        activeColIndex = 0;
+
+        if (state.manifest.mode === 'local') {
+          await savePage(completedPage).catch(console.error);
+          await savePage({
+            id: `${state.manifest.id}-page-${currentPageNumber}`,
+            manuscriptId: state.manifest.id,
+            pageNumber: currentPageNumber,
+            lines: [firstLine],
+            completedAt: null,
+          }).catch(console.error);
+        }
+      } else {
+        const nextLine = createEmptyLine(currentPageNumber, nextLineIndex);
+        lines.push(nextLine);
+        activeLineIndex = nextLineIndex;
+        activeColIndex = 0;
+
+        if (state.manifest.mode === 'local') {
+          await savePage({
+            id: `${state.manifest.id}-page-${currentPageNumber}`,
+            manuscriptId: state.manifest.id,
+            pageNumber: currentPageNumber,
+            lines,
+            completedAt: null,
+          }).catch(console.error);
+        }
+      }
+    } else if (activeLineIndex > 0 && lines[activeLineIndex - 1]) {
+      // If active line is already empty, ensure preceding line is committed with hard break
+      lines[activeLineIndex - 1] = {
+        ...lines[activeLineIndex - 1],
+        isCommitted: true,
+        wrapType: 'hard',
+      };
+    }
+
     const allPages = [
-      ...state.historicalPages,
+      ...historicalPages,
       {
-        pageNumber: state.currentPageNumber,
-        lines: state.currentPageLines,
+        pageNumber: currentPageNumber,
+        lines,
         completedAt: null,
       },
     ];
@@ -804,7 +882,17 @@ export const createProjectSlice: StateCreator<
     if (state.manifest.mode === 'local') {
       await saveManuscript(updatedManifest).catch(console.error);
     }
-    set({ activeSessions, manifest: updatedManifest });
+    set({
+      activeSessions,
+      manifest: updatedManifest,
+      currentPageLines: lines,
+      activeLineIndex,
+      activeColIndex,
+      historicalPages,
+      currentPageNumber,
+      isHighlighting: false,
+      highlightHead: null,
+    });
   },
 
   deleteSession: async (sessionId: string) => {
