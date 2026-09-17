@@ -43,7 +43,6 @@ next-env.d.ts
 # documentation
 /docs
 docs/
-GEMINI.md
 
 # images
 /img/

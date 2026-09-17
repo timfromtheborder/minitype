@@ -41,6 +41,20 @@ class TypewriterAudio {
       window.addEventListener('touchstart', unlock, { once: true, passive: true });
       window.addEventListener('pointerdown', unlock, { once: true, passive: true });
       window.addEventListener('keydown', unlock, { once: true });
+
+      // Auto-resume AudioContext if browser suspended it during tab switch, backgrounding, or sleep
+      const resumeAudio = () => {
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+      };
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          resumeAudio();
+        }
+      });
+      window.addEventListener('focus', resumeAudio);
     }
   }
 

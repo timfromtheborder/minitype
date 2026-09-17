@@ -44,15 +44,18 @@ export function useKeyboardShortcuts(options?: UseKeyboardShortcutsOptions) {
         return;
       }
 
-      // Cmd/Ctrl + P (Project Files Modal)
-      if (e.key.toLowerCase() === 'p' && !e.shiftKey) {
+      // Cmd/Ctrl + P or Cmd/Ctrl + O (Project Files Modal)
+      if ((e.key.toLowerCase() === 'p' || e.key.toLowerCase() === 'o') && !e.shiftKey) {
         e.preventDefault();
         onToggleProject?.();
         return;
       }
 
-      // Cmd/Ctrl + S or Cmd/Ctrl + E (Session Drawer)
-      if ((e.key.toLowerCase() === 's' || e.key.toLowerCase() === 'e') && !e.shiftKey) {
+      // Cmd/Ctrl + D, Cmd/Ctrl + S, or Cmd/Ctrl + E (Document / Session Drawer)
+      if (
+        (e.key.toLowerCase() === 'd' || e.key.toLowerCase() === 's' || e.key.toLowerCase() === 'e') &&
+        !e.shiftKey
+      ) {
         e.preventDefault();
         onToggleSession?.();
         return;

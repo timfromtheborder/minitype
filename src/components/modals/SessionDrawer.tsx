@@ -480,21 +480,21 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                   <div key={session.id} data-session-card="true">
                     {/* Nested In-line Header Divider in Small Faded Text */}
                     {showDividers && (
-                      <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono text-muted-foreground/60 select-none py-1 mb-1.5 overflow-hidden">
+                      <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono text-card-foreground/50 select-none py-1 mb-1.5 overflow-hidden">
                         <span className="shrink-0 opacity-40 select-none">-----</span>
-                        <span className="font-semibold text-foreground/80 shrink-0 select-none">
+                        <span className="font-semibold text-card-foreground/85 shrink-0 select-none">
                           Session {session.sessionNumber}
                         </span>
                         <span className="shrink-0 opacity-40 select-none">---</span>
-                        <span className="shrink-0 truncate text-muted-foreground/75 select-none">
+                        <span className="shrink-0 truncate text-card-foreground/65 select-none">
                           {timeRange}
                         </span>
-                        <div className="flex-1 min-w-4 border-t border-dashed border-border/40 self-center mx-1" />
+                        <div className="flex-1 min-w-4 border-t border-dashed border-card-foreground/20 self-center mx-1" />
                         <span
                           className={`shrink-0 text-right text-[10px] sm:text-[11px] ${
                             isTargetMet
-                              ? 'font-bold text-foreground'
-                              : 'font-medium text-muted-foreground/75'
+                              ? 'font-bold text-card-foreground'
+                              : 'font-medium text-card-foreground/65'
                           }`}
                         >
                           {session.wordCount.toLocaleString()} words
@@ -538,34 +538,34 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                 <div
                   data-session-card="true"
                   data-active-session="true"
-                  className={`border border-border/80 bg-muted/20 rounded-[2px] p-3.5 sm:p-4 text-center select-none shadow-2xs transition-all duration-200 ${
+                  className={`border border-card-foreground/15 bg-card-foreground/5 rounded-[2px] p-3.5 sm:p-4 text-center select-none shadow-2xs transition-all duration-200 ${
                     completedSessions.length > 0 ? 'mt-6' : 'mt-2'
-                  } ${isPulsingActive ? 'bg-primary/15 ring-1 ring-primary/40' : ''}`}
+                  } ${isPulsingActive ? 'bg-card-foreground/12 ring-1 ring-card-foreground/30' : ''}`}
                 >
                   {(() => {
                     const isActiveTargetMet = Boolean(
                       sessionWordTarget && sessionWordTarget > 0 && activeSession.wordCount >= sessionWordTarget
                     );
                     return (
-                      <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono text-muted-foreground/60 select-none py-1 mb-2 overflow-hidden">
+                      <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono text-card-foreground/50 select-none py-1 mb-2 overflow-hidden">
                         <span className="shrink-0 opacity-40 select-none">-----</span>
-                        <span className="font-semibold text-foreground/80 shrink-0 select-none">
+                        <span className="font-semibold text-card-foreground/85 shrink-0 select-none">
                           Session {activeSession.sessionNumber}
                         </span>
                         <span className="shrink-0 opacity-40 select-none">---</span>
-                        <span className="shrink-0 truncate text-muted-foreground/75 select-none">
+                        <span className="shrink-0 truncate text-card-foreground/65 select-none">
                           {formatSessionDateTime(activeSession.startedAt)} - Present
                         </span>
-                        <span className="flex items-center gap-1 text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-[1px] shrink-0 font-sans ml-1 select-none">
+                        <span className="flex items-center gap-1 text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 rounded-[1px] shrink-0 font-sans ml-1 select-none">
                           <Sparkles className="w-2.5 h-2.5" />
                           <span>Active</span>
                         </span>
-                        <div className="flex-1 min-w-4 border-t border-dashed border-border/40 self-center mx-1" />
+                        <div className="flex-1 min-w-4 border-t border-dashed border-card-foreground/20 self-center mx-1" />
                         <span
                           className={`shrink-0 text-right text-[10px] sm:text-[11px] ${
                             isActiveTargetMet
-                              ? 'font-bold text-foreground'
-                              : 'font-medium text-muted-foreground/75'
+                              ? 'font-bold text-card-foreground'
+                              : 'font-medium text-card-foreground/65'
                           }`}
                         >
                           {activeSession.wordCount.toLocaleString()} words
@@ -574,7 +574,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                       </div>
                     );
                   })()}
-                  <div className="flex items-center justify-center gap-2 py-3 px-2 text-xs sm:text-sm font-mono text-muted-foreground">
+                  <div className="flex items-center justify-center gap-2 py-3 px-2 text-xs sm:text-sm font-mono text-card-foreground/75">
                     <Lock className="w-3.5 h-3.5 shrink-0 opacity-70" />
                     <span>
                       [ {activeSession.wordCount.toLocaleString()} {activeSession.wordCount === 1 ? 'word' : 'words'} drafted · Locked until session closed ]

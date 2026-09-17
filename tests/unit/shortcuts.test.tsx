@@ -10,15 +10,18 @@ function ShortcutHost({
   isPaused = false,
   onToggleSettings,
   onToggleProject,
+  onToggleSession,
 }: {
   isPaused?: boolean;
   onToggleSettings?: () => void;
   onToggleProject?: () => void;
+  onToggleSession?: () => void;
 }) {
   useKeyboardShortcuts({
     isPaused,
     onToggleSettings: onToggleSettings || (() => {}),
     onToggleProject: onToggleProject || (() => {}),
+    onToggleSession: onToggleSession || (() => {}),
   });
   return null;
 }
@@ -158,6 +161,42 @@ describe('Keyboard Shortcuts Hook (useKeyboardShortcuts)', () => {
     );
 
     expect(onToggleProject).toHaveBeenCalledTimes(1);
+  });
+
+  it('Ctrl/Cmd + O toggles project modal', async () => {
+    const onToggleProject = vi.fn();
+
+    await act(async () => {
+      root.render(<ShortcutHost onToggleProject={onToggleProject} />);
+    });
+
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'o',
+        ctrlKey: true,
+        bubbles: true,
+      })
+    );
+
+    expect(onToggleProject).toHaveBeenCalledTimes(1);
+  });
+
+  it('Ctrl/Cmd + D toggles document/session drawer', async () => {
+    const onToggleSession = vi.fn();
+
+    await act(async () => {
+      root.render(<ShortcutHost onToggleSession={onToggleSession} />);
+    });
+
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'd',
+        ctrlKey: true,
+        bubbles: true,
+      })
+    );
+
+    expect(onToggleSession).toHaveBeenCalledTimes(1);
   });
 
   it('Ctrl/Cmd + , toggles settings drawer', async () => {
