@@ -671,3 +671,10 @@ html[data-page-mode="notecard"],
     transition: transform 50ms ease-out, filter 50ms ease-out, opacity 50ms ease-out;
   }
 }
+
+/* Smooth View Transitions for theme changes */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 150ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}

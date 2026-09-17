@@ -105,6 +105,16 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   const showSessionTargetTracker = manifest.showSessionTargetTracker ?? true;
   const allowStrikeout = manifest.allowStrikeout ?? true;
 
+  const handleSelectScheme = (newScheme: ColorScheme) => {
+    if (typeof document !== 'undefined' && 'startViewTransition' in document) {
+      (document as unknown as { startViewTransition: (cb: () => void) => void }).startViewTransition(() => {
+        onUpdateManifest({ colorScheme: newScheme });
+      });
+    } else {
+      onUpdateManifest({ colorScheme: newScheme });
+    }
+  };
+
   const handleClose = () => {
     onClose();
   };
@@ -300,11 +310,11 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                           if (isSelected) {
                             setIsPhosphorPickerOpen((prev) => !prev);
                           } else {
-                            onUpdateManifest({ colorScheme: 'dark-amber' });
+                            handleSelectScheme('dark-amber');
                             setIsPhosphorPickerOpen(false);
                           }
                         } else {
-                          onUpdateManifest({ colorScheme: scheme.id as ColorScheme });
+                          handleSelectScheme(scheme.id as ColorScheme);
                           setIsPhosphorPickerOpen(false);
                         }
                       }}
@@ -529,7 +539,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.8.4
+              Minitype v0.9.8.5
             </span>
           </div>
         </div>

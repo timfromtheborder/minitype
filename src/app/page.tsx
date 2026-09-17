@@ -43,8 +43,22 @@ export default function Home() {
 
   const activeApertureHeight = useTypingStore((s) => s.manifest.activeApertureHeight);
   const pageMode = useTypingStore((s) => s.manifest.pageMode);
+  const isHydrated = useTypingStore((s) => s.isHydrated);
 
   useWakeLock();
+
+  useEffect(() => {
+    if (isHydrated && typeof document !== 'undefined') {
+      const veil = document.getElementById('minitype-startup-veil');
+      if (veil) {
+        veil.style.opacity = '0';
+        const timer = setTimeout(() => {
+          veil.remove();
+        }, 180);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [isHydrated]);
 
   const handleCloseSettings = React.useCallback(() => setIsSettingsOpen(false), []);
   const handleCloseSession = React.useCallback(() => setIsSessionOpen(false), []);

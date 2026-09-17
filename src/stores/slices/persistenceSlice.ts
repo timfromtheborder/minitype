@@ -52,6 +52,7 @@ export interface PersistenceSlice {
   saveState: SaveState;
   persistenceError: string | null;
   isProjectDirty: boolean;
+  isHydrated: boolean;
   flushSave: () => Promise<void>;
   resetEngine: (newManifest?: Partial<ManuscriptManifest>) => void;
   rehydrate: () => Promise<void>;
@@ -225,6 +226,7 @@ export const createPersistenceSlice: StateCreator<
   saveState: 'saved',
   persistenceError: null,
   isProjectDirty: false,
+  isHydrated: false,
 
   flushSave: async () => {
     cancelVisualSaveTimers();
@@ -349,6 +351,7 @@ export const createPersistenceSlice: StateCreator<
         if (!projectData) {
           // No project in IndexedDB -> create fresh initial project
           await get().newProject();
+          set({ isHydrated: true });
           return;
         }
 
@@ -444,9 +447,11 @@ export const createPersistenceSlice: StateCreator<
           lockReason: null,
           sessionCommittedLines: 0,
           committedDocWords: snapshot.committedDocWords,
+          isHydrated: true,
         });
       } catch (e) {
         console.error('Failed to rehydrate project from IndexedDB:', e);
+        set({ isHydrated: true });
       }
     }
   },

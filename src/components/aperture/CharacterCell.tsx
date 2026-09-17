@@ -17,8 +17,8 @@ export const CharacterCell = React.memo(function CharacterCell({ cell }: Charact
       data-cell-id={cell.id}
       data-col={cell.colIndex}
       data-state={cell.state}
-      className={`inline-block shrink-0 relative font-mono text-center select-none w-[1ch] transition-colors duration-75 ${
-        isHighlighted ? 'font-semibold' : ''
+      className={`inline-block shrink-0 relative font-mono text-center select-none w-[1ch] ${
+        isHighlighted ? 'font-semibold transition-colors duration-75' : ''
       } ${isStruck ? 'opacity-70' : ''}`}
       style={{
         userSelect: 'none',

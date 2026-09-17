@@ -15,8 +15,6 @@ const interTight = Inter_Tight({
 
 const basePath = process.env.GITHUB_PAGES === "true" ? "/minitype" : "";
 
-import Script from "next/script";
-
 export const metadata: Metadata = {
   title: "minitype",
   description: "Distraction-free, forward-momentum writing web application modeled on mechanical typewriter constraints.",
@@ -54,9 +52,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${interTight.variable} ${courierPrime.variable} h-full antialiased font-sans`}
     >
       <head>
-        <Script
+        <script
           id="minitype-zero-fouc"
-          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
@@ -141,7 +138,21 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning>{children}</body>
+      <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning>
+        <div
+          id="minitype-startup-veil"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            backgroundColor: 'var(--background)',
+            pointerEvents: 'none',
+            transition: 'opacity 160ms cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
+          aria-hidden="true"
+        />
+        {children}
+      </body>
     </html>
   );
 }

@@ -30,6 +30,7 @@ export interface TypingEngineState {
   activeSessions: SessionRecord[];
   isProjectDirty: boolean;
   committedDocWords?: number;
+  isHydrated: boolean;
 }
 
 export interface TypingEngineActions {
