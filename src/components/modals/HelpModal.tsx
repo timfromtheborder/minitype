@@ -70,13 +70,13 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
       role="dialog"
       aria-modal="true"
       aria-label="Help and Instructions"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-2 sm:p-4 animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-2 pb-14 sm:p-4 sm:pb-16 animate-in fade-in duration-150"
       onClick={onClose}
     >
       <div
         ref={modalRef}
         tabIndex={-1}
-        className="w-full max-w-2xl h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] landscape:h-[calc(100dvh-3.5rem)] landscape:max-h-[calc(100dvh-3.5rem)] sm:h-[580px] sm:max-h-[580px] my-auto rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-col select-none relative overflow-hidden p-3 sm:p-5 gap-3 focus:outline-none"
+        className="w-full max-w-2xl h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] landscape:h-[calc(100dvh-4.5rem)] landscape:max-h-[calc(100dvh-4.5rem)] sm:h-[580px] sm:max-h-[calc(100dvh-5.5rem)] my-auto rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-col select-none relative overflow-hidden p-3 sm:p-5 gap-3 focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header: Unified Icon, Label & Return Button */}

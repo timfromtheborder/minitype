@@ -24,12 +24,19 @@ export default function Home() {
 
   useTypingEngine({ isPaused: isAnyModalOpen });
 
+  const toggleModal = React.useCallback((modal: 'document' | 'project' | 'settings' | 'help') => {
+    setIsSessionOpen((prev) => (modal === 'document' ? !prev : false));
+    setIsProjectOpen((prev) => (modal === 'project' ? !prev : false));
+    setIsSettingsOpen((prev) => (modal === 'settings' ? !prev : false));
+    setIsHelpOpen((prev) => (modal === 'help' ? !prev : false));
+  }, []);
+
   useKeyboardShortcuts({
     isPaused: isAnyModalOpen,
-    onToggleSettings: () => setIsSettingsOpen((p) => !p),
-    onToggleProject: () => setIsProjectOpen((p) => !p),
-    onToggleSession: () => setIsSessionOpen((p) => !p),
-    onToggleHelp: () => setIsHelpOpen((p) => !p),
+    onToggleSettings: () => toggleModal('settings'),
+    onToggleProject: () => toggleModal('project'),
+    onToggleSession: () => toggleModal('document'),
+    onToggleHelp: () => toggleModal('help'),
   });
 
   const colorScheme = useTypingStore((s) => s.manifest.colorScheme);
@@ -109,6 +116,17 @@ export default function Home() {
 
   const isSpotlight = colorScheme === 'spotlight';
 
+  const getDeckButtonClass = (isActive: boolean) => {
+    if (isActive) {
+      return isSpotlight
+        ? 'border-card bg-card text-card-foreground shadow-sm font-semibold ring-1 ring-card/30'
+        : 'border-primary bg-primary text-primary-foreground shadow-sm font-semibold ring-1 ring-primary/30';
+    }
+    return isSpotlight
+      ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground active:bg-card active:text-card-foreground'
+      : 'border-border/70 bg-card hover:bg-muted text-card-foreground active:bg-muted';
+  };
+
   return (
     <main
       suppressHydrationWarning
@@ -148,70 +166,66 @@ export default function Home() {
         </div>
       </section>
 
-      {/* UTILITY DECK: Viewport Base, centered */}
-      <footer className="absolute bottom-0 left-0 right-0 flex justify-center items-center pb-[max(0.75rem,env(safe-area-inset-bottom))] px-2.5 sm:px-6 select-none text-xs">
-        <div className="flex items-center justify-center gap-1.5 sm:gap-2.5">
+      {/* UTILITY DECK: Viewport Base, centered and elevated above modal backdrops */}
+      <footer className="fixed bottom-0 left-0 right-0 z-[60] flex justify-center items-center pb-[max(0.75rem,env(safe-area-inset-bottom))] px-2.5 sm:px-6 select-none text-xs pointer-events-none">
+        <div className="flex items-center justify-center gap-1.5 sm:gap-2.5 pointer-events-auto">
           {/* Document Button */}
           <button
             type="button"
-            onClick={() => setIsSessionOpen(true)}
-            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
-              isSpotlight
-                ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground active:bg-card active:text-card-foreground'
-                : 'border-border/70 bg-card hover:bg-muted text-card-foreground active:bg-muted'
-            }`}
+            onClick={() => toggleModal('document')}
+            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${getDeckButtonClass(
+              isSessionOpen
+            )}`}
             title="Document"
             aria-label="Document"
+            aria-pressed={isSessionOpen}
           >
-            <FileText className="w-3.5 h-3.5 opacity-70 shrink-0" />
+            <FileText className={`w-3.5 h-3.5 shrink-0 ${isSessionOpen ? 'opacity-100' : 'opacity-70'}`} />
             <span>Document</span>
           </button>
 
           {/* Project Button */}
           <button
             type="button"
-            onClick={() => setIsProjectOpen(true)}
-            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
-              isSpotlight
-                ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground active:bg-card active:text-card-foreground'
-                : 'border-border/70 bg-card hover:bg-muted text-card-foreground active:bg-muted'
-            }`}
+            onClick={() => toggleModal('project')}
+            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${getDeckButtonClass(
+              isProjectOpen
+            )}`}
             title="Project"
             aria-label="Project"
+            aria-pressed={isProjectOpen}
           >
-            <FolderOpen className="w-3.5 h-3.5 opacity-70 shrink-0" />
+            <FolderOpen className={`w-3.5 h-3.5 shrink-0 ${isProjectOpen ? 'opacity-100' : 'opacity-70'}`} />
             <span>Project</span>
           </button>
 
           {/* Settings Button */}
           <button
             type="button"
-            onClick={() => setIsSettingsOpen(true)}
-            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
-              isSpotlight
-                ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground active:bg-card active:text-card-foreground'
-                : 'border-border/70 bg-card hover:bg-muted text-card-foreground active:bg-muted'
-            }`}
+            onClick={() => toggleModal('settings')}
+            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${getDeckButtonClass(
+              isSettingsOpen
+            )}`}
             title="Settings"
             aria-label="Settings"
+            aria-pressed={isSettingsOpen}
           >
-            <Sliders className="w-3.5 h-3.5 opacity-70 shrink-0" />
+            <Sliders className={`w-3.5 h-3.5 shrink-0 ${isSettingsOpen ? 'opacity-100' : 'opacity-70'}`} />
             <span>Settings</span>
           </button>
 
           {/* Help Button */}
           <button
             type="button"
-            onClick={() => setIsHelpOpen(true)}
-            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${
-              isSpotlight
-                ? 'border-border/80 bg-muted/70 text-foreground/90 hover:bg-card hover:text-card-foreground active:bg-card active:text-card-foreground'
-                : 'border-border/70 bg-card hover:bg-muted text-card-foreground active:bg-muted'
-            }`}
+            onClick={() => toggleModal('help')}
+            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 text-[11px] sm:text-xs whitespace-nowrap ${getDeckButtonClass(
+              isHelpOpen
+            )}`}
             title="Help"
             aria-label="Help"
+            aria-pressed={isHelpOpen}
           >
-            <HelpCircle className="w-3.5 h-3.5 opacity-70 shrink-0" />
+            <HelpCircle className={`w-3.5 h-3.5 shrink-0 ${isHelpOpen ? 'opacity-100' : 'opacity-70'}`} />
             <span>Help</span>
           </button>
 
