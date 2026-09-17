@@ -252,34 +252,31 @@ describe('ChronoSuite & Clock Formatter', () => {
       await act(async () => {
         vi.advanceTimersByTime(20 * 1000);
       });
-      // 60 seconds left -> should be in warning state with animate-pulse and beep played
+      // 60 seconds left -> should be in warning state with animate-pulse and double beep played
       expect(badgeBtn?.textContent).toBe('01:00');
       expect(badgeBtn?.className).toContain('animate-pulse');
       expect(badgeBtn?.className).toContain('font-bold');
-      expect(beepSpy).toHaveBeenCalledTimes(1);
+      expect(doubleBeepSpy).toHaveBeenCalledTimes(1);
 
       // Advance 60 seconds to reach zero and trigger 1-minute break
       await act(async () => {
         vi.advanceTimersByTime(60 * 1000);
       });
 
-      // Now in break mode: inverted styling (bg-foreground text-background) and double beep played
+      // Now in break mode: timer expired -> chime played
       badgeBtn = container.querySelector('button[aria-label*="Pomodoro break"]');
       expect(badgeBtn).not.toBeNull();
       expect(badgeBtn?.textContent).toBe('01:00');
-      expect(badgeBtn?.className).toContain('bg-foreground');
-      expect(badgeBtn?.className).toContain('text-background');
-      expect(doubleBeepSpy).toHaveBeenCalledTimes(1);
+      expect(chimeSpy).toHaveBeenCalledTimes(1);
 
-      // Advance 60 seconds to complete break and resume work session -> chime played
+      // Advance 60 seconds to complete break and resume work session -> single beep played
       await act(async () => {
         vi.advanceTimersByTime(60 * 1000);
       });
       badgeBtn = container.querySelector('button[aria-label*="Pomodoro countdown"]');
       expect(badgeBtn).not.toBeNull();
       expect(badgeBtn?.textContent).toBe('02:00');
-      expect(badgeBtn?.className).not.toContain('bg-foreground');
-      expect(chimeSpy).toHaveBeenCalledTimes(1);
+      expect(beepSpy).toHaveBeenCalledTimes(1);
 
       // Clicking the clock restarts pomodoro at 02:00 work phase
       await act(async () => {
@@ -288,7 +285,6 @@ describe('ChronoSuite & Clock Formatter', () => {
       badgeBtn = container.querySelector('button[aria-label*="Pomodoro countdown"]');
       expect(badgeBtn).not.toBeNull();
       expect(badgeBtn?.textContent).toBe('02:00');
-      expect(badgeBtn?.className).not.toContain('bg-foreground');
 
       // Clicking badge dismisses pomodoro timer
       await act(async () => {
@@ -300,6 +296,42 @@ describe('ChronoSuite & Clock Formatter', () => {
       beepSpy.mockRestore();
       doubleBeepSpy.mockRestore();
       chimeSpy.mockRestore();
+    });
+
+    it('renders theme-specific break badge styling for manuscript, paperwhite, and newsprint', async () => {
+      vi.setSystemTime(new Date(2026, 8, 17, 10, 0, 0));
+
+      const themes = [
+        { theme: 'typewriter' as const, expectedClass: 'bg-card' },
+        { theme: 'high-contrast' as const, expectedClass: 'bg-[#E6E6E6]' },
+        { theme: 'low-contrast' as const, expectedClass: 'bg-[#808080]' },
+        { theme: 'dark-mode' as const, expectedClass: 'bg-foreground' },
+      ];
+
+      for (const { theme, expectedClass } of themes) {
+        const root = createRoot(container);
+        await act(async () => {
+          root.render(<ChronoSuite showClock={true} timerStyle="pomodoro" colorScheme={theme} />);
+        });
+
+        const clockBtn = container.querySelector('button[aria-label*="time"]');
+        await act(async () => {
+          clockBtn?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        });
+
+        // Fast forward 2 minutes to enter break mode
+        await act(async () => {
+          vi.advanceTimersByTime(120 * 1000);
+        });
+
+        const badgeBtn = container.querySelector('button[aria-label*="Pomodoro break"]');
+        expect(badgeBtn).not.toBeNull();
+        expect(badgeBtn?.className).toContain(expectedClass);
+
+        await act(async () => {
+          root.unmount();
+        });
+      }
     });
 
     it('silences pomodoro audio cues when pomodoroSoundEnabled is false', async () => {

@@ -518,8 +518,8 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                     }
                     className={`h-[26px] w-[26px] flex items-center justify-center rounded-[2px] border transition-colors cursor-pointer shrink-0 ${
                       manifest.pomodoroSoundEnabled ?? true
-                        ? 'border-primary bg-primary/15 text-primary hover:bg-primary/25'
-                        : 'border-border/80 bg-muted/30 text-muted-foreground/60 hover:text-foreground'
+                        ? 'border-primary bg-primary text-primary-foreground shadow-xs'
+                        : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-muted-foreground'
                     }`}
                     title={
                       manifest.pomodoroSoundEnabled ?? true
@@ -600,7 +600,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.9.2 · by timfromtheborder
+              Minitype v0.9.9.3 · by timfromtheborder
             </span>
           </div>
         </div>

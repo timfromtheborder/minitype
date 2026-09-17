@@ -114,9 +114,9 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
   }, [timerStartTime, now]);
 
   // Pomodoro Audio Alerts:
-  // - 1-minute remaining warning: single heart monitor bleep
-  // - Time's up (work hits 0, transitions to break): double heart monitor bleep
-  // - Resume (break hits 0, work resumes): two-tone chime
+  // - 1-minute remaining warning: double heart monitor bleep
+  // - Time's up (work hits 0, transitions to break): two-tone chime
+  // - Actual resume (break hits 0, work resumes): single heart monitor bleep
   const prevPhaseRef = useRef<'work' | 'break' | null>(null);
   const hasPlayedBeepRef = useRef<boolean>(false);
   const prevStartTimeRef = useRef<number | null>(null);
@@ -137,12 +137,12 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
       return;
     }
 
-    // 1. Warning beep at <= 1 minute left in work phase (single bleep)
+    // 1. Warning beep at <= 1 minute left in work phase (double bleep)
     if (pomodoroPhase === 'work') {
       if (pomodoroSeconds <= 60 && !hasPlayedBeepRef.current) {
         hasPlayedBeepRef.current = true;
         if (pomodoroSoundEnabled !== false) {
-          typewriterAudio.playPomodoroBeep();
+          typewriterAudio.playPomodoroDoubleBeep();
         }
       } else if (pomodoroSeconds > 60) {
         hasPlayedBeepRef.current = false;
@@ -152,15 +152,15 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
     // 2. Phase transitions
     if (prevPhaseRef.current !== null && prevPhaseRef.current !== pomodoroPhase) {
       if (prevPhaseRef.current === 'work' && pomodoroPhase === 'break') {
-        // Work hit 0 and transitioned to break: double bleep
+        // Work hit 0 and transitioned to break (timer expired): chime
         if (pomodoroSoundEnabled !== false) {
-          typewriterAudio.playPomodoroDoubleBeep();
+          typewriterAudio.playPomodoroChime();
         }
         hasPlayedBeepRef.current = false;
       } else if (prevPhaseRef.current === 'break' && pomodoroPhase === 'work') {
-        // Break hit 0 and resumed work: chime
+        // Break hit 0 and resumed work session (actual resume): single beep
         if (pomodoroSoundEnabled !== false) {
-          typewriterAudio.playPomodoroChime();
+          typewriterAudio.playPomodoroBeep();
         }
         hasPlayedBeepRef.current = false;
       }
@@ -209,9 +209,27 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
           ? 'font-mono tracking-tight'
           : 'font-mono';
 
+  // Pomodoro break badge appearance:
+  // - manuscript (typewriter): matches platen bg (#EFE9DE) with dark text
+  // - paperwhite (high-contrast): 90% gray (#E6E6E6) with black text
+  // - newsprint (low-contrast): ~50% gray (#808080) with white text
+  // - others: inverted bg-foreground text-background
+  const breakBadgeStyle = useMemo(() => {
+    switch (effectiveColorScheme) {
+      case 'typewriter':
+        return 'bg-card text-card-foreground border border-border/80';
+      case 'high-contrast':
+        return 'bg-[#E6E6E6] text-black border border-[#D0D0D0]';
+      case 'low-contrast':
+        return 'bg-[#808080] text-white border border-[#646A71]';
+      default:
+        return 'bg-foreground text-background border border-transparent';
+    }
+  }, [effectiveColorScheme]);
+
   // Pomodoro styling:
   // - Work phase: matches snapshot, flashes when <= 1 minute left
-  // - Break phase: inverted appearance (black text inside light bg box or white inside dark box), flashes background on minute boundary
+  // - Break phase: inverted appearance per theme, flashes background on minute boundary
   const isPomodoroWarning = timerStyle === 'pomodoro' && pomodoroPhase === 'work' && pomodoroSeconds <= 60 && pomodoroSeconds > 0;
   const isBreakPhase = timerStyle === 'pomodoro' && pomodoroPhase === 'break';
   const isBreakMinuteFlash = isBreakPhase && pomodoroSeconds % 60 === 0;
@@ -228,14 +246,14 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
           type="button"
           suppressHydrationWarning
           onClick={handleTimerBadgeClick}
-          className={`absolute bottom-full mb-2 left-0 text-left text-xl sm:text-2xl uppercase tracking-widest transition-all cursor-pointer border-none shadow-none outline-none whitespace-nowrap animate-timer-slide-up select-none ${
+          className={`absolute bottom-full mb-2 left-0 text-left text-xl sm:text-2xl uppercase tracking-widest transition-all cursor-pointer shadow-none outline-none whitespace-nowrap animate-timer-slide-up select-none ${
             isBreakPhase
-              ? `bg-foreground text-background px-1.5 py-0.5 rounded-[2px] font-bold ${
+              ? `${breakBadgeStyle} px-1.5 py-0.5 rounded-[2px] font-bold ${
                   isBreakMinuteFlash ? 'opacity-50' : 'opacity-100'
                 }`
               : isPomodoroWarning
-              ? 'text-foreground font-bold animate-pulse p-0'
-              : 'text-foreground/45 hover:text-foreground/60 p-0'
+              ? 'border-none text-foreground font-bold animate-pulse p-0'
+              : 'border-none text-foreground/45 hover:text-foreground/60 p-0'
           }`}
           aria-label={
             timerStyle === 'pomodoro'

@@ -630,7 +630,8 @@ class TypewriterAudio {
   }
 
   /**
-   * Uplifting harmonic two-tone chime when Pomodoro work session resumes.
+   * Crystal clean, uplifting harmonic two-tone chime when Pomodoro timer expires.
+   * Uses smooth anti-click attack envelopes and complete decay to zero to prevent punch-in/punch-out clicks.
    */
   public playPomodoroChime() {
     const ctx = this.getContext();
@@ -638,28 +639,36 @@ class TypewriterAudio {
 
     try {
       const t = ctx.currentTime;
-      const duration1 = 0.45;
-      const duration2 = 0.8;
+      const duration1 = 0.38;
+      const duration2 = 0.65;
 
-      // Note 1 (G5 - 784Hz)
+      // Note 1 (G5 - 783.99Hz)
       const osc1 = ctx.createOscillator();
       const gain1 = ctx.createGain();
       osc1.type = 'sine';
       osc1.frequency.setValueAtTime(783.99, t);
-      gain1.gain.setValueAtTime(0.16, t);
-      gain1.gain.exponentialRampToValueAtTime(0.001, t + duration1);
+
+      // Smooth anti-click attack and complete fade to zero
+      gain1.gain.setValueAtTime(0.0001, t);
+      gain1.gain.linearRampToValueAtTime(0.13, t + 0.004);
+      gain1.gain.exponentialRampToValueAtTime(0.00005, t + duration1);
+      gain1.gain.linearRampToValueAtTime(0, t + duration1 + 0.01);
 
       osc1.connect(gain1);
       gain1.connect(this.getMasterBus(ctx));
 
-      // Note 2 (C6 - 1046.5Hz) delayed by 130ms
-      const t2 = t + 0.13;
+      // Note 2 (C6 - 1046.5Hz) delayed by 120ms
+      const t2 = t + 0.12;
       const osc2 = ctx.createOscillator();
       const gain2 = ctx.createGain();
       osc2.type = 'sine';
       osc2.frequency.setValueAtTime(1046.5, t2);
-      gain2.gain.setValueAtTime(0.20, t2);
-      gain2.gain.exponentialRampToValueAtTime(0.001, t2 + duration2);
+
+      // Smooth anti-click attack and complete fade to zero
+      gain2.gain.setValueAtTime(0.0001, t2);
+      gain2.gain.linearRampToValueAtTime(0.15, t2 + 0.004);
+      gain2.gain.exponentialRampToValueAtTime(0.00005, t2 + duration2);
+      gain2.gain.linearRampToValueAtTime(0, t2 + duration2 + 0.01);
 
       osc2.connect(gain2);
       gain2.connect(this.getMasterBus(ctx));
