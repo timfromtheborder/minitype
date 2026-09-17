@@ -56,8 +56,9 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
   const [now, setNow] = useState<Date>(() => new Date());
   const [timerStartTime, setTimerStartTime] = useState<number | null>(null);
 
-  // Update clock every second
+  // Update clock every second and sync on mount
   useEffect(() => {
+    setNow(new Date());
     const timer = setInterval(() => {
       setNow(new Date());
     }, 1000);
@@ -107,29 +108,34 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
           : 'font-mono';
 
   return (
-    <div className={`relative inline-flex flex-col items-start justify-center select-none ${fontClass}`}>
+    <div
+      suppressHydrationWarning
+      className={`relative inline-flex flex-col items-start justify-center select-none ${fontClass}`}
+    >
       {/* Session Timer: justified with the clock so numbers align vertically */}
       {timerStartTime !== null && (
         <button
           key={timerStartTime}
           type="button"
+          suppressHydrationWarning
           onClick={handleTimerBadgeClick}
           className="absolute bottom-full mb-2 left-0 text-left text-xl sm:text-2xl uppercase tracking-widest text-foreground/45 hover:text-foreground/60 transition-colors cursor-pointer bg-transparent border-none p-0 shadow-none outline-none whitespace-nowrap animate-timer-slide-up select-none"
           aria-label={`Session timer started at ${formattedStartTime}, elapsed ${elapsedMinutes} minutes. Click to dismiss.`}
         >
-          <span>{formattedStartTime}</span>
-          <span className="ml-2.5">{formattedElapsed}</span>
+          <span suppressHydrationWarning>{formattedStartTime}</span>
+          <span suppressHydrationWarning className="ml-2.5">{formattedElapsed}</span>
         </button>
       )}
 
       {/* Clock Display: centered anchor, justified with the timer */}
       <button
         type="button"
+        suppressHydrationWarning
         onClick={handleClockClick}
         className="text-left text-xl sm:text-2xl text-foreground/75 hover:text-foreground transition-colors cursor-pointer tracking-widest uppercase bg-transparent border-none p-0 shadow-none outline-none whitespace-nowrap select-none"
         aria-label={`Current time: ${formattedCurrentTime}. Click to start session timer.`}
       >
-        {formattedCurrentTime}
+        <span suppressHydrationWarning>{formattedCurrentTime}</span>
       </button>
     </div>
   );
