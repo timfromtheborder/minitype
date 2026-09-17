@@ -9,8 +9,9 @@ This document outlines the near-term feature, polish, safety, architectural, per
 | Milestone | Codename | Primary Focus Area | QC Scope | Status |
 | :--- | :--- | :--- | :--- | :--- |
 | **v0.9.7.5** | **Pass A** | Mechanical & Session Polish, Audio Bus, Strikeout Lockout & Session Boundary | Typing ergonomics, audio stability, session boundary lock, bridge re-renders | **Complete** |
-| **v0.9.7.5.1** | **Pass B1** | Mobile Ergonomics, Orientation Clamping, Screen Wake Lock & PWA Readiness | Wake Lock API, 35-col orientation font clamp, iOS app header, bundle hygiene | **Next Up** |
-| **v0.9.7.5.2** | **Pass B2** | Data Safety (Full Backup/Restore) & Manuscript View | Full-library JSON import/export, serif publishing layout | Planned |
+| **v0.9.7.5.1** | **Hotfix** | Theme Switching Latency & SSR Hydration Optimization | Instant CSS variable switching, debounced saving, stable modal callbacks | **Complete** |
+| **v0.9.7.5.2** | **Pass B1** | Mobile Ergonomics, Orientation Clamping, Screen Wake Lock & PWA Readiness | Wake Lock API, 35-col orientation font clamp, horizontal scale, PWA manifest, a11y | **Complete** |
+| **v0.9.7.5.3** | **Pass B2** | Data Safety (Full Backup/Restore) & Manuscript View | Full-library JSON import/export, serif publishing layout | Planned |
 | **v0.9.7.6** | **Tier 2 (Pass A)** | Platen Rendering Optimization & Typing Engine Isolation | Zero-CLS platen, single-frame themes, cursor overlay | Planned |
 | **v0.9.7.6.1** | **Tier 2 (Pass B)** | Storage Architecture, Hydrator Consolidation & Batching | Unified hydrator parity, Dexie `bulkPut()`, schema typing | Planned |
 | **v0.9.7.6.2** | **Tier 2 (Pass C)** | Large-Scale Concurrency, Web Worker & Stress Profiling | 50k-word stress test, Web Worker background word count | Planned |
@@ -75,7 +76,7 @@ Focuses on resolving session creation edge cases, inter-session boundary protect
 
 ---
 
-## [v0.9.7.5.1] — Pass B1: Mobile Ergonomics, Orientation Clamping, Screen Wake Lock & PWA Readiness
+## [v0.9.7.5.2] — Pass B1: Mobile Ergonomics, Orientation Clamping, Screen Wake Lock & PWA Readiness
 
 Focuses on mobile writing ergonomics, orientation-based font sizing, keeping the screen awake during active drafting, evaluating iOS standalone chrome, and dependency hygiene.
 
@@ -117,7 +118,7 @@ Focuses on mobile writing ergonomics, orientation-based font sizing, keeping the
 
 ---
 
-## [v0.9.7.5.2] — Pass B2: Data Safety (Full Backup/Restore) & Manuscript View
+## [v0.9.7.5.3] — Pass B2: Data Safety (Full Backup/Restore) & Manuscript View
 
 Dedicated pass to implement full-library backup/restore and publisher-standard reader preview layout.
 

@@ -17,6 +17,8 @@ export type Typeface = 'courier-prime' | 'jetbrains-mono' | 'ibm-plex-mono';
 export type TextSize = 's' | 'm' | 'l' | 'xl';
 export type ManuscriptMode = 'local';
 
+export type ScreenWakeLockPolicy = 'always' | '5-min' | 'off';
+
 export interface ManuscriptManifest {
   id: string;
   title: string;
@@ -38,6 +40,7 @@ export interface ManuscriptManifest {
   sessionWordTarget?: number;
   doubleSpaceLinebreaks?: boolean;
   allowStrikeout?: boolean;
+  keepScreenAwake?: ScreenWakeLockPolicy;
   activeSessionId?: string;
   sessionCount?: number;
   totalWordCount?: number;

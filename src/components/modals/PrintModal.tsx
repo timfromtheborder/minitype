@@ -106,17 +106,53 @@ export const PrintModal: React.FC<PrintModalProps> = ({
     }
   }, [isOpen, activeTab, manifest.id, sanitizedFullText]);
 
-  // Escape key dismisses modal
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // Focus trap and Escape key dismiss
   useEffect(() => {
     if (!isOpen) return;
+
+    const timer = setTimeout(() => {
+      const focusables = modalRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusables && focusables.length > 0) {
+        focusables[0].focus();
+      }
+    }, 50);
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
         onClose();
+        return;
+      }
+      if (e.key === 'Tab') {
+        const focusables = modalRef.current?.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusables || focusables.length === 0) return;
+        const firstEl = focusables[0];
+        const lastEl = focusables[focusables.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === firstEl) {
+            e.preventDefault();
+            lastEl.focus();
+          }
+        } else {
+          if (document.activeElement === lastEl) {
+            e.preventDefault();
+            firstEl.focus();
+          }
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
@@ -153,10 +189,12 @@ export const PrintModal: React.FC<PrintModalProps> = ({
     <div
       role="dialog"
       aria-modal="true"
+      aria-label="Manuscript Management"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-2 sm:p-4 animate-in fade-in duration-150"
       onClick={onClose}
     >
       <div
+        ref={modalRef}
         className="w-full max-w-3xl h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] landscape:h-[calc(100dvh-3.5rem)] landscape:max-h-[calc(100dvh-3.5rem)] sm:h-[560px] sm:max-h-[560px] my-auto rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-row select-none relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >

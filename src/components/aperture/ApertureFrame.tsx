@@ -67,12 +67,14 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = React.memo(function A
 
     const checkLimit = () => {
       const isPortraitOrientation =
-        window.matchMedia('(orientation: portrait)').matches ||
+        (typeof window.matchMedia === 'function' && window.matchMedia('(orientation: portrait)').matches) ||
         window.innerHeight > window.innerWidth;
 
       if (!isPortraitOrientation) {
         // Landscape orientation: standard 70 columns (unless extreme phone < 560px)
-        setActiveColumnLimit(window.innerWidth <= 560 ? 35 : 70);
+        const limit = window.innerWidth <= 560 ? 35 : 70;
+        setActiveColumnLimit(limit);
+        document.documentElement.setAttribute('data-column-limit', String(limit));
         return;
       }
 
@@ -80,6 +82,7 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = React.memo(function A
       // 1. Mobile portrait viewports (<= 640px) are locked to 35 columns
       if (window.innerWidth <= 640) {
         setActiveColumnLimit(35);
+        document.documentElement.setAttribute('data-column-limit', '35');
         return;
       }
 
@@ -110,22 +113,24 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = React.memo(function A
         }
       }
 
-      setActiveColumnLimit(overflows ? 35 : 70);
+      const finalLimit = overflows ? 35 : 70;
+      setActiveColumnLimit(finalLimit);
+      document.documentElement.setAttribute('data-column-limit', String(finalLimit));
     };
 
     checkLimit();
 
-    const portraitQuery = window.matchMedia('(orientation: portrait)');
-    const mobileQuery = window.matchMedia('(max-width: 640px)');
+    const portraitQuery = typeof window.matchMedia === 'function' ? window.matchMedia('(orientation: portrait)') : null;
+    const mobileQuery = typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 640px)') : null;
 
     window.addEventListener('resize', checkLimit);
-    portraitQuery.addEventListener?.('change', checkLimit);
-    mobileQuery.addEventListener?.('change', checkLimit);
+    portraitQuery?.addEventListener?.('change', checkLimit);
+    mobileQuery?.addEventListener?.('change', checkLimit);
 
     return () => {
       window.removeEventListener('resize', checkLimit);
-      portraitQuery.removeEventListener?.('change', checkLimit);
-      mobileQuery.removeEventListener?.('change', checkLimit);
+      portraitQuery?.removeEventListener?.('change', checkLimit);
+      mobileQuery?.removeEventListener?.('change', checkLimit);
     };
   }, [setActiveColumnLimit, textSize, pageMode]);
 
@@ -267,18 +272,30 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = React.memo(function A
                     activeColIndex={activeColIndex}
                     isLocked={isLocked}
                     isHighlighting={isHighlighting}
+                    activeColumnLimit={activeColumnLimit}
                   />
                 ) : (
                   <HistoricalLine
                     line={line}
                     lineIndex={actualIndex}
                     isTopmost={isOldestInAperture}
+                    activeColumnLimit={activeColumnLimit}
                   />
                 )}
               </div>
             );
           })}
         </div>
+      </div>
+
+      {/* Accessibility Live Region for Screen Readers */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {`Line ${activeLineIndex + 1}, Column ${activeColIndex + 1}${isHighlighting ? ', Highlighting strikeout' : ''}`}
       </div>
 
       {/* Mechanical Platen Roller Line Bar Indicator */}

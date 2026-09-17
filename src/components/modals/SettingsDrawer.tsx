@@ -5,6 +5,7 @@ import {
   PageMode,
   ColorScheme,
   TextSize,
+  ScreenWakeLockPolicy,
   ManuscriptManifest,
 } from '@/types';
 import { X, Sliders, Volume2, VolumeX } from 'lucide-react';
@@ -34,17 +35,53 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
     }
   }, [isOpen]);
 
-  // Escape key dismisses settings drawer
+  const drawerRef = React.useRef<HTMLDivElement>(null);
+
+  // Focus trap and Escape key dismiss
   React.useEffect(() => {
     if (!isOpen) return;
+
+    const timer = setTimeout(() => {
+      const focusables = drawerRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusables && focusables.length > 0) {
+        focusables[0].focus();
+      }
+    }, 50);
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
         onClose();
+        return;
+      }
+      if (e.key === 'Tab') {
+        const focusables = drawerRef.current?.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusables || focusables.length === 0) return;
+        const firstEl = focusables[0];
+        const lastEl = focusables[focusables.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === firstEl) {
+            e.preventDefault();
+            lastEl.focus();
+          }
+        } else {
+          if (document.activeElement === lastEl) {
+            e.preventDefault();
+            firstEl.focus();
+          }
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
@@ -66,10 +103,12 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
     <div
       role="dialog"
       aria-modal="true"
+      aria-label="Settings"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-2 sm:p-4 animate-in fade-in duration-150"
       onClick={handleClose}
     >
       <div
+        ref={drawerRef}
         className="w-full max-w-md max-h-[calc(100dvh-1rem)] overflow-y-auto square-scrollbar p-4 sm:p-6 rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-col gap-4 sm:gap-5 select-none"
         onClick={(e) => e.stopPropagation()}
       >
@@ -390,12 +429,42 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 />
               </button>
             </div>
+
+            {/* Keep screen awake */}
+            <div className="flex flex-col gap-1.5 pt-2 border-t border-border/40">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Keep screen awake:</span>
+                <span className="font-bold text-foreground capitalize">
+                  {(manifest.keepScreenAwake || 'always') === '5-min' ? '5 Minutes' : manifest.keepScreenAwake || 'always'}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {(['always', '5-min', 'off'] as ScreenWakeLockPolicy[]).map((policy) => {
+                  const isSelected = (manifest.keepScreenAwake || 'always') === policy;
+                  const label = policy === 'always' ? 'Always' : policy === '5-min' ? '5 Min' : 'Off';
+                  return (
+                    <button
+                      key={policy}
+                      type="button"
+                      onClick={() => onUpdateManifest({ keepScreenAwake: policy })}
+                      className={`py-1.5 rounded-[2px] border text-center transition-all cursor-pointer font-bold text-xs sm:text-sm ${
+                        isSelected
+                          ? 'border-primary bg-primary text-primary-foreground shadow-xs'
+                          : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.7.5.1
+              Minitype v0.9.7.5.2
             </span>
           </div>
         </div>

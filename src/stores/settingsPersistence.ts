@@ -14,6 +14,7 @@ export const SETTING_KEYS = [
   'showSessionTargetTracker',
   'doubleSpaceLinebreaks',
   'allowStrikeout',
+  'keepScreenAwake',
 ] as const;
 
 export const SETTINGS_KEY = 'minitype_global_settings';
@@ -40,6 +41,7 @@ export const DEFAULT_MANIFEST: ManuscriptManifest = {
   sessionWordTarget: undefined,
   doubleSpaceLinebreaks: false,
   allowStrikeout: true,
+  keepScreenAwake: 'always',
   sessionCount: 0,
   totalWordCount: 0,
   createdAt: '2026-01-01T00:00:00.000Z',
@@ -135,6 +137,7 @@ export function readSynchronousSettings(): (Partial<ManuscriptManifest> & { _upd
       const showStats = document.documentElement.getAttribute('data-show-stats');
       const doubleSpace = document.documentElement.getAttribute('data-double-space');
       const allowStrikeout = document.documentElement.getAttribute('data-allow-strikeout');
+      const keepScreenAwake = document.documentElement.getAttribute('data-keep-screen-awake') as any;
 
       const fallback: any = { _updatedAt: parseInt(updatedAt, 10) };
       if (theme) fallback.colorScheme = theme;
@@ -145,6 +148,7 @@ export function readSynchronousSettings(): (Partial<ManuscriptManifest> & { _upd
       if (showStats !== null && showStats !== undefined) fallback.showStats = showStats === 'true';
       if (doubleSpace !== null && doubleSpace !== undefined) fallback.doubleSpaceLinebreaks = doubleSpace === 'true';
       if (allowStrikeout !== null && allowStrikeout !== undefined) fallback.allowStrikeout = allowStrikeout === 'true';
+      if (keepScreenAwake) fallback.keepScreenAwake = keepScreenAwake;
       return fallback;
     }
   }
@@ -264,6 +268,7 @@ export function persistSettings(manifest: Partial<ManuscriptManifest>): void {
       setAttrIfChanged('data-show-stats', merged.showStats);
       setAttrIfChanged('data-double-space', merged.doubleSpaceLinebreaks);
       setAttrIfChanged('data-allow-strikeout', merged.allowStrikeout);
+      setAttrIfChanged('data-keep-screen-awake', merged.keepScreenAwake);
       setAttrIfChanged('data-updated-at', merged._updatedAt);
     }
   } catch (e) {

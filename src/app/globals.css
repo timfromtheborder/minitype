@@ -311,6 +311,20 @@ html[data-text-size="XL"],
   }
 }
 
+html[data-column-limit="35"][data-text-size="s"] {
+  font-size: clamp(11px, calc((100vw - 2rem) / 23.5), 14px);
+}
+html[data-column-limit="35"]:not([data-text-size]),
+html[data-column-limit="35"][data-text-size="m"] {
+  font-size: clamp(12px, calc((100vw - 2rem) / 23.5), 16px);
+}
+html[data-column-limit="35"][data-text-size="l"] {
+  font-size: clamp(13px, calc((100vw - 2rem) / 23.5), 18px);
+}
+html[data-column-limit="35"][data-text-size="xl"] {
+  font-size: clamp(13.5px, calc((100vw - 2rem) / 23.5), 24px);
+}
+
 @media (max-width: 900px) and ((min-width: 641px) or (orientation: landscape)) {
   /* 70-column platen: clamp font-size so 71ch + padding fits on narrow landscape/tablets */
   html[data-text-size="s"],
