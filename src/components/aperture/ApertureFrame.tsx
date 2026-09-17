@@ -272,14 +272,12 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = React.memo(function A
                     activeColIndex={activeColIndex}
                     isLocked={isLocked}
                     isHighlighting={isHighlighting}
-                    activeColumnLimit={activeColumnLimit}
                   />
                 ) : (
                   <HistoricalLine
                     line={line}
                     lineIndex={actualIndex}
                     isTopmost={isOldestInAperture}
-                    activeColumnLimit={activeColumnLimit}
                   />
                 )}
               </div>

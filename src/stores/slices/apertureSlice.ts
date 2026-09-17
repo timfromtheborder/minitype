@@ -11,6 +11,7 @@ import {
   createCellId,
   MAX_COLUMNS,
 } from '@/lib/wrap';
+import { reflowLines } from '@/lib/reflow';
 import { typewriterAudio } from '@/lib/sound';
 import {
   saveManuscript,
@@ -57,8 +58,61 @@ export const createApertureSlice: StateCreator<
   activeColumnLimit: 70,
   pendingWrappedCells: null,
 
-  setActiveColumnLimit: (limit: number) =>
-    set((state) => (state.activeColumnLimit === limit ? state : { activeColumnLimit: limit })),
+  setActiveColumnLimit: (limit: number) => {
+    const state = get();
+    if (state.activeColumnLimit === limit) return;
+
+    const hasCurrentLines =
+      state.currentPageLines &&
+      state.currentPageLines.some((l) => l.cells.length > 0 || l.isCommitted);
+    const hasHistoricalPages = state.historicalPages && state.historicalPages.length > 0;
+
+    if (!hasCurrentLines && !hasHistoricalPages) {
+      set({ activeColumnLimit: limit });
+      return;
+    }
+
+    const currentReflow = reflowLines(
+      state.currentPageLines,
+      limit,
+      state.currentPageNumber,
+      state.activeLineIndex,
+      state.activeColIndex
+    );
+
+    const reflowedHistorical = (state.historicalPages || []).map((page) => {
+      const pReflow = reflowLines(page.lines, limit, page.pageNumber, 0, 0);
+      return {
+        ...page,
+        lines: pReflow.lines,
+      };
+    });
+
+    set({
+      activeColumnLimit: limit,
+      currentPageLines: currentReflow.lines,
+      activeLineIndex: currentReflow.activeLineIndex,
+      activeColIndex: currentReflow.activeColIndex,
+      historicalPages: reflowedHistorical,
+    });
+
+    if (state.manifest?.id) {
+      debounceSavePage({
+        manuscriptId: state.manifest.id,
+        pageNumber: state.currentPageNumber,
+        lines: currentReflow.lines,
+        completedAt: null,
+      });
+      for (const hPage of reflowedHistorical) {
+        savePage({
+          manuscriptId: state.manifest.id,
+          pageNumber: hPage.pageNumber,
+          lines: hPage.lines,
+          completedAt: hPage.completedAt,
+        }).catch(console.error);
+      }
+    }
+  },
 
   insertChar: (char: string) => {
     const state = get();
