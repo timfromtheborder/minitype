@@ -538,12 +538,12 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
               </button>
             </div>
 
-            {/* Typing sounds */}
+            {/* Enable sound */}
             <div
               className="flex items-center justify-between cursor-pointer"
               onClick={handleToggleMute}
             >
-              <span className="text-muted-foreground">Typing sounds</span>
+              <span className="text-muted-foreground">Enable sound</span>
               <button
                 type="button"
                 role="switch"
@@ -555,7 +555,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[2px] border transition-colors duration-150 ease-in-out focus:outline-hidden ${
                   !isMuted ? 'bg-primary border-primary' : 'bg-muted/70 border-border/80'
                 }`}
-                title="Typing sounds"
+                title="Enable sound"
               >
                 <span
                   className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-[1px] shadow-xs transition-transform duration-150 ease-in-out ${

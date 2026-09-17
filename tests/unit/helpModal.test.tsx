@@ -44,6 +44,7 @@ describe('HelpModal', () => {
     // Check concise instructions sections
     expect(container.textContent).toContain('Saving, Import & Export');
     expect(container.textContent).toContain('Settings Reference');
+    expect(container.textContent).toContain('Enable sound');
     expect(container.textContent).toContain('Keyboard Shortcuts');
 
     // Verify verbosity, method philosophy, and phosphor easter egg are omitted

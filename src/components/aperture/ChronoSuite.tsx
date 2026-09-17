@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ClockFormat, Typeface, ColorScheme, TimerStyle } from '@/types';
+import { typewriterAudio } from '@/lib/sound';
 
 export interface ChronoSuiteProps {
   showClock?: boolean;
@@ -86,24 +87,79 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
   }, [timerStartTime, now]);
 
   // Pomodoro countdown derived continuously in realtime from wall-clock time
+  // TEMPORARY: Set work to 2 minutes, break to 1 minute for testing (normally 25m work, 5m break)
   const { pomodoroPhase, pomodoroSeconds } = useMemo(() => {
+    const WORK_SECONDS = 2 * 60;
+    const BREAK_SECONDS = 1 * 60;
+    const CYCLE_SECONDS = WORK_SECONDS + BREAK_SECONDS;
+
     if (timerStartTime === null) {
-      return { pomodoroPhase: 'work' as const, pomodoroSeconds: 25 * 60 };
+      return { pomodoroPhase: 'work' as const, pomodoroSeconds: WORK_SECONDS };
     }
     const elapsedSeconds = Math.max(0, Math.floor((now.getTime() - timerStartTime) / 1000));
-    const cycleSeconds = elapsedSeconds % (30 * 60); // 30-minute recurring loop (25m work, 5m break)
-    if (cycleSeconds < 25 * 60) {
+    const cycleSeconds = elapsedSeconds % CYCLE_SECONDS;
+    if (cycleSeconds < WORK_SECONDS) {
       return {
         pomodoroPhase: 'work' as const,
-        pomodoroSeconds: 25 * 60 - cycleSeconds,
+        pomodoroSeconds: WORK_SECONDS - cycleSeconds,
       };
     } else {
       return {
         pomodoroPhase: 'break' as const,
-        pomodoroSeconds: 30 * 60 - cycleSeconds,
+        pomodoroSeconds: CYCLE_SECONDS - cycleSeconds,
       };
     }
   }, [timerStartTime, now]);
+
+  // Pomodoro Audio Alerts:
+  // - 1-minute remaining warning beep in work phase
+  // - Ding when hitting 0 and transitioning to break
+  // - Chime when break hits 0 and work resumes
+  const prevPhaseRef = useRef<'work' | 'break' | null>(null);
+  const hasPlayedBeepRef = useRef<boolean>(false);
+  const prevStartTimeRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (timerStyle !== 'pomodoro' || timerStartTime === null) {
+      prevPhaseRef.current = null;
+      hasPlayedBeepRef.current = false;
+      prevStartTimeRef.current = null;
+      return;
+    }
+
+    // Reset baseline if timer was just clicked/restarted
+    if (prevStartTimeRef.current !== timerStartTime) {
+      prevStartTimeRef.current = timerStartTime;
+      prevPhaseRef.current = pomodoroPhase;
+      hasPlayedBeepRef.current = false;
+      return;
+    }
+
+    // 1. Warning beep at <= 1 minute left in work phase
+    if (pomodoroPhase === 'work') {
+      if (pomodoroSeconds <= 60 && !hasPlayedBeepRef.current) {
+        hasPlayedBeepRef.current = true;
+        typewriterAudio.playPomodoroBeep();
+      } else if (pomodoroSeconds > 60) {
+        hasPlayedBeepRef.current = false;
+      }
+    }
+
+    // 2. Phase transitions
+    if (prevPhaseRef.current !== null && prevPhaseRef.current !== pomodoroPhase) {
+      if (prevPhaseRef.current === 'work' && pomodoroPhase === 'break') {
+        // Work hit 0 and transitioned to break
+        typewriterAudio.playPomodoroDing();
+        hasPlayedBeepRef.current = false;
+      } else if (prevPhaseRef.current === 'break' && pomodoroPhase === 'work') {
+        // Break hit 0 and resumed work
+        typewriterAudio.playPomodoroChime();
+        hasPlayedBeepRef.current = false;
+      }
+    }
+
+    prevPhaseRef.current = pomodoroPhase;
+  }, [timerStyle, timerStartTime, pomodoroPhase, pomodoroSeconds]);
 
   const handleClockClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();

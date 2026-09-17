@@ -161,8 +161,8 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
                 <span className="text-foreground/75">When enabled, Backspace steps backward to strike out text. When disabled, drafting is forward-only.</span>
               </div>
               <div className="p-2 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
-                <span className="font-semibold text-foreground sm:w-40 shrink-0">Typing sounds</span>
-                <span className="text-foreground/75">Mechanical typewriter audio effects for keystrokes, return bells, and line feeds.</span>
+                <span className="font-semibold text-foreground sm:w-40 shrink-0">Enable sound</span>
+                <span className="text-foreground/75">Synthesized mechanical typewriter keystrokes, carriage returns, and Pomodoro timer audio alerts.</span>
               </div>
             </div>
           </section>

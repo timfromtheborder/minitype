@@ -543,6 +543,125 @@ class TypewriterAudio {
       osc.stop(t + thwupDuration);
     } catch {}
   }
+
+  /**
+   * Subtle alert beep for Pomodoro 1-minute warning.
+   */
+  public playPomodoroBeep() {
+    if (this.isMuted) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    try {
+      const t = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, t);
+
+      gain.gain.setValueAtTime(0.001, t);
+      gain.gain.exponentialRampToValueAtTime(0.12, t + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+
+      osc.connect(gain);
+      gain.connect(this.getMasterBus(ctx));
+
+      this.cleanupNodes(osc, gain);
+      osc.start(t);
+      osc.stop(t + 0.11);
+    } catch {}
+  }
+
+  /**
+   * Resonant typewriter/desk bell ding when Pomodoro hits 0 and transitions.
+   */
+  public playPomodoroDing() {
+    if (this.isMuted) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    try {
+      const t = ctx.currentTime;
+      const duration = 0.75;
+
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(1760, t);
+
+      gain1.gain.setValueAtTime(0.24, t);
+      gain1.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+      osc1.connect(gain1);
+      gain1.connect(this.getMasterBus(ctx));
+
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(2637, t);
+
+      gain2.gain.setValueAtTime(0.11, t);
+      gain2.gain.exponentialRampToValueAtTime(0.001, t + duration * 0.6);
+
+      osc2.connect(gain2);
+      gain2.connect(this.getMasterBus(ctx));
+
+      this.cleanupNodes(osc1, gain1);
+      this.cleanupNodes(osc2, gain2);
+
+      osc1.start(t);
+      osc1.stop(t + duration + 0.02);
+      osc2.start(t);
+      osc2.stop(t + duration * 0.6 + 0.02);
+    } catch {}
+  }
+
+  /**
+   * Uplifting harmonic two-tone chime when Pomodoro work session resumes.
+   */
+  public playPomodoroChime() {
+    if (this.isMuted) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    try {
+      const t = ctx.currentTime;
+      const duration1 = 0.45;
+      const duration2 = 0.8;
+
+      // Note 1 (G5 - 784Hz)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(783.99, t);
+      gain1.gain.setValueAtTime(0.16, t);
+      gain1.gain.exponentialRampToValueAtTime(0.001, t + duration1);
+
+      osc1.connect(gain1);
+      gain1.connect(this.getMasterBus(ctx));
+
+      // Note 2 (C6 - 1046.5Hz) delayed by 130ms
+      const t2 = t + 0.13;
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(1046.5, t2);
+      gain2.gain.setValueAtTime(0.20, t2);
+      gain2.gain.exponentialRampToValueAtTime(0.001, t2 + duration2);
+
+      osc2.connect(gain2);
+      gain2.connect(this.getMasterBus(ctx));
+
+      this.cleanupNodes(osc1, gain1);
+      this.cleanupNodes(osc2, gain2);
+
+      osc1.start(t);
+      osc1.stop(t + duration1 + 0.02);
+      osc2.start(t2);
+      osc2.stop(t2 + duration2 + 0.02);
+    } catch {}
+  }
 }
 
 export const typewriterAudio = new TypewriterAudio();

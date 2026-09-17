@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ChronoSuite, formatClockTime, formatStartTime, formatElapsedTime, formatPomodoroTime } from '@/components/aperture/ChronoSuite';
+import { typewriterAudio } from '@/lib/sound';
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -215,7 +216,11 @@ describe('ChronoSuite & Clock Formatter', () => {
       expect(wrapper?.className).not.toContain('font-serif-clock');
     });
 
-    it('handles pomodoro timer countdown, warning flash, break inversion, and dismissal', async () => {
+    it('handles pomodoro timer countdown, audio alerts, warning flash, break inversion, and dismissal', async () => {
+      const beepSpy = vi.spyOn(typewriterAudio, 'playPomodoroBeep');
+      const dingSpy = vi.spyOn(typewriterAudio, 'playPomodoroDing');
+      const chimeSpy = vi.spyOn(typewriterAudio, 'playPomodoroChime');
+
       const root = createRoot(container);
       await act(async () => {
         root.render(<ChronoSuite showClock={true} timerStyle="pomodoro" />);
@@ -227,55 +232,62 @@ describe('ChronoSuite & Clock Formatter', () => {
       // Initially no pomodoro badge
       expect(container.querySelector('button[aria-label*="Pomodoro countdown"]')).toBeNull();
 
-      // Click clock to start Pomodoro timer (starts at 25:00)
+      // Click clock to start Pomodoro timer (starts at 02:00)
       await act(async () => {
         clockBtn?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       });
 
       let badgeBtn = container.querySelector('button[aria-label*="Pomodoro countdown"]');
       expect(badgeBtn).not.toBeNull();
-      expect(badgeBtn?.textContent).toBe('25:00');
+      expect(badgeBtn?.textContent).toBe('02:00');
 
-      // Advance 100 seconds -> should be 23:20
+      // Advance 40 seconds -> should be 01:20
       await act(async () => {
-        vi.advanceTimersByTime(100 * 1000);
+        vi.advanceTimersByTime(40 * 1000);
       });
-      expect(badgeBtn?.textContent).toBe('23:20');
+      expect(badgeBtn?.textContent).toBe('01:20');
+      expect(beepSpy).not.toHaveBeenCalled();
 
-      // Advance to 1 minute left (total 24 minutes elapsed = 1440s)
+      // Advance 20 seconds to 1 minute left (total 60s elapsed)
       await act(async () => {
-        vi.advanceTimersByTime(1340 * 1000);
+        vi.advanceTimersByTime(20 * 1000);
       });
-      // 60 seconds left -> should be in warning state with animate-pulse
+      // 60 seconds left -> should be in warning state with animate-pulse and beep played
       expect(badgeBtn?.textContent).toBe('01:00');
       expect(badgeBtn?.className).toContain('animate-pulse');
       expect(badgeBtn?.className).toContain('font-bold');
+      expect(beepSpy).toHaveBeenCalledTimes(1);
 
-      // Advance 60 seconds to reach zero and trigger 5-minute break
+      // Advance 60 seconds to reach zero and trigger 1-minute break
       await act(async () => {
         vi.advanceTimersByTime(60 * 1000);
       });
 
-      // Now in break mode: inverted styling (bg-foreground text-background)
+      // Now in break mode: inverted styling (bg-foreground text-background) and ding played
       badgeBtn = container.querySelector('button[aria-label*="Pomodoro break"]');
       expect(badgeBtn).not.toBeNull();
-      expect(badgeBtn?.textContent).toBe('05:00');
+      expect(badgeBtn?.textContent).toBe('01:00');
       expect(badgeBtn?.className).toContain('bg-foreground');
       expect(badgeBtn?.className).toContain('text-background');
+      expect(dingSpy).toHaveBeenCalledTimes(1);
 
-      // Advance 1 minute into break -> pulses background
+      // Advance 60 seconds to complete break and resume work session -> chime played
       await act(async () => {
         vi.advanceTimersByTime(60 * 1000);
       });
-      expect(badgeBtn?.textContent).toBe('04:00');
+      badgeBtn = container.querySelector('button[aria-label*="Pomodoro countdown"]');
+      expect(badgeBtn).not.toBeNull();
+      expect(badgeBtn?.textContent).toBe('02:00');
+      expect(badgeBtn?.className).not.toContain('bg-foreground');
+      expect(chimeSpy).toHaveBeenCalledTimes(1);
 
-      // Clicking the clock restarts pomodoro at 25:00 work phase
+      // Clicking the clock restarts pomodoro at 02:00 work phase
       await act(async () => {
         clockBtn?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       });
       badgeBtn = container.querySelector('button[aria-label*="Pomodoro countdown"]');
       expect(badgeBtn).not.toBeNull();
-      expect(badgeBtn?.textContent).toBe('25:00');
+      expect(badgeBtn?.textContent).toBe('02:00');
       expect(badgeBtn?.className).not.toContain('bg-foreground');
 
       // Clicking badge dismisses pomodoro timer
@@ -284,6 +296,10 @@ describe('ChronoSuite & Clock Formatter', () => {
       });
       expect(container.querySelector('button[aria-label*="Pomodoro countdown"]')).toBeNull();
       expect(container.querySelector('button[aria-label*="Pomodoro break"]')).toBeNull();
+
+      beepSpy.mockRestore();
+      dingSpy.mockRestore();
+      chimeSpy.mockRestore();
     });
 
     it('pomodoro timer continues counting down in realtime even when isPaused is true (modals open)', async () => {
@@ -298,15 +314,15 @@ describe('ChronoSuite & Clock Formatter', () => {
       });
 
       const badgeBtn = container.querySelector('button[aria-label*="Pomodoro countdown"]');
-      expect(badgeBtn?.textContent).toBe('25:00');
+      expect(badgeBtn?.textContent).toBe('02:00');
 
-      // Advance 120 seconds while isPaused={true}
+      // Advance 50 seconds while isPaused={true}
       await act(async () => {
-        vi.advanceTimersByTime(120 * 1000);
+        vi.advanceTimersByTime(50 * 1000);
       });
 
-      // Should have advanced 2 minutes in realtime (23:00)
-      expect(badgeBtn?.textContent).toBe('23:00');
+      // Should have advanced 50 seconds in realtime (01:10)
+      expect(badgeBtn?.textContent).toBe('01:10');
     });
   });
 });
