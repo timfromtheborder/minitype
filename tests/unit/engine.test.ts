@@ -2544,18 +2544,18 @@ describe('Typing Engine & State Machine Invariants', () => {
       expect(allHighlighted.map((c) => c.char).join('')).toBe('hello world');
     });
 
-    it('ensures sessionWordTarget is not in global settings and defaults to undefined in new projects', async () => {
+    it('ensures sessionWordTarget is in global settings and preserved in new projects', async () => {
       const store = useTypingStore.getState();
       store.setManifest({ sessionWordTarget: 500 });
       persistSettings(useTypingStore.getState().manifest);
 
       const globalSettings = readSynchronousSettings();
-      // Should not be saved into global settings
-      expect(globalSettings?.sessionWordTarget).toBeUndefined();
+      // Should be saved into global settings
+      expect(globalSettings?.sessionWordTarget).toBe(500);
 
       // Create new project
       await store.newProject();
-      expect(useTypingStore.getState().manifest.sessionWordTarget).toBeUndefined();
+      expect(useTypingStore.getState().manifest.sessionWordTarget).toBe(500);
     });
 
     it('does not create active session when loading an empty project until typed', async () => {

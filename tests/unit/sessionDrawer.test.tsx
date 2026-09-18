@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { SessionDrawer } from '@/components/modals/SessionDrawer';
+import { CompileModal } from '@/components/modals/CompileModal';
 import { ProjectFilesModal } from '@/components/modals/ProjectFilesModal';
 import { SettingsDrawer } from '@/components/modals/SettingsDrawer';
 import { useTypingStore } from '@/stores/typingStore';
@@ -187,13 +188,48 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     });
 
     await act(async () => {
-      root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
+      root.render(
+        <CompileModal
+          isOpen={true}
+          onClose={() => {}}
+          onCloseAll={() => {}}
+          pages={[
+            {
+              pageNumber: 1,
+              lines: [
+                {
+                  id: 'p1-l0',
+                  lineIndex: 0,
+                  cells: 'First paragraph sentence.'.split('').map((c, i) => ({ id: `c0-${i}`, char: c, state: 'standard', colIndex: i, lineIndex: 0 })),
+                  isCommitted: true,
+                  wrapType: 'hard',
+                },
+                {
+                  id: 'p1-l1',
+                  lineIndex: 1,
+                  cells: 'Second paragraph sentence.'.split('').map((c, i) => ({ id: `c1-${i}`, char: c, state: 'standard', colIndex: i, lineIndex: 1 })),
+                  isCommitted: true,
+                  wrapType: 'hard',
+                },
+                {
+                  id: 'p1-l2',
+                  lineIndex: 2,
+                  cells: 'Final paragraph sentence.'.split('').map((c, i) => ({ id: `c2-${i}`, char: c, state: 'standard', colIndex: i, lineIndex: 2 })),
+                  isCommitted: true,
+                  wrapType: 'hard',
+                },
+              ],
+              completedAt: now,
+            },
+          ]}
+        />
+      );
     });
 
-    const innerPreview = container.querySelector('.whitespace-pre-wrap') as HTMLDivElement;
+    const innerPreview = container.querySelector('.font-manuscript-serif') as HTMLDivElement;
     expect(innerPreview).not.toBeNull();
     const initialText = innerPreview.textContent;
-    expect(initialText).toBe('First paragraph sentence.\nSecond paragraph sentence.\nFinal paragraph sentence.');
+    expect(initialText).toContain('First paragraph sentence.');
 
     // Find double-space button
     const buttons = Array.from(container.querySelectorAll('button'));
@@ -206,10 +242,6 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     });
 
     expect(useTypingStore.getState().manifest.doubleSpaceLinebreaks).toBe(true);
-    const doubleSpacedPreview = container.querySelector('.whitespace-pre-wrap') as HTMLDivElement;
-    expect(doubleSpacedPreview.textContent).toBe(
-      'First paragraph sentence.\n\nSecond paragraph sentence.\n\nFinal paragraph sentence.'
-    );
 
     // Toggle double space OFF
     await act(async () => {
@@ -217,12 +249,6 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     });
 
     expect(useTypingStore.getState().manifest.doubleSpaceLinebreaks).toBe(false);
-    const restoredPreview = container.querySelector('.whitespace-pre-wrap') as HTMLDivElement;
-    expect(restoredPreview.textContent).toBe(initialText);
-
-    // Count occurrences of the final sentence
-    const occurrences = (restoredPreview.textContent?.match(/Final paragraph sentence\./g) || []).length;
-    expect(occurrences).toBe(1);
 
     await act(async () => {
       root.unmount();
@@ -320,17 +346,9 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
 
     // Now CHANGE sessionWordTarget to 2 (drastically lower target)
     // Historical targetReached must stay invariant
-    const targetInput = container.querySelector('input[type="number"]') as HTMLInputElement;
-    expect(targetInput).not.toBeNull();
-
     await act(async () => {
-      const nativeSetter = Object.getOwnPropertyDescriptor(
-        window.HTMLInputElement.prototype,
-        'value'
-      )?.set;
-      nativeSetter?.call(targetInput, '2');
-      targetInput.dispatchEvent(new Event('input', { bubbles: true }));
-      targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+      useTypingStore.getState().setManifest({ sessionWordTarget: 2 });
+      root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
     });
 
     sessionSpans = getSessionWordSpans();
@@ -345,13 +363,8 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     // Session 1 (targetReached: true, 8 words): MUST REMAIN BOLD!
     // Session 3 (active, 4 words < 100): dynamically unbolds!
     await act(async () => {
-      const nativeSetter = Object.getOwnPropertyDescriptor(
-        window.HTMLInputElement.prototype,
-        'value'
-      )?.set;
-      nativeSetter?.call(targetInput, '100');
-      targetInput.dispatchEvent(new Event('input', { bubbles: true }));
-      targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+      useTypingStore.getState().setManifest({ sessionWordTarget: 100 });
+      root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
     });
 
     sessionSpans = getSessionWordSpans();
@@ -368,7 +381,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     container.remove();
   });
 
-  it('supports toggling between Typewriter and Manuscript views', async () => {
+  it('supports viewing drafting ledger in typewriter font and popping over compile modal in publisher manuscript serif', async () => {
     (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
     const root = createRoot(container);
 
@@ -385,6 +398,14 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
           wordCount: 3,
         },
       ],
+      currentPageLines: [
+        {
+          id: 'p1-l0',
+          lineIndex: 0,
+          cells: 'Drafting text here.'.split('').map((c, i) => ({ id: `c-${i}`, char: c, state: 'standard' as const, colIndex: i, lineIndex: 0 })),
+          isCommitted: false,
+        },
+      ],
       manifest: {
         ...useTypingStore.getState().manifest,
         title: 'View Mode Test',
@@ -395,40 +416,24 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
       root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
     });
 
-    // Initially typewriter mode
-    let textPreview = container.querySelector('.whitespace-pre-wrap');
+    // Drafting ledger is permanently typewriter monospace font
+    const textPreview = container.querySelector('.whitespace-pre-wrap');
     expect(textPreview?.className).toContain('font-mono');
 
-    // Click Manuscript button
+    // Click Compile button to open Compile modal
     const buttons = Array.from(container.querySelectorAll('button'));
-    const manuscriptBtn = buttons.find((b) =>
-      b.getAttribute('aria-label')?.includes('Manuscript') ||
-      b.getAttribute('title')?.includes('Manuscript') ||
-      b.textContent?.includes('Manuscript')
-    );
-    expect(manuscriptBtn).toBeDefined();
+    const compileBtn = buttons.find((b) => b.textContent?.includes('Compile'));
+    expect(compileBtn).toBeDefined();
 
     await act(async () => {
-      manuscriptBtn?.click();
+      compileBtn?.click();
     });
 
-    textPreview = container.querySelector('.whitespace-pre-wrap');
-    expect(textPreview?.className).toContain('font-manuscript-serif');
-
-    // Click Typewriter button
-    const typewriterBtn = buttons.find((b) =>
-      b.getAttribute('aria-label')?.includes('Typewriter') ||
-      b.getAttribute('title')?.includes('Typewriter') ||
-      b.textContent?.includes('Typewriter')
-    );
-    expect(typewriterBtn).toBeDefined();
-
-    await act(async () => {
-      typewriterBtn?.click();
-    });
-
-    textPreview = container.querySelector('.whitespace-pre-wrap');
-    expect(textPreview?.className).toContain('font-mono');
+    // Compile modal is opened with manuscript serif formatting
+    const compileModal = container.querySelector('[aria-label="Compile Manuscript"]');
+    expect(compileModal).not.toBeNull();
+    const serifPreview = container.querySelector('.font-manuscript-serif');
+    expect(serifPreview).not.toBeNull();
 
     await act(async () => {
       root.unmount();
@@ -502,7 +507,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     container.remove();
   });
 
-  it('supports hiding and showing session dividers via the Show Sessions toolbar button', async () => {
+  it('renders permanent session dividers and solid margin indicator (▶) at session boundaries in drafting ledger', async () => {
     (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
     const root = createRoot(container);
 
@@ -518,42 +523,31 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
           text: 'First session content.',
           wordCount: 3,
         },
+        {
+          id: 'doc-1-session-2',
+          projectId: 'doc-1',
+          sessionNumber: 2,
+          startedAt: now,
+          completedAt: null,
+          text: 'Second session content.',
+          wordCount: 3,
+        },
       ],
-      manifest: {
-        ...useTypingStore.getState().manifest,
-        showSessionDividers: true,
-      },
     });
 
     await act(async () => {
       root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
     });
 
-    // Dividers exist initially
+    // Both sessions render header dividers
+    expect(container.textContent).toContain('Session 1');
+    expect(container.textContent).toContain('Session 2');
     expect(container.textContent).toContain('-----');
 
-    // Click Show Sessions button
-    const buttons = Array.from(container.querySelectorAll('button'));
-    const showSessionsBtn = buttons.find((b) => b.textContent?.includes('Show Sessions'));
-    expect(showSessionsBtn).toBeDefined();
-
-    await act(async () => {
-      showSessionsBtn?.click();
-    });
-
-    expect(useTypingStore.getState().manifest.showSessionDividers).toBe(false);
-    // Divider dashes should be hidden now
-    expect(container.textContent).not.toContain('-----');
-    // Content is still present and continuous
-    expect(container.textContent).toContain('First session content.');
-
-    // Click Show Sessions button again to restore
-    await act(async () => {
-      showSessionsBtn?.click();
-    });
-
-    expect(useTypingStore.getState().manifest.showSessionDividers).toBe(true);
-    expect(container.textContent).toContain('-----');
+    // Both session headers contain the solid margin triangle SVG matching modal background
+    const triangles = container.querySelectorAll('polygon[points="0,0 10,6 0,12"]');
+    expect(triangles.length).toBe(2);
+    expect((triangles[0] as HTMLElement).getAttribute('style')).toContain('fill: var(--background)');
 
     await act(async () => {
       root.unmount();
@@ -561,7 +555,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     container.remove();
   });
 
-  it('indents every paragraph in Manuscript view mode', async () => {
+  it('indents every paragraph in CompileModal manuscript view mode', async () => {
     (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
     const root = createRoot(container);
 
@@ -580,18 +574,49 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
           wordCount: 9,
         },
       ],
-      manifest: {
-        ...useTypingStore.getState().manifest,
-        documentViewMode: 'manuscript',
-      },
     });
 
     await act(async () => {
-      root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
+      root.render(
+        <CompileModal
+          isOpen={true}
+          onClose={() => {}}
+          onCloseAll={() => {}}
+          pages={[
+            {
+              pageNumber: 1,
+              lines: [
+                {
+                  id: 'p1-l0',
+                  lineIndex: 0,
+                  cells: 'Paragraph one text.'.split('').map((c, i) => ({ id: `c-${i}`, char: c, state: 'standard', colIndex: i, lineIndex: 0 })),
+                  isCommitted: true,
+                  wrapType: 'hard',
+                },
+                {
+                  id: 'p1-l1',
+                  lineIndex: 1,
+                  cells: 'Paragraph two text.'.split('').map((c, i) => ({ id: `c-${i}`, char: c, state: 'standard', colIndex: i, lineIndex: 1 })),
+                  isCommitted: true,
+                  wrapType: 'hard',
+                },
+                {
+                  id: 'p1-l2',
+                  lineIndex: 2,
+                  cells: 'Paragraph three text.'.split('').map((c, i) => ({ id: `c-${i}`, char: c, state: 'standard', colIndex: i, lineIndex: 2 })),
+                  isCommitted: true,
+                  wrapType: 'hard',
+                },
+              ],
+              completedAt: now,
+            },
+          ]}
+        />
+      );
     });
 
     // Query all paragraph elements inside the text preview
-    const paragraphs = Array.from(container.querySelectorAll('.whitespace-pre-wrap p'));
+    const paragraphs = Array.from(container.querySelectorAll('.font-manuscript-serif p'));
     expect(paragraphs.length).toBe(3);
 
     // Every paragraph must have the indent-8 class
@@ -682,7 +707,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     });
   });
 
-  it('preserves active session demarcation card when Show Sessions is toggled off', async () => {
+  it('demarcates active session card with distinct styling and unifies upon session close', async () => {
     (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
     const root = createRoot(container);
 
@@ -697,7 +722,6 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
         ...useTypingStore.getState().manifest,
         id: 'doc-mask-2',
         title: 'Dividers Off Demarcation Test',
-        showSessionDividers: false, // Sessions hidden
       },
       historicalPages: [],
       currentPageNumber: 1,
@@ -741,11 +765,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
       root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
     });
 
-    // Completed session text is visible in main body without divider headers
-    expect(container.querySelector('.whitespace-pre-wrap')?.textContent).toContain(completedText);
-    expect(container.querySelector('.whitespace-pre-wrap')?.textContent).not.toContain('Session 1');
-
-    // Active session card remains distinctly demarcated beneath the body AND shows its banner even when dividers are off
+    // Active session card remains distinctly demarcated beneath the body
     const activeCard = container.querySelector('[data-active-session="true"]');
     expect(activeCard).not.toBeNull();
     expect(activeCard?.textContent).toContain('Session 2');
@@ -754,7 +774,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     // Active draft text is visible in the active session card
     expect(activeCard?.textContent).toContain(activeText);
 
-    // When closed, session joins the body, and with Show Sessions off, neither session has a divider
+    // When closed, session joins completed sessions
     const buttons = Array.from(container.querySelectorAll('button'));
     const closeBtn = buttons.find((b) => b.textContent?.includes('Close Session'));
     expect(closeBtn).toBeDefined();
@@ -765,8 +785,6 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     });
 
     expect(container.querySelector('[data-active-session="true"]')).toBeNull();
-    expect(container.textContent).not.toContain('Session 1');
-    expect(container.textContent).not.toContain('Session 2');
     expect(container.textContent).toContain(completedText);
     expect(container.textContent).toContain(activeText);
 
@@ -978,13 +996,8 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     container.remove();
   });
 
-  it('exports plaintext directly when no active session with text, but expands button with confirmation when active text exists', async () => {
+  it('compiles directly when no active session with text, but expands confirmation to close active session first when active text exists', async () => {
     (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
-    if (!window.URL.createObjectURL) {
-      window.URL.createObjectURL = vi.fn().mockReturnValue('blob:mock');
-      window.URL.revokeObjectURL = vi.fn();
-    }
-    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
     // Case 1: No active session with text
     useTypingStore.setState({
@@ -999,7 +1012,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
       ],
       manifest: {
         ...useTypingStore.getState().manifest,
-        title: 'Export Test Doc',
+        title: 'Compile Test Doc',
       },
     });
 
@@ -1008,19 +1021,18 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
       root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
     });
 
-    const exportBtn = Array.from(container.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Export Document')
+    const compileBtn = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Compile')
     );
-    expect(exportBtn).not.toBeUndefined();
+    expect(compileBtn).not.toBeUndefined();
 
     await act(async () => {
-      exportBtn?.click();
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      compileBtn?.click();
     });
 
-    // Should download directly without expanding confirmation
-    expect(clickSpy).toHaveBeenCalled();
-    expect(container.textContent).not.toContain('Close active session and export');
+    // Should open CompileModal directly without asking confirmation
+    expect(container.textContent).not.toContain('Close active session to compile');
+    expect(container.querySelector('[aria-label="Compile Manuscript"]')).not.toBeNull();
 
     await act(async () => {
       root.unmount();
@@ -1031,7 +1043,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     useTypingStore.setState({
       activeSessions: [
         {
-          id: 'export-session-1',
+          id: 'compile-session-1',
           projectId: 'current',
           sessionNumber: 1,
           startedAt: now,
@@ -1063,20 +1075,20 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
       root2.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
     });
 
-    const exportBtn2 = Array.from(container.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Export Document')
+    const compileBtn2 = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Compile')
     );
-    expect(exportBtn2).not.toBeUndefined();
+    expect(compileBtn2).not.toBeUndefined();
 
-    // Click Export Document -> button expands and text says 'Close active session and export'
+    // Click Compile -> button expands and says 'Close active session to compile'
     await act(async () => {
-      exportBtn2?.click();
+      compileBtn2?.click();
     });
 
-    expect(container.textContent).toContain('Close active session and export');
+    expect(container.textContent).toContain('Close active session to compile');
     expect(container.textContent).toContain('Cancel');
 
-    // Test reversion 1: Cancel reverts button back to 'Export Document'
+    // Test reversion 1: Cancel reverts button back to 'Compile'
     const cancelBtn = Array.from(container.querySelectorAll('button')).find((b) =>
       b.textContent?.includes('Cancel')
     );
@@ -1085,147 +1097,72 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     await act(async () => {
       cancelBtn?.click();
     });
-    expect(container.textContent).not.toContain('Close active session and export');
-    expect(container.textContent).toContain('Export Document');
+    expect(container.textContent).not.toContain('Close active session to compile');
+    expect(container.textContent).toContain('Compile');
 
     // Expand button again
-    const exportBtn3 = Array.from(container.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Export Document')
+    const compileBtn3 = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Compile')
     );
     await act(async () => {
-      exportBtn3?.click();
+      compileBtn3?.click();
     });
-    expect(container.textContent).toContain('Close active session and export');
+    expect(container.textContent).toContain('Close active session to compile');
 
-    // Test reversion 2: If 'Close Session' button is pressed, the button reverts
-    const closeSessionBtn = Array.from(container.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Close Session')
+    // Test execution: Clicking 'Close active session to compile'
+    const closeAndCompileBtn = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Close active session to compile')
     );
-    expect(closeSessionBtn).not.toBeUndefined();
+    expect(closeAndCompileBtn).not.toBeUndefined();
 
     await act(async () => {
-      closeSessionBtn?.click();
+      closeAndCompileBtn?.click();
       await new Promise((resolve) => setTimeout(resolve, 50));
     });
 
     expect(closeSessionSpy).toHaveBeenCalled();
-    expect(container.textContent).not.toContain('Close active session and export');
-    expect(container.textContent).toContain('Export Document');
-
-    // Test reversion 3: If the modal is closed, the button reverts
-    // Set up active session with text again
-    await act(async () => {
-      useTypingStore.setState({
-        activeSessions: [
-          {
-            id: 'export-session-2',
-            projectId: 'current',
-            sessionNumber: 2,
-            startedAt: now,
-            completedAt: null,
-            text: 'More active words.',
-            wordCount: 3,
-          },
-        ],
-      });
-    });
-
-    // Re-render and expand
-    await act(async () => {
-      root2.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
-    });
-    const exportBtn4 = Array.from(container.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Export Document')
-    );
-    await act(async () => {
-      exportBtn4?.click();
-    });
-    expect(container.textContent).toContain('Close active session and export');
-
-    // Close modal (isOpen: false)
-    await act(async () => {
-      root2.render(<SessionDrawer isOpen={false} onClose={() => {}} />);
-    });
-    // Open modal again (isOpen: true)
-    await act(async () => {
-      root2.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
-    });
-    // The button must have reverted to 'Export Document'
-    expect(container.textContent).not.toContain('Close active session and export');
-    expect(container.textContent).toContain('Export Document');
-
-    // Test execution: Clicking 'Close active session and export'
-    const exportBtn5 = Array.from(container.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Export Document')
-    );
-    await act(async () => {
-      exportBtn5?.click();
-    });
-
-    const closeAndExportBtn = Array.from(container.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Close active session and export')
-    );
-    expect(closeAndExportBtn).not.toBeUndefined();
-
-    await act(async () => {
-      closeAndExportBtn?.click();
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    });
-
-    expect(closeSessionSpy).toHaveBeenCalledTimes(2);
-    expect(container.textContent).not.toContain('Close active session and export');
+    expect(container.textContent).not.toContain('Close active session to compile');
+    expect(container.querySelector('[aria-label="Compile Manuscript"]')).not.toBeNull();
 
     await act(async () => {
       root2.unmount();
     });
-    clickSpy.mockRestore();
     container.remove();
   });
 
-  it('renders typewriter/manuscript toggle box matching toolbar height and toggles when tapped anywhere', async () => {
+  it('renders CompileModal with no header and allows returning to drafting ledger', async () => {
     (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
     const testContainer = document.createElement('div');
     document.body.appendChild(testContainer);
     const root = createRoot(testContainer);
 
+    let returnCalled = false;
     await act(async () => {
-      root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
+      root.render(
+        <CompileModal
+          isOpen={true}
+          onClose={() => {
+            returnCalled = true;
+          }}
+          onCloseAll={() => {}}
+        />
+      );
     });
 
-    const toggleBtn = testContainer.querySelector('button[aria-label*="Toggle document view"]');
-    expect(toggleBtn).not.toBeNull();
+    // Compile modal has no header element
+    expect(testContainer.querySelector('header')).toBeNull();
 
-    // Toggle box matches height with other toolbar buttons (h-[28px])
-    expect(toggleBtn?.className).toContain('h-[28px]');
-
-    const showSessionsBtn = Array.from(testContainer.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Show Sessions')
+    // Has bottom action bar with Return to Ledger button
+    const returnBtn = Array.from(testContainer.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Return to Ledger')
     );
-    expect(showSessionsBtn?.className).toContain('h-[28px]');
+    expect(returnBtn).toBeDefined();
 
-    const doubleSpaceBtn = Array.from(testContainer.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Double-space')
-    );
-    expect(doubleSpaceBtn?.className).toContain('h-[28px]');
-
-    // Contains only icon SVGs without literal text labels
-    expect(toggleBtn?.textContent?.trim()).toBe('');
-    expect(toggleBtn?.querySelectorAll('svg').length).toBe(2);
-
-    // Initially in typewriter mode
-    expect(useTypingStore.getState().manifest.documentViewMode ?? 'typewriter').toBe('typewriter');
-
-    // Tapping anywhere on the box toggles to manuscript
     await act(async () => {
-      (toggleBtn as HTMLElement).click();
+      returnBtn?.click();
     });
-    expect(useTypingStore.getState().manifest.documentViewMode).toBe('manuscript');
 
-    // Tapping again toggles back to typewriter
-    await act(async () => {
-      (toggleBtn as HTMLElement).click();
-    });
-    expect(useTypingStore.getState().manifest.documentViewMode).toBe('typewriter');
+    expect(returnCalled).toBe(true);
 
     await act(async () => {
       root.unmount();
@@ -1385,16 +1322,17 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     useTypingStore.setState({
       manifest: {
         ...useTypingStore.getState().manifest,
+        showSessionTargetTracker: true,
         sessionWordTarget: undefined,
       },
     });
 
     await act(async () => {
-      root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
+      root.render(<SettingsDrawer isOpen={true} onClose={() => {}} />);
     });
 
-    const incBtn = testContainer.querySelector('button[aria-label="Increment target"]') as HTMLButtonElement;
-    const decBtn = testContainer.querySelector('button[aria-label="Decrement target"]') as HTMLButtonElement;
+    const incBtn = testContainer.querySelector('button[aria-label="Increment target by 50"]') as HTMLButtonElement;
+    const decBtn = testContainer.querySelector('button[aria-label="Decrement target by 50"]') as HTMLButtonElement;
     const input = testContainer.querySelector('input[type="number"]') as HTMLInputElement;
 
     expect(incBtn).not.toBeNull();

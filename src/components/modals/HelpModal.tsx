@@ -92,7 +92,6 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
             type="button"
             onClick={onClose}
             className="flex items-center gap-1 px-2 py-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-border/60 transition-colors cursor-pointer touch-manipulation text-xs shrink-0"
-            title="Return to writing in aperture"
             aria-label="Return to writing in aperture"
           >
             <CornerUpLeft className="w-4 h-4 shrink-0" />

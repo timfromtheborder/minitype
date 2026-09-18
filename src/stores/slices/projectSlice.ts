@@ -310,7 +310,6 @@ export const createProjectSlice: StateCreator<
     const updatedManifest: ManuscriptManifest = {
       ...state.manifest, // retains global settings
       ...globalSettings,
-      sessionWordTarget: undefined,
       id: newId,
       title,
       mode: 'local',

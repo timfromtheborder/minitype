@@ -15,7 +15,7 @@ export function formatSessionDateTime(isoStr?: string | null): string {
   if (!isoStr) return '';
   try {
     const d = new Date(isoStr);
-    const weekday = d.toLocaleDateString('en-US', { weekday: 'long' });
+    const weekday = d.toLocaleDateString('en-US', { weekday: 'short' });
     const month = d.toLocaleDateString('en-US', { month: 'short' });
     const day = d.getDate();
     const year = d.getFullYear();
@@ -166,7 +166,7 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
                     }
                   }}
                   className="w-14 sm:w-16 h-full px-1.5 text-xs font-mono font-bold text-right bg-transparent text-foreground focus:outline-hidden [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  title="Target words per session (enter 0 or clear to turn off)"
+                  aria-label="Target words per session"
                 />
                 <div className="flex flex-col h-full border-l border-border/80 divide-y divide-border/60 shrink-0 w-4 sm:w-4.5 bg-muted/20">
                   <button
@@ -177,8 +177,7 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
                       setManifest({ sessionWordTarget: next });
                     }}
                     className="flex-1 flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none"
-                    title="Increment target by 50"
-                    aria-label="Increment target"
+                    aria-label="Increment target by 50"
                   >
                     <ChevronUp className="w-2.5 h-2.5" />
                   </button>
@@ -194,8 +193,7 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
                       }
                     }}
                     className="flex-1 flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none"
-                    title="Decrement target by 50"
-                    aria-label="Decrement target"
+                    aria-label="Decrement target by 50"
                   >
                     <ChevronDown className="w-2.5 h-2.5" />
                   </button>
@@ -206,7 +204,7 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
                   type="button"
                   onClick={() => setManifest({ sessionWordTarget: undefined })}
                   className="text-[10px] text-muted-foreground hover:text-foreground cursor-pointer underline shrink-0"
-                  title="Turn off target"
+                  aria-label="Turn off target"
                 >
                   Off
                 </button>
@@ -296,7 +294,7 @@ export const ProjectSessionsTab: React.FC<ProjectSessionsTabProps> = ({
             await useTypingStore.getState().startNewSession();
           }}
           className="w-full flex items-center justify-center gap-2 p-2.5 sm:p-3 border border-dashed border-border/80 hover:border-primary/60 bg-muted/15 hover:bg-muted/30 text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none rounded-[2px] font-mono text-[11px] sm:text-xs"
-          title="Start a new drafting session"
+          aria-label="Start a new drafting session"
         >
           <Plus className="w-3.5 h-3.5 text-primary" />
           <span className="font-semibold tracking-wider uppercase text-[10px] sm:text-[11px]">

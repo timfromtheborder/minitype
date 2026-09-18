@@ -9,25 +9,30 @@ import {
   PhosphorColor,
   TimerStyle,
 } from '@/types';
-import { CornerUpLeft, Sliders, Volume2, VolumeX } from 'lucide-react';
+import { useTypingStore } from '@/stores/typingStore';
+import { CornerUpLeft, Sliders, Volume2, VolumeX, ChevronUp, ChevronDown } from 'lucide-react';
 import { typewriterAudio } from '@/lib/sound';
 
 interface SettingsDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  manifest: ManuscriptManifest;
-  onUpdateHeight: (height: ApertureHeight) => void;
-  onUpdatePageSize: (size: PageSize) => void;
-  onUpdateManifest: (patch: Partial<ManuscriptManifest>) => void;
+  manifest?: ManuscriptManifest;
+  onUpdateHeight?: (height: ApertureHeight) => void;
+  onUpdatePageSize?: (size: PageSize) => void;
+  onUpdateManifest?: (patch: Partial<ManuscriptManifest>) => void;
 }
 
 export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   isOpen,
   onClose,
-  manifest,
-  onUpdateHeight,
-  onUpdateManifest,
+  manifest: propManifest,
+  onUpdateHeight: propOnUpdateHeight,
+  onUpdateManifest: propOnUpdateManifest,
 }) => {
+  const storeManifest = useTypingStore((state) => state.manifest);
+  const manifest = propManifest ?? storeManifest;
+  const onUpdateManifest = propOnUpdateManifest ?? useTypingStore.getState().setManifest;
+  const onUpdateHeight = propOnUpdateHeight ?? useTypingStore.getState().setApertureHeight;
   const [isMuted, setIsMuted] = React.useState(typewriterAudio.getMuted());
   const [isPhosphorPickerOpen, setIsPhosphorPickerOpen] = React.useState(false);
 
@@ -140,9 +145,9 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           </div>
           <button
             type="button"
-            onClick={handleClose}
-            className="flex items-center gap-1 px-2 py-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-border/60 transition-colors cursor-pointer touch-manipulation text-xs shrink-0"
-            title="Return to writing in aperture"
+            onClick={onClose}
+            className="flex items-center gap-1 px-2 py-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-border/60 transition-colors cursor-pointer touch-manipulation text-xs"
+            aria-label="Return to writing in aperture"
           >
             <CornerUpLeft className="w-4 h-4 shrink-0" />
             <span className="hidden sm:inline font-sans text-xs font-semibold">Return</span>
@@ -367,7 +372,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                             <button
                               key={swatch.id}
                               type="button"
-                              title={swatch.label}
+                              aria-label={swatch.label}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onUpdateManifest({ phosphorColor: swatch.id });
@@ -413,7 +418,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[2px] border transition-colors duration-150 ease-in-out focus:outline-hidden ${
                   showStats ? 'bg-primary border-primary' : 'bg-muted/70 border-border/80'
                 }`}
-                title="Show document stats"
+                aria-label="Show document stats"
               >
                 <span
                   className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-[1px] shadow-xs transition-transform duration-150 ease-in-out ${
@@ -440,7 +445,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[2px] border transition-colors duration-150 ease-in-out focus:outline-hidden ${
                   showSessionTargetTracker ? 'bg-primary border-primary' : 'bg-muted/70 border-border/80'
                 }`}
-                title="Session target tracker"
+                aria-label="Session target tracker"
               >
                 <span
                   className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-[1px] shadow-xs transition-transform duration-150 ease-in-out ${
@@ -449,6 +454,76 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 />
               </button>
             </div>
+
+            {/* Session target words stepper (beneath session target tracker) */}
+            {showSessionTargetTracker && (
+              <div className="flex items-center justify-between pl-3 pr-1 py-1 border-l-2 border-primary/40 -mt-1 mb-0.5">
+                <span className="text-xs text-muted-foreground">Target words per session</span>
+                <div className="flex items-center gap-1.5">
+                  <div className="h-[26px] flex items-center rounded-[2px] border border-border/80 bg-background focus-within:border-primary transition-colors overflow-hidden">
+                    <input
+                      type="number"
+                      min={0}
+                      max={99999}
+                      step={50}
+                      placeholder="Off"
+                      value={manifest.sessionWordTarget && manifest.sessionWordTarget > 0 ? manifest.sessionWordTarget : ''}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0);
+                        onUpdateManifest({ sessionWordTarget: val > 0 ? val : undefined });
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          window.getSelection()?.removeAllRanges();
+                        }
+                      }}
+                      className="w-16 h-full px-1.5 text-xs font-mono font-bold text-right bg-transparent text-foreground focus:outline-hidden [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      aria-label="Target words per session"
+                    />
+                    <div className="flex flex-col h-full border-l border-border/80 divide-y divide-border/60 shrink-0 w-4 bg-muted/20">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const current = manifest.sessionWordTarget ?? 0;
+                          const next = Math.min(99999, Math.floor(current / 50) * 50 + 50);
+                          onUpdateManifest({ sessionWordTarget: next });
+                        }}
+                        className="flex-1 flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none"
+                        aria-label="Increment target by 50"
+                      >
+                        <ChevronUp className="w-2.5 h-2.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const current = manifest.sessionWordTarget ?? 0;
+                          if (current <= 50) {
+                            onUpdateManifest({ sessionWordTarget: undefined });
+                          } else {
+                            const next = Math.max(50, Math.ceil(current / 50) * 50 - 50);
+                            onUpdateManifest({ sessionWordTarget: next });
+                          }
+                        }}
+                        className="flex-1 flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none"
+                        aria-label="Decrement target by 50"
+                      >
+                        <ChevronDown className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+                  </div>
+                  {manifest.sessionWordTarget && manifest.sessionWordTarget > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => onUpdateManifest({ sessionWordTarget: undefined })}
+                      className="text-[10px] text-muted-foreground hover:text-foreground cursor-pointer underline shrink-0"
+                      aria-label="Turn off target"
+                    >
+                      Off
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            )}
 
             {/* Show clock */}
             <div
@@ -467,7 +542,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[2px] border transition-colors duration-150 ease-in-out focus:outline-hidden ${
                   manifest.showClock ? 'bg-primary border-primary' : 'bg-muted/70 border-border/80'
                 }`}
-                title="Show clock"
+                aria-label="Show clock"
               >
                 <span
                   className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-[1px] shadow-xs transition-transform duration-150 ease-in-out ${
@@ -557,7 +632,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[2px] border transition-colors duration-150 ease-in-out focus:outline-hidden ${
                   allowStrikeout ? 'bg-primary border-primary' : 'bg-muted/70 border-border/80'
                 }`}
-                title="Allow backspace"
+                aria-label="Allow backspace"
               >
                 <span
                   className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-[1px] shadow-xs transition-transform duration-150 ease-in-out ${
@@ -584,7 +659,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[2px] border transition-colors duration-150 ease-in-out focus:outline-hidden ${
                   !isMuted ? 'bg-primary border-primary' : 'bg-muted/70 border-border/80'
                 }`}
-                title="Typing sounds"
+                aria-label="Typing sounds"
               >
                 <span
                   className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-[1px] shadow-xs transition-transform duration-150 ease-in-out ${
@@ -598,7 +673,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.10.11 · by timfromtheborder
+              Minitype v0.9.10.12 · by timfromtheborder
             </span>
           </div>
         </div>

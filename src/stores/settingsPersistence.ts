@@ -12,6 +12,7 @@ export const SETTING_KEYS = [
   'textSize',
   'showStats',
   'showSessionTargetTracker',
+  'sessionWordTarget',
   'doubleSpaceLinebreaks',
   'allowStrikeout',
   'showClock',

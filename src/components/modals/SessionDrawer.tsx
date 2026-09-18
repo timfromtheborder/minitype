@@ -9,13 +9,10 @@ import {
   Plus,
   CheckCircle,
   Sparkles,
-  Type,
   BookOpen,
-  Download,
   FileText,
-  ChevronUp,
-  ChevronDown,
 } from 'lucide-react';
+import { CompileModal } from './CompileModal';
 import {
   countWords,
   resolveActiveSessionStats,
@@ -65,14 +62,13 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
       pageMode: manifest.pageMode,
     });
   });
-  const viewMode = manifest.documentViewMode || 'typewriter';
-  const showDividers = manifest.showSessionDividers !== false;
   const [isPulsingActive, setIsPulsingActive] = useState<boolean>(false);
-  const [isConfirmingCloseExport, setIsConfirmingCloseExport] = useState<boolean>(false);
-  const isConfirmingCloseExportRef = useRef<boolean>(false);
+  const [isCompileOpen, setIsCompileOpen] = useState<boolean>(false);
+  const [isConfirmingCloseCompile, setIsConfirmingCloseCompile] = useState<boolean>(false);
+  const isConfirmingCloseCompileRef = useRef<boolean>(false);
   useEffect(() => {
-    isConfirmingCloseExportRef.current = isConfirmingCloseExport;
-  }, [isConfirmingCloseExport]);
+    isConfirmingCloseCompileRef.current = isConfirmingCloseCompile;
+  }, [isConfirmingCloseCompile]);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -112,7 +108,8 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
       useTypingStore.getState().syncSessionStats(fullClean, computedTotalWords);
     } else {
       prevIsOpenRef.current = false;
-      setIsConfirmingCloseExport(false);
+      setIsConfirmingCloseCompile(false);
+      setIsCompileOpen(false);
     }
   }, [
     isOpen,
@@ -149,8 +146,8 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        if (isConfirmingCloseExportRef.current) {
-          setIsConfirmingCloseExport(false);
+        if (isConfirmingCloseCompileRef.current) {
+          setIsConfirmingCloseCompile(false);
           return;
         }
         onClose();
@@ -280,59 +277,30 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
   };
 
   const handleCloseActiveSession = async () => {
-    setIsConfirmingCloseExport(false);
+    setIsConfirmingCloseCompile(false);
     await useTypingStore.getState().closeActiveSession();
   };
 
   const hasActiveSession = Boolean(activeSession);
   const hasActiveDraftedText = Boolean(activeSession && activeSession.wordCount > 0);
 
-  const downloadPlainText = (textToExport: string) => {
-    const safeTitle = (title.trim() || 'manuscript').replace(/[/\\?%*:|"<>]/g, '-');
-    const blob = new Blob([textToExport], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${safeTitle}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const executeExport = async (shouldCloseSession: boolean) => {
-    setIsConfirmingCloseExport(false);
-    if (shouldCloseSession) {
-      await useTypingStore.getState().closeActiveSession();
-    }
-    const state = useTypingStore.getState();
-    const allPages = propPages ?? [
-      ...state.historicalPages,
-      {
-        pageNumber: state.currentPageNumber,
-        lines: state.currentPageLines,
-        completedAt: null,
-      },
-    ];
-    const latestClean = sanitizeManuscript(allPages, {
-      doubleSpaceLinebreaks: state.manifest.doubleSpaceLinebreaks,
-      pageMode: state.manifest.pageMode,
-    });
-    downloadPlainText(latestClean);
-  };
-
-  const handleExportClick = () => {
+  const handleCompileClick = () => {
     if (hasActiveDraftedText) {
-      setIsConfirmingCloseExport(true);
+      setIsConfirmingCloseCompile(true);
     } else {
-      executeExport(false);
+      setIsCompileOpen(true);
     }
   };
 
-  const handleConfirmCloseAndExport = async () => {
-    await executeExport(true);
+  const handleConfirmCloseAndCompile = async () => {
+    setIsConfirmingCloseCompile(false);
+    await useTypingStore.getState().closeActiveSession();
+    setIsCompileOpen(true);
   };
 
   const handleModalClose = () => {
-    setIsConfirmingCloseExport(false);
+    setIsConfirmingCloseCompile(false);
+    setIsCompileOpen(false);
     onClose();
   };
 
@@ -381,7 +349,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                 }
               }}
               className="bg-transparent text-sm font-sans font-semibold tracking-wide text-foreground border-b border-dashed border-border/80 hover:border-foreground focus:border-foreground focus:outline-none px-1 py-0.5 w-full max-w-[240px] sm:max-w-[340px] truncate transition-colors cursor-text"
-              title="Click to edit document title"
+              aria-label="Click to edit document title"
             />
           </div>
 
@@ -389,15 +357,15 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
             type="button"
             onClick={handleModalClose}
             className="flex items-center gap-1 px-2 py-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-border/60 transition-colors cursor-pointer touch-manipulation text-xs"
-            title="Return to writing in aperture"
+            aria-label="Return to writing in aperture"
           >
             <CornerUpLeft className="w-4 h-4 shrink-0" />
             <span className="hidden sm:inline font-sans text-xs font-semibold">Return</span>
           </button>
         </div>
 
-        {/* Overview Banner & Top Toolbar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 sm:p-3 border border-border/70 bg-muted/25 rounded-[2px] shrink-0 gap-2.5">
+        {/* Overview Banner: Clean single row */}
+        <div className="flex items-center justify-between p-2.5 sm:p-3 border border-border/70 bg-muted/25 rounded-[2px] shrink-0">
           <div className="flex items-center gap-3 sm:gap-4 shrink-0">
             <div>
               <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
@@ -415,156 +383,26 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                 {totalWords.toLocaleString()}
               </div>
             </div>
-            <div className="border-l border-border/60 pl-3">
-              <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-                Session Target
-              </div>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <div className="h-[26px] flex items-center rounded-[2px] border border-border/80 bg-background focus-within:border-primary transition-colors overflow-hidden">
-                  <input
-                    type="number"
-                    min={0}
-                    max={99999}
-                    step={50}
-                    placeholder="Off"
-                    value={sessionWordTarget && sessionWordTarget > 0 ? sessionWordTarget : ''}
-                    onChange={(e) => {
-                      const val = e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0);
-                      useTypingStore.getState().setManifest({ sessionWordTarget: val > 0 ? val : undefined });
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        window.getSelection()?.removeAllRanges();
-                      }
-                    }}
-                    className="w-14 sm:w-16 h-full px-1.5 text-xs font-mono font-bold text-right bg-transparent text-foreground focus:outline-hidden [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    title="Target words per session (enter 0 or clear to turn off)"
-                  />
-                  <div className="flex flex-col h-full border-l border-border/80 divide-y divide-border/60 shrink-0 w-4 sm:w-4.5 bg-muted/20">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const current = sessionWordTarget ?? 0;
-                        const next = Math.min(99999, Math.floor(current / 50) * 50 + 50);
-                        useTypingStore.getState().setManifest({ sessionWordTarget: next });
-                      }}
-                      className="flex-1 flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none"
-                      title="Increment target by 50"
-                      aria-label="Increment target"
-                    >
-                      <ChevronUp className="w-2.5 h-2.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const current = sessionWordTarget ?? 0;
-                        if (current <= 50) {
-                          useTypingStore.getState().setManifest({ sessionWordTarget: undefined });
-                        } else {
-                          const next = Math.max(50, Math.ceil(current / 50) * 50 - 50);
-                          useTypingStore.getState().setManifest({ sessionWordTarget: next });
-                        }
-                      }}
-                      className="flex-1 flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none"
-                      title="Decrement target by 50"
-                      aria-label="Decrement target"
-                    >
-                      <ChevronDown className="w-2.5 h-2.5" />
-                    </button>
-                  </div>
+            {manifest.sessionWordTarget && manifest.sessionWordTarget > 0 ? (
+              <div className="border-l border-border/60 pl-3">
+                <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                  Target
                 </div>
-                {sessionWordTarget && sessionWordTarget > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => useTypingStore.getState().setManifest({ sessionWordTarget: undefined })}
-                    className="text-[10px] text-muted-foreground hover:text-foreground cursor-pointer underline shrink-0"
-                    title="Turn off target"
-                  >
-                    Off
-                  </button>
-                ) : null}
+                <div className="text-xs sm:text-sm font-mono font-bold text-muted-foreground">
+                  {manifest.sessionWordTarget}w
+                </div>
               </div>
+            ) : null}
+          </div>
+
+          {activeSession && (
+            <div className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground">
+              <span className="flex items-center gap-1 text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 rounded-[1px] shrink-0 font-sans">
+                <Sparkles className="w-2.5 h-2.5" />
+                <span>Session {activeSession.sessionNumber} Active</span>
+              </span>
             </div>
-          </div>
-
-          {/* Action Toolbar */}
-          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-            {/* View Mode Toggle Switch (Icons only; tapping anywhere on the box toggles) */}
-            <button
-              type="button"
-              onClick={() => {
-                const nextMode = viewMode === 'manuscript' ? 'typewriter' : 'manuscript';
-                useTypingStore.getState().setManifest({ documentViewMode: nextMode });
-              }}
-              className="h-[28px] flex items-center border border-border/80 rounded-[2px] bg-background/50 p-0.5 cursor-pointer hover:border-foreground/40 transition-colors text-[11px] font-sans shrink-0 select-none"
-              title={`Switch to ${viewMode === 'manuscript' ? 'Typewriter Monospace' : 'Publisher Manuscript Serif'} View`}
-              aria-label={`Toggle document view: ${viewMode === 'manuscript' ? 'Manuscript (Publisher Serif)' : 'Typewriter (Monospace)'}`}
-            >
-              <span
-                className={`h-full flex items-center justify-center px-1.5 rounded-[1px] transition-colors pointer-events-none ${
-                  viewMode === 'typewriter'
-                    ? 'bg-muted text-foreground font-semibold shadow-2xs'
-                    : 'text-muted-foreground'
-                }`}
-                title="Typewriter Monospace View"
-              >
-                <Type className="w-3.5 h-3.5" />
-              </span>
-              <span
-                className={`h-full flex items-center justify-center px-1.5 rounded-[1px] transition-colors pointer-events-none ${
-                  viewMode === 'manuscript'
-                    ? 'bg-muted text-foreground font-semibold shadow-2xs'
-                    : 'text-muted-foreground'
-                }`}
-                title="Publisher Manuscript Serif View"
-              >
-                <BookOpen className="w-3.5 h-3.5" />
-              </span>
-            </button>
-
-            {/* Show Sessions Toggle */}
-            <button
-              type="button"
-              onClick={() => {
-                useTypingStore.getState().setManifest({ showSessionDividers: !showDividers });
-              }}
-              className={`h-[28px] flex items-center gap-1.5 px-2 rounded-[2px] border transition-colors cursor-pointer text-[clamp(10px,0.8em,12px)] font-sans shrink-0 ${
-                showDividers
-                  ? 'bg-primary/10 border-primary text-foreground font-medium'
-                  : 'border-border/80 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground'
-              }`}
-              title={showDividers ? 'Hide sessions' : 'Show sessions'}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-[0.5px] ${
-                  showDividers ? 'bg-primary' : 'bg-muted-foreground/50'
-                }`}
-              />
-              <span>Show Sessions</span>
-            </button>
-
-            {/* Double-space Toggle */}
-            <button
-              type="button"
-              onClick={() => {
-                const isDouble = manifest.doubleSpaceLinebreaks ?? false;
-                useTypingStore.getState().setManifest({ doubleSpaceLinebreaks: !isDouble });
-              }}
-              className={`h-[28px] flex items-center gap-1.5 px-2 rounded-[2px] border transition-colors cursor-pointer text-[clamp(10px,0.8em,12px)] font-sans shrink-0 ${
-                manifest.doubleSpaceLinebreaks
-                  ? 'bg-primary/10 border-primary text-foreground font-medium'
-                  : 'border-border/80 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground'
-              }`}
-              title="Double-space paragraphs in preview"
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-[0.5px] ${
-                  manifest.doubleSpaceLinebreaks ? 'bg-primary' : 'bg-muted-foreground/50'
-                }`}
-              />
-              <span>Double-space</span>
-            </button>
-          </div>
+          )}
         </div>
 
         {/* Chronological Stream of Permanently Expanded Contiguous Sessions */}
@@ -600,54 +438,44 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                 const sessionText = session.text || '';
 
                 return (
-                  <div key={session.id} data-session-card="true">
-                    {/* Nested In-line Header Divider in Small Faded Text */}
-                    {showDividers && (
-                      <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono text-card-foreground/50 select-none py-1 mb-1.5 overflow-hidden">
-                        <span className="shrink-0 opacity-40 select-none">-----</span>
-                        <span className="font-semibold text-card-foreground/85 shrink-0 select-none">
-                          Session {session.sessionNumber}
-                        </span>
-                        <span className="shrink-0 opacity-40 select-none">---</span>
-                        <span className="shrink-0 truncate text-card-foreground/65 select-none">
-                          {timeRange}
-                        </span>
-                        <div className="flex-1 min-w-4 border-t border-dashed border-card-foreground/20 self-center mx-1" />
-                        <span
-                          className={`shrink-0 text-right text-[10px] sm:text-[11px] ${
-                            isTargetMet
-                              ? 'font-bold text-card-foreground'
-                              : 'font-medium text-card-foreground/65'
-                          }`}
-                        >
-                          {session.wordCount.toLocaleString()} words
-                        </span>
-                        <span className="shrink-0 opacity-40 select-none">-----</span>
-                      </div>
-                    )}
+                  <div key={session.id} data-session-card="true" className="relative">
+                    {/* Nested In-line Header Divider with Solid Margin Triangle */}
+                    <div className="relative flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono text-card-foreground/50 select-none py-1 mb-1.5 overflow-visible -ml-3 sm:-ml-5 pl-3 sm:pl-5">
+                      {/* Solid triangle matching modal background that indents the card */}
+                      <svg
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-2.5 h-3 pointer-events-none select-none"
+                        viewBox="0 0 10 12"
+                        aria-hidden="true"
+                      >
+                        <polygon points="0,0 10,6 0,12" style={{ fill: 'var(--background)' }} />
+                      </svg>
+                      <span className="shrink-0 opacity-40 select-none ml-1">-----</span>
+                      <span className="font-semibold text-card-foreground/85 shrink-0 select-none">
+                        Session {session.sessionNumber}
+                      </span>
+                      <span className="shrink-0 opacity-40 select-none">---</span>
+                      <span className="truncate min-w-0 text-card-foreground/65 select-none">
+                        {timeRange}
+                      </span>
+                      <div className="flex-1 min-w-4 border-t border-dashed border-card-foreground/20 self-center mx-1" />
+                      <span
+                        className={`shrink-0 text-right text-[10px] sm:text-[11px] ${
+                          isTargetMet
+                            ? 'font-bold text-card-foreground'
+                            : 'font-medium text-card-foreground/65'
+                        }`}
+                      >
+                        {session.wordCount.toLocaleString()} words
+                      </span>
+                      <span className="shrink-0 opacity-40 select-none">-----</span>
+                    </div>
 
-                    {/* Manuscript Text: Contiguous & Permanently Expanded */}
-                    <div
-                      className={`whitespace-pre-wrap select-text py-0.5 ${
-                        viewMode === 'typewriter'
-                          ? 'font-mono text-xs sm:text-sm leading-relaxed'
-                          : 'font-manuscript-serif text-sm sm:text-base leading-relaxed'
-                      }`}
-                    >
+                    {/* Drafting Ledger Monospace Text: Contiguous & Permanently Expanded */}
+                    <div className="whitespace-pre-wrap select-text py-0.5 font-mono text-xs sm:text-sm leading-relaxed">
                       {sessionText.length === 0 ? (
                         <span className="text-muted-foreground/40 italic font-mono text-xs">
                           No text in this session.
                         </span>
-                      ) : viewMode === 'manuscript' ? (
-                        sessionText.split('\n').map((para, pIdx) =>
-                          para.length === 0 ? (
-                            <div key={pIdx} className="h-3 sm:h-4" />
-                          ) : (
-                            <p key={pIdx} className="indent-8 leading-relaxed mb-0">
-                              {para}
-                            </p>
-                          )
-                        )
                       ) : (
                         sessionText
                       )}
@@ -661,21 +489,29 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                 <div
                   data-session-card="true"
                   data-active-session="true"
-                  className={completedSessions.length > 0 ? 'mt-4 sm:mt-6' : 'mt-1'}
+                  className={`relative ${completedSessions.length > 0 ? 'mt-4 sm:mt-6' : 'mt-1'}`}
                 >
-                  {/* Active Session Header: Always visible regardless of showDividers */}
+                  {/* Active Session Header */}
                   {(() => {
                     const isActiveTargetMet = Boolean(
                       sessionWordTarget && sessionWordTarget > 0 && activeSession.wordCount >= sessionWordTarget
                     );
                     return (
-                      <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono text-card-foreground/50 select-none py-1 mb-2 overflow-hidden">
-                        <span className="shrink-0 opacity-40 select-none">-----</span>
+                      <div className="relative flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono text-card-foreground/50 select-none py-1 mb-2 overflow-visible -ml-3 sm:-ml-5 pl-3 sm:pl-5">
+                        {/* Solid triangle matching modal background that indents the card */}
+                        <svg
+                          className="absolute left-0 top-1/2 -translate-y-1/2 w-2.5 h-3 pointer-events-none select-none"
+                          viewBox="0 0 10 12"
+                          aria-hidden="true"
+                        >
+                          <polygon points="0,0 10,6 0,12" style={{ fill: 'var(--background)' }} />
+                        </svg>
+                        <span className="shrink-0 opacity-40 select-none ml-1">-----</span>
                         <span className="font-semibold text-card-foreground/85 shrink-0 select-none">
                           Session {activeSession.sessionNumber}
                         </span>
                         <span className="shrink-0 opacity-40 select-none">---</span>
-                        <span className="shrink-0 truncate text-card-foreground/65 select-none">
+                        <span className="truncate min-w-0 text-card-foreground/65 select-none">
                           {formatSessionDateTime(activeSession.startedAt)} - Present
                         </span>
                         <span className="flex items-center gap-1 text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 rounded-[1px] shrink-0 font-sans ml-1 select-none">
@@ -703,27 +539,11 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                       isPulsingActive ? 'bg-primary/[0.08] border-primary ring-1 ring-primary/30' : ''
                     }`}
                   >
-                    <div
-                      className={`whitespace-pre-wrap select-text py-0.5 ${
-                        viewMode === 'typewriter'
-                          ? 'font-mono text-xs sm:text-sm leading-relaxed'
-                          : 'font-manuscript-serif text-sm sm:text-base leading-relaxed'
-                      }`}
-                    >
+                    <div className="whitespace-pre-wrap select-text py-0.5 font-mono text-xs sm:text-sm leading-relaxed">
                       {activeSession.text.length === 0 ? (
                         <span className="text-muted-foreground/40 italic font-mono text-xs">
                           No text in this active session yet.
                         </span>
-                      ) : viewMode === 'manuscript' ? (
-                        activeSession.text.split('\n').map((para, pIdx) =>
-                          para.length === 0 ? (
-                            <div key={pIdx} className="h-3 sm:h-4" />
-                          ) : (
-                            <p key={pIdx} className="indent-8 leading-relaxed mb-0">
-                              {para}
-                            </p>
-                          )
-                        )
                       ) : (
                         activeSession.text
                       )}
@@ -742,7 +562,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
               type="button"
               onClick={handleStartNewSession}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] border border-primary bg-primary text-primary-foreground font-semibold shadow-xs hover:opacity-90 transition-opacity cursor-pointer text-xs"
-              title="Start a new drafting session"
+              aria-label="Start a new drafting session"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Start New Session</span>
@@ -753,29 +573,29 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
               onClick={handleCloseActiveSession}
               disabled={!hasActiveSession}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] border border-border/80 bg-muted/40 hover:bg-muted text-foreground transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium"
-              title="Complete and close active drafting session"
+              aria-label="Complete and close active drafting session"
             >
               <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
               <span>Close Session</span>
             </button>
           </div>
 
-          {isConfirmingCloseExport ? (
+          {isConfirmingCloseCompile ? (
             <div className="flex items-center gap-1.5 animate-in fade-in duration-150 shrink-0">
               <button
                 type="button"
-                onClick={handleConfirmCloseAndExport}
+                onClick={handleConfirmCloseAndCompile}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] border border-primary bg-primary text-primary-foreground font-semibold shadow-xs hover:opacity-90 transition-all cursor-pointer text-xs shrink-0"
-                title="Close active drafting session and export document"
+                aria-label="Close active drafting session and compile"
               >
-                <Download className="w-3.5 h-3.5" />
-                <span>Close active session and export</span>
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Close active session to compile</span>
               </button>
               <button
                 type="button"
-                onClick={() => setIsConfirmingCloseExport(false)}
+                onClick={() => setIsConfirmingCloseCompile(false)}
                 className="px-2 py-1.5 rounded-[2px] border border-border/80 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer text-xs"
-                title="Cancel"
+                aria-label="Cancel"
               >
                 Cancel
               </button>
@@ -783,15 +603,24 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
           ) : (
             <button
               type="button"
-              onClick={handleExportClick}
+              onClick={handleCompileClick}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] border border-border/80 bg-muted/40 hover:bg-muted hover:border-foreground/40 text-foreground transition-colors cursor-pointer text-xs font-medium shrink-0"
-              title="Export document as plaintext (.txt)"
+              aria-label="Compile manuscript view"
             >
-              <Download className="w-3.5 h-3.5 opacity-70" />
-              <span>Export Document</span>
+              <BookOpen className="w-3.5 h-3.5 opacity-70" />
+              <span>Compile</span>
             </button>
           )}
         </div>
+
+        {/* Compile Modal: Manuscript View */}
+        <CompileModal
+          isOpen={isCompileOpen}
+          onClose={() => setIsCompileOpen(false)}
+          onCloseAll={handleModalClose}
+          pages={propPages}
+          manifest={manifest}
+        />
       </div>
     </div>
   );

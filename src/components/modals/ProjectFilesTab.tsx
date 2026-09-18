@@ -330,7 +330,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
             type="button"
             onClick={handleImportClick}
             className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-[2px] border border-border/80 bg-muted/40 hover:bg-muted text-foreground transition-colors cursor-pointer"
-            title="Import .txt or .md from computer"
+            aria-label="Import .txt or .md from computer"
           >
             <Upload className="w-3.5 h-3.5" />
             <span>Import</span>
@@ -339,7 +339,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
             type="button"
             onClick={handleNewFile}
             className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-[2px] border border-primary bg-primary text-primary-foreground font-semibold shadow-xs hover:opacity-90 transition-opacity cursor-pointer"
-            title="Create a new project"
+            aria-label="Create a new project"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>New Project</span>
@@ -440,7 +440,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                               className={`font-mono text-xs sm:text-sm truncate text-foreground hover:underline cursor-text ${
                                 isActive ? 'font-bold' : 'font-semibold'
                               }`}
-                              title="Click to rename"
+                              aria-label="Click to rename"
                             >
                               {(isActive && activeTitle !== undefined ? activeTitle : file.title) || 'Untitled Project'}
                             </span>
@@ -451,7 +451,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                                 handleStartRename(file);
                               }}
                               className="opacity-0 group-hover/title:opacity-100 p-0.5 text-muted-foreground hover:text-foreground transition-opacity cursor-pointer"
-                              title="Rename project"
+                              aria-label="Rename project"
                             >
                               <Edit2 className="w-3 h-3" />
                             </button>
@@ -487,7 +487,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                         type="button"
                         onClick={() => handleOpenProject(file.id)}
                         className="flex items-center gap-1 px-2 py-1 text-xs rounded-[2px] border border-border/80 bg-muted/30 hover:bg-muted text-foreground transition-colors cursor-pointer"
-                        title="Open this project"
+                        aria-label="Open this project"
                       >
                         <FolderOpen className="w-3.5 h-3.5" />
                         <span className="hidden sm:inline">Open</span>
@@ -495,7 +495,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                     ) : (
                       <span
                         className="flex items-center gap-1 px-2 py-1 text-xs rounded-[2px] border border-primary/50 bg-primary/20 text-primary font-bold shadow-xs select-none"
-                        title="Currently active project"
+                        aria-label="Currently active project"
                       >
                         <Check className="w-3.5 h-3.5" />
                         <span className="hidden sm:inline">Active</span>
@@ -507,7 +507,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                       type="button"
                       onClick={() => handleDownloadProject(file)}
                       className="p-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                      title="Download project text"
+                      aria-label="Download project text"
                     >
                       <Download className="w-3.5 h-3.5" />
                     </button>
@@ -535,7 +535,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                         type="button"
                         onClick={() => setDeletingId(file.id)}
                         className="p-1 rounded-[2px] text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
-                        title="Delete project"
+                        aria-label="Delete project"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -573,7 +573,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
             onClick={handleBackupExport}
             disabled={isExporting}
             className="flex items-center gap-1 px-2 py-1 text-xs rounded-[2px] border border-border/80 bg-muted/40 hover:bg-muted text-foreground transition-colors cursor-pointer disabled:opacity-50"
-            title="Download complete library backup as JSON"
+            aria-label="Download complete library backup as JSON"
           >
             {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
             <span>Backup All</span>
@@ -583,7 +583,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
             onClick={handleRestoreClick}
             disabled={isRestoring}
             className="flex items-center gap-1 px-2 py-1 text-xs rounded-[2px] border border-border/80 bg-muted/40 hover:bg-muted text-foreground transition-colors cursor-pointer disabled:opacity-50"
-            title="Restore library from a JSON backup file"
+            aria-label="Restore library from a JSON backup file"
           >
             {isRestoring ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
             <span>Restore</span>
