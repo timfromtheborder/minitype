@@ -154,253 +154,15 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           </button>
         </div>
 
-        <div className="flex flex-col gap-4 text-xs font-sans">
-          {/* Aperture Visible Lines Slider (1 to 10 lines) */}
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-muted-foreground">Aperture:</label>
-              <span
-                className={`font-bold ${
-                  manifest.pageMode === 'notecard' ? 'text-muted-foreground/50' : 'text-foreground'
-                }`}
-              >
-                {manifest.pageMode === 'notecard'
-                  ? '10 lines'
-                  : `${manifest.activeApertureHeight} ${manifest.activeApertureHeight === 1 ? 'line' : 'lines'}`}
-              </span>
-            </div>
-            <div className="flex items-center gap-3 pt-1">
-              <span className="text-[10px] text-muted-foreground font-semibold">1</span>
-              <input
-                type="range"
-                min={1}
-                max={10}
-                step={1}
-                value={manifest.pageMode === 'notecard' ? 10 : manifest.activeApertureHeight}
-                disabled={manifest.pageMode === 'notecard'}
-                onChange={(e) => {
-                  if (manifest.pageMode === 'notecard') return;
-                  const val = Number(e.target.value) as ApertureHeight;
-                  onUpdateHeight(val);
-                }}
-                className={`w-full square-slider ${
-                  manifest.pageMode === 'notecard' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
-                }`}
-                aria-label="Aperture slider"
-              />
-              <span className="text-[10px] text-muted-foreground font-semibold">10</span>
-            </div>
-          </div>
+        <div className="flex flex-col gap-5 text-xs font-sans">
+          {/* =================================================================
+              SECTION 1: TOOLS (Stats, Session Target, Clock & Timer)
+              ================================================================= */}
+          <div className="flex flex-col gap-3">
+            <span className="text-[11px] font-sans font-bold tracking-wider uppercase text-muted-foreground/70 select-none">
+              Tools
+            </span>
 
-          {/* Text Size ([S] [M] [L] [XL]) */}
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-muted-foreground">Text Size:</label>
-              <span className="font-bold text-foreground">
-                {(manifest.textSize || 'm') === 's'
-                  ? 'Small (S)'
-                  : (manifest.textSize || 'm') === 'l'
-                  ? 'Large (L)'
-                  : (manifest.textSize || 'm') === 'xl'
-                  ? 'Extra Large (XL)'
-                  : 'Default (M)'}
-              </span>
-            </div>
-            <div className="grid grid-cols-4 gap-1.5">
-              {(['s', 'm', 'l', 'xl'] as TextSize[]).map((size) => {
-                const isSelected = (manifest.textSize || 'm') === size;
-                const label = size.toUpperCase();
-                return (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={() => onUpdateManifest({ textSize: size })}
-                    className={`py-1.5 rounded-[2px] border text-center transition-all cursor-pointer font-bold text-xs sm:text-sm ${
-                      isSelected
-                        ? 'border-primary bg-primary text-primary-foreground shadow-xs'
-                        : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Page Mode */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-muted-foreground">Page Mode:</label>
-            <div className="grid grid-cols-2 gap-1.5">
-              {(['scroll', 'notecard'] as PageMode[]).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => {
-                    const pageSize = mode === 'scroll' ? 999999 : 10;
-                    onUpdateManifest({ pageMode: mode, pageSize });
-                  }}
-                  className={`py-1.5 px-0.5 rounded-[2px] border text-center transition-all cursor-pointer capitalize text-[10px] sm:text-xs truncate ${
-                    (manifest.pageMode || 'scroll') === mode
-                      ? 'border-primary bg-primary text-primary-foreground font-bold shadow-xs'
-                      : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground'
-                  }`}
-                >
-                  <span className="truncate">{mode}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Color Schemes (Renamed labels) */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-muted-foreground">Theme:</label>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                {
-                  id: 'typewriter',
-                  label: 'Manuscript',
-                  bg: '#F5F2EB',
-                  fg: '#1E1E1E',
-                  border: '#DCD1BE',
-                },
-                {
-                  id: 'spotlight',
-                  label: 'Spotlight',
-                  bg: '#E4E4E7',
-                  fg: '#09090B',
-                  border: '#141416',
-                },
-                {
-                  id: 'high-contrast',
-                  label: 'Paperwhite',
-                  bg: '#FFFFFF',
-                  fg: '#000000',
-                  border: '#666666',
-                },
-                {
-                  id: 'dark-amber',
-                  label: 'Terminal',
-                  bg: '#121212',
-                  fg: currentPhosphorHex,
-                  border: currentPhosphorHex,
-                },
-                {
-                  id: 'low-contrast',
-                  label: 'Newsprint',
-                  bg: '#646a71',
-                  fg: '#1c2024',
-                  border: '#6d747c',
-                },
-                {
-                  id: 'dark-mode',
-                  label: 'Charcoal',
-                  bg: '#121214',
-                  fg: '#EDEDED',
-                  border: '#EDEDED',
-                },
-              ].map((scheme) => {
-                const isSelected = manifest.colorScheme === scheme.id;
-                return (
-                  <div key={scheme.id} className="relative">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (scheme.id === 'dark-amber') {
-                          if (isSelected) {
-                            setIsPhosphorPickerOpen((prev) => !prev);
-                          } else {
-                            handleSelectScheme('dark-amber');
-                            setIsPhosphorPickerOpen(false);
-                          }
-                        } else {
-                          handleSelectScheme(scheme.id as ColorScheme);
-                          setIsPhosphorPickerOpen(false);
-                        }
-                      }}
-                      className={`w-full py-2 px-3 rounded-[2px] border text-left flex items-center justify-between transition-colors duration-100 cursor-pointer focus:outline-hidden ${
-                        isSelected
-                          ? 'border-primary bg-primary text-primary-foreground font-semibold shadow-xs'
-                          : 'border-border/80 hover:bg-muted/60 text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="w-4 h-4 rounded-[2px] border flex items-center justify-center text-[8px] font-mono font-bold shrink-0"
-                          style={{
-                            backgroundColor: scheme.bg,
-                            color: scheme.fg,
-                            borderColor: scheme.border,
-                          }}
-                        >
-                          Aa
-                        </span>
-                        <span className="truncate">{scheme.label}</span>
-                      </div>
-
-                      {/* Functional Square Radio Button Indicator */}
-                      <div
-                        className={`w-3.5 h-3.5 rounded-[2px] border flex items-center justify-center transition-colors duration-100 shrink-0 ml-1.5 ${
-                          isSelected
-                            ? 'border-primary-foreground bg-primary-foreground'
-                            : 'border-muted-foreground/40 bg-transparent'
-                        }`}
-                      >
-                        {isSelected && (
-                          <div className="w-1.5 h-1.5 rounded-[2px] bg-primary" />
-                        )}
-                      </div>
-                    </button>
-
-                    {/* Terminal Multi-Phosphor Pop-over directly over the Terminal button */}
-                    {scheme.id === 'dark-amber' && isPhosphorPickerOpen && (
-                      <div
-                        className="absolute inset-0 z-20 rounded-[2px] border border-primary bg-card/95 backdrop-blur-xs flex items-center justify-around px-1.5 shadow-lg animate-in fade-in zoom-in-95 duration-100 select-none"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {(
-                          [
-                            { id: 'amber', label: 'Amber', hex: '#FFB000' },
-                            { id: 'green', label: 'Green', hex: '#33FF33' },
-                            { id: 'blue', label: 'Blue', hex: '#00E5FF' },
-                            { id: 'red', label: 'Red', hex: '#ff1a0d' },
-                          ] as const
-                        ).map((swatch) => {
-                          const isCurrent = (manifest.phosphorColor || 'amber') === swatch.id;
-                          return (
-                            <button
-                              key={swatch.id}
-                              type="button"
-                              aria-label={swatch.label}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onUpdateManifest({ phosphorColor: swatch.id });
-                                setIsPhosphorPickerOpen(false);
-                              }}
-                              className={`w-5 h-5 sm:w-6 sm:h-6 rounded-[2px] border flex items-center justify-center transition-all cursor-pointer ${
-                                isCurrent
-                                  ? 'ring-2 ring-foreground ring-offset-1 ring-offset-background border-transparent scale-105'
-                                  : 'border-border/80 hover:scale-105 opacity-85 hover:opacity-100'
-                              }`}
-                              style={{ backgroundColor: swatch.hex }}
-                            >
-                              {isCurrent && (
-                                <div className="w-1.5 h-1.5 rounded-[1px] bg-black" />
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Settings Switches (Document Stats, Double-space paragraphs, Typing Sounds) */}
-          <div className="flex flex-col gap-3 pt-2.5 border-t border-border/60">
             {/* Show document stats */}
             <div
               className="flex items-center justify-between cursor-pointer"
@@ -457,7 +219,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
 
             {/* Session target words stepper (beneath session target tracker) */}
             {showSessionTargetTracker && (
-              <div className="flex items-center justify-between pl-3 pr-1 py-1 border-l-2 border-primary/40 -mt-1 mb-0.5">
+              <div className="flex items-center justify-between pl-3 pr-1.5 py-1.5 border-l-2 border-primary/40 bg-muted/15 rounded-r-[2px] -mt-1 mb-0.5 animate-in fade-in duration-100">
                 <span className="text-xs text-muted-foreground">Target words per session</span>
                 <div className="flex items-center gap-1.5">
                   <div className="h-[26px] flex items-center rounded-[2px] border border-border/80 bg-background focus-within:border-primary transition-colors overflow-hidden">
@@ -554,7 +316,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
 
             {/* Timer Style (Visible only when Clock is enabled) */}
             {manifest.showClock && (
-              <div className="flex flex-col gap-1.5 pl-2.5 border-l-2 border-border/70 ml-1 py-0.5 animate-in fade-in duration-100">
+              <div className="flex flex-col gap-1.5 pl-3 pr-1.5 py-1.5 border-l-2 border-primary/40 bg-muted/15 rounded-r-[2px] -mt-1 animate-in fade-in duration-100">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground text-xs">Timer Style</span>
                   <span className="font-bold text-foreground capitalize text-xs">
@@ -614,6 +376,79 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Section Divider */}
+          <div className="border-t border-border/60" />
+
+          {/* =================================================================
+              SECTION 2: MECHANICS (Aperture Slider, Page Mode, Allow Backspace)
+              ================================================================= */}
+          <div className="flex flex-col gap-3">
+            <span className="text-[11px] font-sans font-bold tracking-wider uppercase text-muted-foreground/70 select-none">
+              Mechanics
+            </span>
+
+            {/* Aperture Visible Lines Slider (1 to 10 lines) */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-muted-foreground">Aperture:</label>
+                <span
+                  className={`font-bold ${
+                    manifest.pageMode === 'notecard' ? 'text-muted-foreground/50' : 'text-foreground'
+                  }`}
+                >
+                  {manifest.pageMode === 'notecard'
+                    ? '10 lines'
+                    : `${manifest.activeApertureHeight} ${manifest.activeApertureHeight === 1 ? 'line' : 'lines'}`}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 pt-1">
+                <span className="text-xs text-muted-foreground font-semibold">1</span>
+                <input
+                  type="range"
+                  min={1}
+                  max={10}
+                  step={1}
+                  value={manifest.pageMode === 'notecard' ? 10 : manifest.activeApertureHeight}
+                  disabled={manifest.pageMode === 'notecard'}
+                  onChange={(e) => {
+                    if (manifest.pageMode === 'notecard') return;
+                    const val = Number(e.target.value) as ApertureHeight;
+                    onUpdateHeight(val);
+                  }}
+                  className={`w-full square-slider ${
+                    manifest.pageMode === 'notecard' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+                  }`}
+                  aria-label="Aperture slider"
+                />
+                <span className="text-xs text-muted-foreground font-semibold">10</span>
+              </div>
+            </div>
+
+            {/* Page Mode */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-muted-foreground">Page Mode:</label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {(['scroll', 'notecard'] as PageMode[]).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => {
+                      const pageSize = mode === 'scroll' ? 999999 : 10;
+                      onUpdateManifest({ pageMode: mode, pageSize });
+                    }}
+                    className={`py-1.5 px-0.5 rounded-[2px] border text-center transition-all cursor-pointer capitalize text-xs truncate ${
+                      (manifest.pageMode || 'scroll') === mode
+                        ? 'border-primary bg-primary text-primary-foreground font-bold shadow-xs'
+                        : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground'
+                    }`}
+                  >
+                    <span className="truncate">{mode}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* Allow backspace */}
             <div
@@ -640,6 +475,201 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   }`}
                 />
               </button>
+            </div>
+          </div>
+
+          {/* Section Divider */}
+          <div className="border-t border-border/60" />
+
+          {/* =================================================================
+              SECTION 3: INTERFACE (Text Size, Theme Grid, Typing Sounds)
+              ================================================================= */}
+          <div className="flex flex-col gap-3">
+            <span className="text-[11px] font-sans font-bold tracking-wider uppercase text-muted-foreground/70 select-none">
+              Interface
+            </span>
+
+            {/* Text Size ([S] [M] [L] [XL]) */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-muted-foreground">Text Size:</label>
+                <span className="font-bold text-foreground">
+                  {(manifest.textSize || 'm') === 's'
+                    ? 'Small (S)'
+                    : (manifest.textSize || 'm') === 'l'
+                    ? 'Large (L)'
+                    : (manifest.textSize || 'm') === 'xl'
+                    ? 'Extra Large (XL)'
+                    : 'Default (M)'}
+                </span>
+              </div>
+              <div className="grid grid-cols-4 gap-1.5">
+                {(['s', 'm', 'l', 'xl'] as TextSize[]).map((size) => {
+                  const isSelected = (manifest.textSize || 'm') === size;
+                  const label = size.toUpperCase();
+                  return (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => onUpdateManifest({ textSize: size })}
+                      className={`py-1.5 rounded-[2px] border text-center transition-all cursor-pointer font-bold text-xs sm:text-sm ${
+                        isSelected
+                          ? 'border-primary bg-primary text-primary-foreground shadow-xs'
+                          : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Color Schemes */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-muted-foreground">Theme:</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  {
+                    id: 'typewriter',
+                    label: 'Manuscript',
+                    bg: '#F5F2EB',
+                    fg: '#1E1E1E',
+                    border: '#DCD1BE',
+                  },
+                  {
+                    id: 'spotlight',
+                    label: 'Spotlight',
+                    bg: '#E4E4E7',
+                    fg: '#09090B',
+                    border: '#141416',
+                  },
+                  {
+                    id: 'high-contrast',
+                    label: 'Paperwhite',
+                    bg: '#FFFFFF',
+                    fg: '#000000',
+                    border: '#666666',
+                  },
+                  {
+                    id: 'dark-amber',
+                    label: 'Terminal',
+                    bg: '#121212',
+                    fg: currentPhosphorHex,
+                    border: currentPhosphorHex,
+                  },
+                  {
+                    id: 'low-contrast',
+                    label: 'Newsprint',
+                    bg: '#646a71',
+                    fg: '#1c2024',
+                    border: '#6d747c',
+                  },
+                  {
+                    id: 'dark-mode',
+                    label: 'Charcoal',
+                    bg: '#121214',
+                    fg: '#EDEDED',
+                    border: '#EDEDED',
+                  },
+                ].map((scheme) => {
+                  const isSelected = manifest.colorScheme === scheme.id;
+                  return (
+                    <div key={scheme.id} className="relative">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (scheme.id === 'dark-amber') {
+                            if (isSelected) {
+                              setIsPhosphorPickerOpen((prev) => !prev);
+                            } else {
+                              handleSelectScheme('dark-amber');
+                              setIsPhosphorPickerOpen(false);
+                            }
+                          } else {
+                            handleSelectScheme(scheme.id as ColorScheme);
+                            setIsPhosphorPickerOpen(false);
+                          }
+                        }}
+                        className={`w-full py-2 px-3 rounded-[2px] border text-left flex items-center justify-between transition-colors duration-100 cursor-pointer focus:outline-hidden ${
+                          isSelected
+                            ? 'border-primary bg-primary text-primary-foreground font-semibold shadow-xs'
+                            : 'border-border/80 hover:bg-muted/60 text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="w-4 h-4 rounded-[2px] border flex items-center justify-center text-[8px] font-mono font-bold shrink-0"
+                            style={{
+                              backgroundColor: scheme.bg,
+                              color: scheme.fg,
+                              borderColor: scheme.border,
+                            }}
+                          >
+                            Aa
+                          </span>
+                          <span className="truncate">{scheme.label}</span>
+                        </div>
+
+                        {/* Functional Square Radio Button Indicator */}
+                        <div
+                          className={`w-3.5 h-3.5 rounded-[2px] border flex items-center justify-center transition-colors duration-100 shrink-0 ml-1.5 ${
+                            isSelected
+                              ? 'border-primary-foreground bg-primary-foreground'
+                              : 'border-muted-foreground/40 bg-transparent'
+                          }`}
+                        >
+                          {isSelected && (
+                            <div className="w-1.5 h-1.5 rounded-[2px] bg-primary" />
+                          )}
+                        </div>
+                      </button>
+
+                      {/* Terminal Multi-Phosphor Pop-over directly over the Terminal button */}
+                      {scheme.id === 'dark-amber' && isPhosphorPickerOpen && (
+                        <div
+                          className="absolute inset-0 z-20 rounded-[2px] border border-primary bg-card/95 backdrop-blur-xs flex items-center justify-around px-1.5 shadow-lg animate-in fade-in zoom-in-95 duration-100 select-none"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {(
+                            [
+                              { id: 'amber', label: 'Amber', hex: '#FFB000' },
+                              { id: 'green', label: 'Green', hex: '#33FF33' },
+                              { id: 'blue', label: 'Blue', hex: '#00E5FF' },
+                              { id: 'red', label: 'Red', hex: '#ff1a0d' },
+                            ] as const
+                          ).map((swatch) => {
+                            const isCurrent = (manifest.phosphorColor || 'amber') === swatch.id;
+                            return (
+                              <button
+                                key={swatch.id}
+                                type="button"
+                                aria-label={swatch.label}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onUpdateManifest({ phosphorColor: swatch.id });
+                                  setIsPhosphorPickerOpen(false);
+                                }}
+                                className={`w-5 h-5 sm:w-6 sm:h-6 rounded-[2px] border flex items-center justify-center transition-all cursor-pointer ${
+                                  isCurrent
+                                    ? 'ring-2 ring-foreground ring-offset-1 ring-offset-background border-transparent scale-105'
+                                    : 'border-border/80 hover:scale-105 opacity-85 hover:opacity-100'
+                                }`}
+                                style={{ backgroundColor: swatch.hex }}
+                              >
+                                {isCurrent && (
+                                  <div className="w-1.5 h-1.5 rounded-[1px] bg-black" />
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Typing sounds */}
@@ -673,7 +703,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-xs font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.10.22 · by timfromtheborder
+              Minitype v0.9.10.23 · by timfromtheborder
             </span>
           </div>
         </div>
