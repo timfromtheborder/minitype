@@ -189,6 +189,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
 
   const totalWords = countWords(sanitizedFullText);
   const sessionWordTarget = manifest.sessionWordTarget;
+  const isSpotlight = manifest.colorScheme === 'spotlight';
 
   // Filter sessions strictly to the current project and sort chronologically: oldest at top, newest at bottom
   const projectSessions = activeSessions.filter((s) => s.projectId === manifest.id);
@@ -301,7 +302,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
     setIsConfirmingCloseCompile(false);
     if (activeSession) {
       setJustClosedSessionId(activeSession.id);
-      setTimeout(() => setJustClosedSessionId(null), 1400);
+      setTimeout(() => setJustClosedSessionId(null), 500);
     }
     await useTypingStore.getState().closeActiveSession();
   };
@@ -321,7 +322,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
     setIsConfirmingCloseCompile(false);
     if (activeSession) {
       setJustClosedSessionId(activeSession.id);
-      setTimeout(() => setJustClosedSessionId(null), 1400);
+      setTimeout(() => setJustClosedSessionId(null), 500);
     }
     await useTypingStore.getState().closeActiveSession();
     setIsCompileOpen(true);
@@ -434,7 +435,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
             }
           }}
           style={{ overflowAnchor: 'none' }}
-          className="flex-1 min-h-0 overflow-y-auto square-scrollbar border border-border/80 bg-muted/15 text-card-foreground p-2 sm:p-3 space-y-2 rounded-[2px] [overflow-anchor:none]"
+          className="flex-1 min-h-0 overflow-y-auto square-scrollbar border border-border/80 bg-muted/15 text-foreground p-2 sm:p-3 space-y-2 rounded-[2px] [overflow-anchor:none]"
         >
           {completedSessions.length === 0 && !activeSession ? (
             <div className="flex flex-col items-center justify-center h-48 p-4 text-center gap-2 text-muted-foreground font-mono">
@@ -454,7 +455,9 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                     data-session-card="true"
                     data-session-folder="true"
                     data-active-session="true"
-                    className={`border border-primary/40 rounded-[2px] overflow-hidden bg-card transition-all ${
+                    className={`border border-primary/40 rounded-[2px] overflow-hidden ${
+                      isSpotlight ? 'bg-zinc-900/90' : 'bg-card'
+                    } transition-all ${
                       isPulsingActive ? 'ring-1 ring-primary/50' : ''
                     }`}
                   >
@@ -465,8 +468,8 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                       aria-expanded={isActiveExpanded}
                       className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-mono select-none cursor-pointer transition-colors text-left ${
                         isActiveExpanded
-                          ? 'bg-primary/[0.08] border-b border-primary/30 text-card-foreground/95'
-                          : 'bg-primary/[0.04] hover:bg-primary/[0.08] text-card-foreground/80'
+                          ? 'bg-primary/[0.08] border-b border-primary/30 text-foreground'
+                          : 'bg-primary/[0.04] hover:bg-primary/[0.08] text-foreground/80'
                       }`}
                     >
                       <div className="flex items-center gap-2 min-w-0 pr-2">
@@ -475,19 +478,19 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                             isActiveExpanded ? 'rotate-90' : ''
                           }`}
                         />
-                        <span className="font-semibold text-card-foreground/95 shrink-0">
+                        <span className="font-semibold text-foreground shrink-0">
                           #{activeSession.sessionNumber}
                         </span>
-                        <span className="text-card-foreground/30 shrink-0">•</span>
-                        <span className="truncate text-card-foreground/60 text-[11px]">
+                        <span className="text-muted-foreground/40 shrink-0">•</span>
+                        <span className="truncate text-muted-foreground text-[11px]">
                           {formatSessionDateTime(activeSession.startedAt)} - Present
                         </span>
                       </div>
                       <span
                         className={`shrink-0 text-right text-[11px] ${
                           isActiveTargetMet
-                            ? 'font-bold text-card-foreground'
-                            : 'font-medium text-card-foreground/65'
+                            ? 'font-bold text-foreground'
+                            : 'font-medium text-muted-foreground'
                         }`}
                       >
                         {activeSession.wordCount.toLocaleString()} words
@@ -496,10 +499,18 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
 
                     {/* Active Folder Body */}
                     {isActiveExpanded && (
-                      <div className="p-2.5 sm:p-3 bg-card border-l-2 border-primary/50">
-                        <div className="whitespace-pre-wrap select-text font-mono text-xs sm:text-sm leading-[1.0] tracking-[-0.1em] text-card-foreground/90">
+                      <div
+                        className={`p-2.5 sm:p-3 border-l-2 border-primary/50 ${
+                          isSpotlight ? 'bg-white text-zinc-950' : 'bg-card text-card-foreground/90'
+                        }`}
+                      >
+                        <div
+                          className={`whitespace-pre-wrap select-text font-mono text-xs sm:text-sm leading-[1.0] tracking-[-0.1em] ${
+                            isSpotlight ? 'text-zinc-950' : 'text-card-foreground/90'
+                          }`}
+                        >
                           {activeSession.text.length === 0 ? (
-                            <span className="text-muted-foreground/40 italic">
+                            <span className={isSpotlight ? 'text-zinc-400 italic' : 'text-muted-foreground/40 italic'}>
                               No text in this active session yet.
                             </span>
                           ) : (
@@ -534,9 +545,11 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                     key={session.id}
                     data-session-card="true"
                     data-session-folder="true"
-                    className={`border rounded-[2px] overflow-hidden bg-card transition-all duration-300 ${
+                    className={`border rounded-[2px] overflow-hidden ${
+                      isSpotlight ? 'bg-zinc-900/90' : 'bg-card'
+                    } transition-all duration-500 ease-out ${
                       isJustClosed
-                        ? 'border-primary ring-2 ring-primary bg-primary/[0.08] animate-pulse'
+                        ? 'border-primary ring-2 ring-primary ring-offset-1 ring-offset-background bg-primary/20 shadow-md'
                         : 'border-border/70'
                     }`}
                   >
@@ -547,31 +560,31 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                       aria-expanded={isExpanded}
                       className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-mono select-none cursor-pointer transition-colors text-left ${
                         isJustClosed
-                          ? 'bg-primary/20 text-card-foreground font-semibold'
+                          ? 'bg-primary/20 text-foreground font-semibold'
                           : isExpanded
-                          ? 'bg-muted/40 border-b border-border/60 text-card-foreground/90'
-                          : 'bg-muted/20 hover:bg-muted/35 text-card-foreground/75'
+                          ? 'bg-muted/40 border-b border-border/60 text-foreground'
+                          : 'bg-muted/20 hover:bg-muted/35 text-foreground/80'
                       }`}
                     >
                       <div className="flex items-center gap-2 min-w-0 pr-2">
                         <ChevronRight
-                          className={`w-3.5 h-3.5 shrink-0 text-card-foreground/60 transition-transform duration-150 ${
+                          className={`w-3.5 h-3.5 shrink-0 text-muted-foreground transition-transform duration-150 ${
                             isExpanded ? 'rotate-90' : ''
                           }`}
                         />
-                        <span className="font-semibold text-card-foreground/90 shrink-0">
+                        <span className="font-semibold text-foreground shrink-0">
                           #{session.sessionNumber}
                         </span>
-                        <span className="text-card-foreground/30 shrink-0">•</span>
-                        <span className="truncate text-card-foreground/60 text-[11px]">
+                        <span className="text-muted-foreground/40 shrink-0">•</span>
+                        <span className="truncate text-muted-foreground text-[11px]">
                           {timeRange}
                         </span>
                       </div>
                       <span
                         className={`shrink-0 text-right text-[11px] ${
                           isTargetMet
-                            ? 'font-bold text-card-foreground'
-                            : 'font-medium text-card-foreground/65'
+                            ? 'font-bold text-foreground'
+                            : 'font-medium text-muted-foreground'
                         }`}
                       >
                         {session.wordCount.toLocaleString()} words
@@ -580,10 +593,18 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
 
                     {/* Collapsible Folder Body */}
                     {isExpanded && (
-                      <div className="p-2.5 sm:p-3 bg-card">
-                        <div className="whitespace-pre-wrap select-text font-mono text-xs sm:text-sm leading-[1.0] tracking-[-0.1em] text-card-foreground/85">
+                      <div
+                        className={`p-2.5 sm:p-3 ${
+                          isSpotlight ? 'bg-white text-zinc-950' : 'bg-card'
+                        }`}
+                      >
+                        <div
+                          className={`whitespace-pre-wrap select-text font-mono text-xs sm:text-sm leading-[1.0] tracking-[-0.1em] ${
+                            isSpotlight ? 'text-zinc-950' : 'text-card-foreground/85'
+                          }`}
+                        >
                           {sessionText.length === 0 ? (
-                            <span className="text-muted-foreground/40 italic">
+                            <span className={isSpotlight ? 'text-zinc-400 italic' : 'text-muted-foreground/40 italic'}>
                               No text in this session.
                             </span>
                           ) : (

@@ -735,13 +735,13 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
 
     await act(async () => {
       closeBtn?.click();
-      await new Promise((r) => setTimeout(r, 50));
+      await new Promise((r) => setTimeout(r, 150));
     });
 
-    // Once closed, active card is removed and session becomes a completed folder with pulse animation
+    // Once closed, active card is removed and session becomes a completed folder with fast pulse outline
     expect(container.querySelector('[data-active-session="true"]')).toBeNull();
     const closedFolder = container.querySelector('[data-session-folder="true"]');
-    expect(closedFolder?.className).toContain('animate-pulse');
+    expect(closedFolder?.className).toContain('ring-2 ring-primary');
 
     // Expand the closed session folder to view text
     const closedFolderTab = closedFolder?.querySelector('button') as HTMLButtonElement;
@@ -828,7 +828,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
 
     await act(async () => {
       closeBtn?.click();
-      await new Promise((r) => setTimeout(r, 50));
+      await new Promise((r) => setTimeout(r, 150));
     });
 
     expect(container.querySelector('[data-active-session="true"]')).toBeNull();
@@ -1425,4 +1425,129 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     });
     testContainer.remove();
   });
+
+  it('unifies button styling to Convention 1 in ProjectFilesModal and SettingsDrawer', async () => {
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+    const testContainer = document.createElement('div');
+    document.body.appendChild(testContainer);
+    const root = createRoot(testContainer);
+
+    // 1. Verify ProjectFilesModal
+    await act(async () => {
+      root.render(<ProjectFilesModal isOpen={true} onClose={() => {}} />);
+    });
+
+    // Left-hand [Active] badge should NOT exist beside the title
+    const activeBadges = Array.from(testContainer.querySelectorAll('span')).filter(
+      (el) => el.textContent?.trim() === 'Active' && el.className.includes('text-[10px]')
+    );
+    expect(activeBadges.length).toBe(0);
+
+    // Right-hand active status indicator button exists and follows Convention 1
+    const activeIndicator = testContainer.querySelector('span[aria-label="Currently active project"]');
+    expect(activeIndicator).not.toBeNull();
+    expect(activeIndicator?.className).toContain('bg-primary');
+    expect(activeIndicator?.className).toContain('text-primary-foreground');
+    expect(activeIndicator?.className).toContain('font-bold');
+
+    // 2. Verify SettingsDrawer Theme Selection
+    await act(async () => {
+      root.render(<SettingsDrawer isOpen={true} onClose={() => {}} />);
+    });
+
+    // Selected theme button should follow Convention 1
+    const selectedThemeBtn = Array.from(testContainer.querySelectorAll('button')).find(
+      (b) => b.textContent?.includes('Manuscript') && b.className.includes('bg-primary')
+    );
+    expect(selectedThemeBtn).toBeDefined();
+    expect(selectedThemeBtn?.className).toContain('bg-primary');
+    expect(selectedThemeBtn?.className).toContain('text-primary-foreground');
+    expect(selectedThemeBtn?.className).toContain('font-semibold');
+
+    // Radio indicator inside selected button should have inverted colors
+    const radioIndicator = selectedThemeBtn?.querySelector('div.w-3\\.5');
+    expect(radioIndicator).not.toBeNull();
+    expect(radioIndicator?.className).toContain('bg-primary-foreground');
+
+    await act(async () => {
+      root.unmount();
+    });
+    testContainer.remove();
+  });
+
+  it('renders Spotlight theme in SessionDrawer mirroring Charcoal with white background for expanded sessions', async () => {
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+    const testContainer = document.createElement('div');
+    document.body.appendChild(testContainer);
+    const root = createRoot(testContainer);
+
+    useTypingStore.setState({
+      manifest: {
+        ...useTypingStore.getState().manifest,
+        id: 'spotlight-doc-1',
+        colorScheme: 'spotlight',
+      },
+      historicalPages: [],
+      currentPageNumber: 1,
+      currentPageLines: [
+        {
+          id: 'p1-line-0',
+          lineIndex: 0,
+          cells: Array.from('Drafting spotlight text.').map((ch, i) => ({
+            id: `p1-l0-c${i}`,
+            char: ch,
+            state: 'standard',
+            colIndex: i,
+            lineIndex: 0,
+          })),
+          isCommitted: false,
+        },
+      ],
+      activeSessions: [
+        {
+          id: 'spotlight-doc-1-session-1',
+          projectId: 'spotlight-doc-1',
+          sessionNumber: 1,
+          startedAt: new Date().toISOString(),
+          completedAt: null,
+          text: 'Drafting spotlight text.',
+          wordCount: 3,
+        },
+      ],
+    });
+
+    await act(async () => {
+      root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
+    });
+
+    // Active session folder should have dark background mirroring charcoal
+    const activeFolder = testContainer.querySelector('[data-active-session="true"]');
+    expect(activeFolder).not.toBeNull();
+    expect(activeFolder?.className).toContain('bg-zinc-900/90');
+
+    // Expanded active folder body should have white background with black text
+    const expandedBody = activeFolder?.querySelector('.bg-white');
+    expect(expandedBody).not.toBeNull();
+    expect(expandedBody?.className).toContain('text-zinc-950');
+
+    // Verify CompileModal manuscript stream in Spotlight theme has white background
+    await act(async () => {
+      root.render(
+        <CompileModal
+          isOpen={true}
+          onClose={() => {}}
+          onCloseAll={() => {}}
+        />
+      );
+    });
+
+    const compileStream = testContainer.querySelector('.bg-white.text-zinc-950');
+    expect(compileStream).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+    });
+    testContainer.remove();
+  });
 });
+

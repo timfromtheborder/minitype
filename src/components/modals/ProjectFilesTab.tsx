@@ -457,11 +457,6 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                             </button>
                           </div>
                         )}
-                        {isActive && (
-                          <span className="shrink-0 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-primary text-primary-foreground shadow-xs rounded-[2px]">
-                            Active
-                          </span>
-                        )}
                       </div>
                       <div className="flex items-center gap-2.5 text-[10px] text-muted-foreground truncate mt-0.5">
                         <span>{formatDate(file.updatedAt || file.createdAt)}</span>
@@ -494,7 +489,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                       </button>
                     ) : (
                       <span
-                        className="flex items-center gap-1 px-2 py-1 text-xs rounded-[2px] border border-primary/50 bg-primary/20 text-primary font-bold shadow-xs select-none"
+                        className="flex items-center gap-1 px-2 py-1 text-xs rounded-[2px] border border-primary bg-primary text-primary-foreground font-bold shadow-xs select-none"
                         aria-label="Currently active project"
                       >
                         <Check className="w-3.5 h-3.5" />

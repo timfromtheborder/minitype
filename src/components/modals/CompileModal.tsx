@@ -136,7 +136,11 @@ export const CompileModal: React.FC<CompileModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Continuous Manuscript Text Stream (No Header) */}
-        <div className="flex-1 min-h-0 overflow-y-auto square-scrollbar border border-border/80 bg-card text-card-foreground p-4 sm:p-8 rounded-[2px] select-text">
+        <div
+          className={`flex-1 min-h-0 overflow-y-auto square-scrollbar border border-border/80 ${
+            manifest.colorScheme === 'spotlight' ? 'bg-white text-zinc-950' : 'bg-card text-card-foreground'
+          } p-4 sm:p-8 rounded-[2px] select-text`}
+        >
           {cleanText.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 text-center text-muted-foreground font-mono text-xs italic select-none">
               No manuscript content to display.

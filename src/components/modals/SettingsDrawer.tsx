@@ -321,7 +321,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                       }}
                       className={`w-full py-2 px-3 rounded-[2px] border text-left flex items-center justify-between transition-colors duration-100 cursor-pointer focus:outline-hidden ${
                         isSelected
-                          ? 'border-primary bg-primary/15 text-foreground font-semibold'
+                          ? 'border-primary bg-primary text-primary-foreground font-semibold shadow-xs'
                           : 'border-border/80 hover:bg-muted/60 text-muted-foreground hover:text-foreground'
                       }`}
                     >
@@ -343,12 +343,12 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                       <div
                         className={`w-3.5 h-3.5 rounded-[2px] border flex items-center justify-center transition-colors duration-100 shrink-0 ml-1.5 ${
                           isSelected
-                            ? 'border-primary bg-primary'
+                            ? 'border-primary-foreground bg-primary-foreground'
                             : 'border-muted-foreground/40 bg-transparent'
                         }`}
                       >
                         {isSelected && (
-                          <div className="w-1.5 h-1.5 rounded-[2px] bg-background" />
+                          <div className="w-1.5 h-1.5 rounded-[2px] bg-primary" />
                         )}
                       </div>
                     </button>
@@ -673,7 +673,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.10.15 · by timfromtheborder
+              Minitype v0.9.10.16 · by timfromtheborder
             </span>
           </div>
         </div>
