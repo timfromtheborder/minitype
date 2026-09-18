@@ -496,12 +496,12 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                           #{activeSession.sessionNumber}
                         </span>
                         <span className="text-muted-foreground/40 shrink-0">•</span>
-                        <span className="truncate text-muted-foreground text-[11px]">
+                        <span className="truncate text-muted-foreground text-xs">
                           {formatSessionDateTime(activeSession.startedAt)} - Present
                         </span>
                       </div>
                       <span
-                        className={`shrink-0 text-right text-[11px] ${
+                        className={`shrink-0 text-right text-xs ${
                           isActiveTargetMet
                             ? 'font-bold text-foreground'
                             : 'font-medium text-muted-foreground'
@@ -588,12 +588,12 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                           #{session.sessionNumber}
                         </span>
                         <span className="text-muted-foreground/40 shrink-0">•</span>
-                        <span className="truncate text-muted-foreground text-[11px]">
+                        <span className="truncate text-muted-foreground text-xs">
                           {timeRange}
                         </span>
                       </div>
                       <span
-                        className={`shrink-0 text-right text-[11px] ${
+                        className={`shrink-0 text-right text-xs ${
                           isTargetMet
                             ? 'font-bold text-foreground'
                             : 'font-medium text-muted-foreground'

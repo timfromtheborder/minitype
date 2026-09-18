@@ -1204,9 +1204,9 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     // Compile modal has no header element
     expect(testContainer.querySelector('header')).toBeNull();
 
-    // Has bottom action bar with Return to Ledger button
+    // Has bottom action bar with Return to Session View button
     const returnBtn = Array.from(testContainer.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Return to Ledger')
+      b.textContent?.includes('Return to Session View')
     );
     expect(returnBtn).toBeDefined();
 

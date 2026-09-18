@@ -170,10 +170,10 @@ export const CompileModal: React.FC<CompileModalProps> = ({
             type="button"
             onClick={onClose}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] border border-border/80 bg-muted/40 hover:bg-muted text-foreground transition-colors cursor-pointer text-xs font-medium shrink-0"
-            aria-label="Return to document ledger"
+            aria-label="Return to session view"
           >
             <CornerUpLeft className="w-3.5 h-3.5" />
-            <span>Return to Ledger</span>
+            <span>Return to Session View</span>
           </button>
 
           {/* Right: Formatting & Export actions */}
@@ -184,7 +184,7 @@ export const CompileModal: React.FC<CompileModalProps> = ({
               onClick={() => {
                 useTypingStore.getState().setManifest({ doubleSpaceLinebreaks: !isDoubleSpaced });
               }}
-              className={`h-[28px] flex items-center gap-1.5 px-2.5 rounded-[2px] border transition-colors cursor-pointer text-xs font-sans ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] border transition-colors cursor-pointer text-xs font-medium ${
                 isDoubleSpaced
                   ? 'bg-primary/10 border-primary text-foreground font-medium'
                   : 'border-border/80 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground'

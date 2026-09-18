@@ -353,10 +353,10 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
       </div>
 
       {/* Sorting Controls Bar */}
-      <div className="flex items-center justify-between gap-2 shrink-0 px-1 py-1 text-[11px] bg-muted/20 border border-border/40 rounded-[2px]">
+      <div className="flex items-center justify-between gap-2 shrink-0 px-1 py-1 text-xs bg-muted/20 border border-border/40 rounded-[2px]">
         <div className="flex items-center gap-1 text-muted-foreground">
           <ArrowUpDown className="w-3 h-3 opacity-70" />
-          <span className="uppercase tracking-wider font-semibold text-[10px]">Sort:</span>
+          <span className="uppercase tracking-wider font-semibold text-xs">Sort:</span>
         </div>
         <div className="flex items-center gap-1">
           {(['modified', 'created', 'name'] as SortField[]).map((field) => {
@@ -366,7 +366,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                 key={field}
                 type="button"
                 onClick={() => toggleSort(field)}
-                className={`flex items-center gap-1 px-2 py-0.5 rounded-[2px] border transition-colors cursor-pointer capitalize ${
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-[2px] border transition-colors cursor-pointer capitalize text-xs ${
                   isSelected
                     ? 'border-primary bg-primary/15 text-primary font-bold shadow-xs'
                     : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40'
@@ -463,7 +463,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
                           </div>
                         )}
                       </div>
-                      <div className="flex items-center gap-2.5 text-[10px] text-muted-foreground truncate mt-0.5">
+                      <div className="flex items-center gap-2.5 text-xs text-muted-foreground truncate mt-0.5">
                         <span>{formatDate(file.updatedAt || file.createdAt)}</span>
                         <span>•</span>
                         <span>
@@ -551,19 +551,15 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
       {/* Bottom Library Data Safety Bar */}
       <div className="flex flex-wrap items-center justify-between gap-2 shrink-0 pt-2 border-t border-border/60 text-xs">
         <div className="flex items-center gap-1.5 min-h-[1.5rem]">
-          {backupStatus ? (
+          {backupStatus && (
             <span
-              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[2px] text-[11px] font-medium animate-in fade-in duration-150 ${
+              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[2px] text-xs font-medium animate-in fade-in duration-150 ${
                 backupStatus.type === 'error'
                   ? 'bg-destructive/15 text-destructive border border-destructive/30'
                   : 'bg-primary/15 text-primary border border-primary/30'
               }`}
             >
               {backupStatus.type === 'error' ? '!' : '✓'} {backupStatus.text}
-            </span>
-          ) : (
-            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/60 select-none">
-              Library Data Safety (JSON)
             </span>
           )}
         </div>
