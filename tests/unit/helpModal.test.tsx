@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { HelpModal } from '@/components/modals/HelpModal';
+import { useTypingStore } from '@/stores/typingStore';
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -124,5 +125,43 @@ describe('HelpModal', () => {
     // Verify relative text-xs classes are applied to tables and containers
     const table = container.querySelector('table');
     expect(table?.className).toContain('text-xs');
+  });
+
+  it('mirrors charcoal theme in Spotlight theme by applying dark-mode data-theme attribute', async () => {
+    await act(async () => {
+      useTypingStore.setState({
+        manifest: {
+          ...useTypingStore.getState().manifest,
+          colorScheme: 'spotlight',
+        },
+      });
+    });
+
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(<HelpModal isOpen={true} onClose={vi.fn()} />);
+    });
+
+    const modalDialog = container.querySelector('[role="dialog"]');
+    expect(modalDialog).not.toBeNull();
+    expect(modalDialog?.getAttribute('data-help-modal')).toBe('true');
+    expect(modalDialog?.getAttribute('data-theme')).toBe('dark-mode');
+
+    // Reset store
+    await act(async () => {
+      useTypingStore.setState({
+        manifest: {
+          ...useTypingStore.getState().manifest,
+          colorScheme: 'typewriter',
+        },
+      });
+    });
+
+    expect(modalDialog?.getAttribute('data-help-modal')).toBe('true');
+    expect(modalDialog?.getAttribute('data-theme')).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+    });
   });
 });

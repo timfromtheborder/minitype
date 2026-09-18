@@ -717,13 +717,24 @@ button,
   animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Spotlight Theme: Ensure active session card in Document modal has crisp dark-on-light contrast */
-[data-theme="spotlight"] [data-active-session="true"] {
-  background-color: rgba(9, 9, 11, 0.05) !important;
-  border-color: rgba(9, 9, 11, 0.18) !important;
-  color: #09090B !important;
-}
-
-[data-theme="spotlight"] [data-active-session="true"] .font-mono {
-  color: rgba(9, 9, 11, 0.8) !important;
+/* Spotlight Theme: Have Help modal mirror Charcoal theme */
+[data-theme="spotlight"] [data-help-modal="true"],
+[data-theme="spotlight"] [aria-label="Help and Instructions"] {
+  --background: #121214;
+  --foreground: #EDEDED;
+  --card: #1C1C20;
+  --card-foreground: #EDEDED;
+  --popover: #18181B;
+  --popover-foreground: #EDEDED;
+  --primary: #F4F4F5;
+  --primary-foreground: #121214;
+  --secondary: #2A2A30;
+  --secondary-foreground: #EDEDED;
+  --muted: #24242A;
+  --muted-foreground: #9D9DA8;
+  --accent: #2A2A30;
+  --accent-foreground: #EDEDED;
+  --border: #2E2E36;
+  --input: #2E2E36;
+  --ring: #F4F4F5;
 }

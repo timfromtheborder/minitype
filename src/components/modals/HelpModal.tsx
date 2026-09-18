@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { HelpCircle, CornerUpLeft, HardDrive, Settings, Terminal, ChevronDown } from 'lucide-react';
+import { useTypingStore } from '@/stores/typingStore';
 
 export interface HelpModalProps {
   isOpen: boolean;
@@ -9,6 +10,8 @@ export interface HelpModalProps {
 }
 
 export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
+  const colorScheme = useTypingStore((state) => state.manifest?.colorScheme);
+  const isSpotlight = colorScheme === 'spotlight';
   const modalRef = useRef<HTMLDivElement>(null);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     saving: true,
@@ -70,6 +73,8 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
       role="dialog"
       aria-modal="true"
       aria-label="Help and Instructions"
+      data-help-modal="true"
+      data-theme={isSpotlight ? 'dark-mode' : undefined}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(3.5rem,56px)] px-2 sm:p-4 sm:pb-16 animate-in fade-in duration-75"
       onClick={onClose}
     >
