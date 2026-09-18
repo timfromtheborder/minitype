@@ -294,7 +294,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
 
     if (archivingSessionId) {
       setJustClosedSessionId(archivingSessionId);
-      setTimeout(() => setJustClosedSessionId(null), 350);
+      setTimeout(() => setJustClosedSessionId(null), 320);
     }
 
     await useTypingStore.getState().startNewSession();
@@ -316,7 +316,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
     setIsConfirmingCloseCompile(false);
     if (activeSession) {
       setJustClosedSessionId(activeSession.id);
-      setTimeout(() => setJustClosedSessionId(null), 350);
+      setTimeout(() => setJustClosedSessionId(null), 320);
     }
     await useTypingStore.getState().closeActiveSession();
   };
@@ -336,7 +336,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
     setIsConfirmingCloseCompile(false);
     if (activeSession) {
       setJustClosedSessionId(activeSession.id);
-      setTimeout(() => setJustClosedSessionId(null), 350);
+      setTimeout(() => setJustClosedSessionId(null), 320);
     }
     await useTypingStore.getState().closeActiveSession();
     setIsCompileOpen(true);
@@ -563,8 +563,8 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                       isSpotlight ? 'bg-zinc-900/90' : 'bg-card'
                     } ${
                       isJustClosed
-                        ? 'border-primary ring-2 ring-primary ring-offset-1 ring-offset-background animate-archive-flash'
-                        : 'border-border/70 transition-colors'
+                        ? 'animate-archive-flash'
+                        : 'border-border/70'
                     }`}
                   >
                     {/* Folder Tab Header Button */}
@@ -572,12 +572,10 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                       type="button"
                       onClick={() => toggleSessionExpanded(session.id)}
                       aria-expanded={isExpanded}
-                      className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-mono select-none cursor-pointer text-left ${
-                        isJustClosed
-                          ? 'animate-archive-tab-flash text-foreground font-semibold'
-                          : isExpanded
-                          ? 'bg-muted/40 border-b border-border/60 text-foreground transition-colors'
-                          : 'bg-muted/20 hover:bg-muted/35 text-foreground/80 transition-colors'
+                      className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-mono select-none cursor-pointer transition-colors text-left ${
+                        isExpanded
+                          ? 'bg-muted/40 border-b border-border/60 text-foreground'
+                          : 'bg-muted/20 hover:bg-muted/35 text-foreground/80'
                       }`}
                     >
                       <div className="flex items-center gap-2 min-w-0 pr-2">

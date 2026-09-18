@@ -673,7 +673,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.10.18 · by timfromtheborder
+              Minitype v0.9.10.19 · by timfromtheborder
             </span>
           </div>
         </div>

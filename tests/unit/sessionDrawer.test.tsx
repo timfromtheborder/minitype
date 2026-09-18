@@ -741,7 +741,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     // Once closed, active card is removed and session becomes a completed folder with fast pulse outline
     expect(container.querySelector('[data-active-session="true"]')).toBeNull();
     const closedFolder = container.querySelector('[data-session-folder="true"]');
-    expect(closedFolder?.className).toContain('ring-2 ring-primary');
+    expect(closedFolder?.className).toContain('animate-archive-flash');
 
     // Expand the closed session folder to view text
     const closedFolderTab = closedFolder?.querySelector('button') as HTMLButtonElement;
@@ -1621,7 +1621,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     );
     expect(archivedSession1).toBeDefined();
     expect(archivedSession1?.className).toContain('animate-archive-flash');
-    expect(archivedSession1?.className).toContain('ring-2 ring-primary');
+    expect(archivedSession1?.className).not.toContain('ring-2');
 
     // After decay duration, the flash state resets
     await act(async () => {
