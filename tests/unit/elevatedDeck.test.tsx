@@ -202,4 +202,52 @@ describe('Strategy A - Persistent Elevated Deck & Modal Linking', () => {
     const card = dialog.firstElementChild as HTMLElement;
     expect(card.className).toContain('landscape:max-h-[calc(100dvh-max(4.5rem,68px))]');
   });
+
+  it('verifies manuscript theme uses medium-dark #63625b for active states in globals.css', () => {
+    const cssPath = path.resolve(__dirname, '../../src/app/globals.css');
+    const cssContent = fs.readFileSync(cssPath, 'utf-8');
+
+    expect(cssContent).toContain('--primary: #63625b;');
+    expect(cssContent).toContain('--ring: #63625b;');
+  });
+
+  it('verifies pomodoro audio toggle and timer style buttons have matching height', async () => {
+    useTypingStore.setState({
+      manifest: {
+        id: 'test-project',
+        title: 'Settings Test',
+        mode: 'local',
+        inboxCount: 0,
+        outboxCount: 0,
+        lastPrintedCharIndex: 0,
+        printedPagesCount: 0,
+        activeApertureHeight: 5,
+        wrapMode: 'soft',
+        pageSize: 54,
+        pageMode: 'scroll',
+        colorScheme: 'typewriter',
+        typeface: 'courier-prime',
+        textSize: 'm',
+        showClock: true,
+      },
+    });
+
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(<Home />);
+    });
+
+    const settingsBtn = container.querySelector('button[aria-label="Settings"]') as HTMLButtonElement;
+    await act(async () => {
+      settingsBtn.click();
+    });
+
+    const pomodoroSoundBtn = container.querySelector('button[aria-label="Mute Pomodoro audio alerts"], button[aria-label="Enable Pomodoro audio alerts"]');
+    expect(pomodoroSoundBtn).not.toBeNull();
+    expect(pomodoroSoundBtn?.className).toContain('h-6.5');
+
+    const timerStyleBtn = container.querySelector('button.capitalize.text-\\[11px\\]');
+    expect(timerStyleBtn).not.toBeNull();
+    expect(timerStyleBtn?.className).toContain('h-6.5');
+  });
 });

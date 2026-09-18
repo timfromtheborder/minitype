@@ -62,7 +62,7 @@
   --card-foreground: #1E1E1E;
   --popover: #F5F2EB;
   --popover-foreground: #1E1E1E;
-  --primary: #1E1E1E;
+  --primary: #63625b;
   --primary-foreground: #F5F2EB;
   --secondary: #E7DFD1;
   --secondary-foreground: #1E1E1E;
@@ -73,7 +73,7 @@
   --destructive: #C0392B;
   --border: #DCD1BE;
   --input: #DCD1BE;
-  --ring: #887E6E;
+  --ring: #63625b;
   --radius: 2px;
   --highlight-bg: rgba(220, 206, 178, 0.9);
   --highlight-text: #1E1E1E;

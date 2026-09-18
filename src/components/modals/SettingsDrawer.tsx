@@ -486,14 +486,14 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                     {manifest.timerStyle || 'snapshot'}
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-stretch gap-1.5">
                   <div className="grid grid-cols-2 gap-1.5 flex-1">
                     {(['snapshot', 'pomodoro'] as TimerStyle[]).map((style) => (
                       <button
                         key={style}
                         type="button"
                         onClick={() => onUpdateManifest({ timerStyle: style })}
-                        className={`py-1 px-1 rounded-[2px] border text-center transition-all cursor-pointer capitalize text-[11px] ${
+                        className={`h-6.5 flex items-center justify-center px-1 rounded-[2px] border text-center transition-all cursor-pointer capitalize text-[11px] touch-manipulation ${
                           (manifest.timerStyle || 'snapshot') === style
                             ? 'border-primary bg-primary text-primary-foreground font-bold shadow-xs'
                             : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground font-medium'
@@ -510,7 +510,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                         pomodoroSoundEnabled: !(manifest.pomodoroSoundEnabled ?? true),
                       })
                     }
-                    className={`h-[26px] w-[26px] flex items-center justify-center rounded-[2px] border transition-colors cursor-pointer shrink-0 ${
+                    className={`h-6.5 w-6.5 flex items-center justify-center rounded-[2px] border transition-colors cursor-pointer shrink-0 touch-manipulation ${
                       manifest.pomodoroSoundEnabled ?? true
                         ? 'border-primary bg-primary text-primary-foreground shadow-xs'
                         : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-muted-foreground'
@@ -594,7 +594,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.10.2 · by timfromtheborder
+              Minitype v0.9.10.3 · by timfromtheborder
             </span>
           </div>
         </div>
