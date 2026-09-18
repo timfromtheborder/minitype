@@ -129,7 +129,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
     >
       <div
         ref={drawerRef}
-        className="w-full max-w-md max-h-[calc(100dvh-max(4.5rem,68px)-env(safe-area-inset-top))] sm:max-h-[calc(100dvh-5rem)] overflow-y-auto square-scrollbar p-4 sm:p-6 rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-col gap-4 sm:gap-5 select-none"
+        className="w-full max-w-md max-h-[calc(100dvh-max(4.5rem,68px)-env(safe-area-inset-top))] sm:max-h-[calc(100dvh-5rem)] overflow-y-auto square-scrollbar p-4 sm:p-5 rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-col gap-3.5 sm:gap-4 select-none"
         onClick={(e) => {
           e.stopPropagation();
           setIsPhosphorPickerOpen(false);
@@ -154,15 +154,107 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           </button>
         </div>
 
-        <div className="flex flex-col gap-5 text-xs font-sans">
+        <div className="flex flex-col gap-3 sm:gap-3.5 text-xs font-sans">
           {/* =================================================================
-              SECTION 1: TOOLS (Stats, Session Target, Clock & Timer)
+              SECTION 1: MECHANICS (Aperture Slider, Page Mode, Allow Backspace)
               ================================================================= */}
-          <div className="flex flex-col gap-3">
-            <span className="text-[11px] font-sans font-bold tracking-wider uppercase text-muted-foreground/70 select-none">
-              Tools
-            </span>
+          <div className="flex flex-col gap-2.5">
+            {/* Aperture Visible Lines Slider (1 to 10 lines) */}
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <label className="text-muted-foreground">Aperture:</label>
+                <span
+                  className={`font-bold ${
+                    manifest.pageMode === 'notecard' ? 'text-muted-foreground/50' : 'text-foreground'
+                  }`}
+                >
+                  {manifest.pageMode === 'notecard'
+                    ? '10 lines'
+                    : `${manifest.activeApertureHeight} ${manifest.activeApertureHeight === 1 ? 'line' : 'lines'}`}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 pt-0.5">
+                <span className="text-xs text-muted-foreground font-semibold">1</span>
+                <input
+                  type="range"
+                  min={1}
+                  max={10}
+                  step={1}
+                  value={manifest.pageMode === 'notecard' ? 10 : manifest.activeApertureHeight}
+                  disabled={manifest.pageMode === 'notecard'}
+                  onChange={(e) => {
+                    if (manifest.pageMode === 'notecard') return;
+                    const val = Number(e.target.value) as ApertureHeight;
+                    onUpdateHeight(val);
+                  }}
+                  className={`w-full square-slider ${
+                    manifest.pageMode === 'notecard' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+                  }`}
+                  aria-label="Aperture slider"
+                />
+                <span className="text-xs text-muted-foreground font-semibold">10</span>
+              </div>
+            </div>
 
+            {/* Page Mode */}
+            <div className="flex flex-col gap-1">
+              <label className="text-muted-foreground">Page Mode:</label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {(['scroll', 'notecard'] as PageMode[]).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => {
+                      const pageSize = mode === 'scroll' ? 999999 : 10;
+                      onUpdateManifest({ pageMode: mode, pageSize });
+                    }}
+                    className={`py-1.5 px-0.5 rounded-[2px] border text-center transition-all cursor-pointer capitalize text-xs truncate ${
+                      (manifest.pageMode || 'scroll') === mode
+                        ? 'border-primary bg-primary text-primary-foreground font-bold shadow-xs'
+                        : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground'
+                    }`}
+                  >
+                    <span className="truncate">{mode}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Allow backspace */}
+            <div
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => onUpdateManifest({ allowStrikeout: !allowStrikeout })}
+            >
+              <span className="text-muted-foreground">Allow backspace</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={allowStrikeout}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUpdateManifest({ allowStrikeout: !allowStrikeout });
+                }}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[2px] border transition-colors duration-150 ease-in-out focus:outline-hidden ${
+                  allowStrikeout ? 'bg-primary border-primary' : 'bg-muted/70 border-border/80'
+                }`}
+                aria-label="Allow backspace"
+              >
+                <span
+                  className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-[1px] shadow-xs transition-transform duration-150 ease-in-out ${
+                    allowStrikeout ? 'translate-x-4 bg-primary-foreground' : 'translate-x-0.5 bg-muted-foreground/70'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Section Divider */}
+          <div className="border-t border-border/60" />
+
+          {/* =================================================================
+              SECTION 2: TOOLS (Stats, Session Target, Clock & Timer)
+              ================================================================= */}
+          <div className="flex flex-col gap-2.5">
             {/* Show document stats */}
             <div
               className="flex items-center justify-between cursor-pointer"
@@ -219,7 +311,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
 
             {/* Session target words stepper (beneath session target tracker) */}
             {showSessionTargetTracker && (
-              <div className="flex items-center justify-between pl-3 pr-1.5 py-1.5 border-l-2 border-primary/40 bg-muted/15 rounded-r-[2px] -mt-1 mb-0.5 animate-in fade-in duration-100">
+              <div className="flex items-center justify-between pl-3 pr-1.5 py-1 border-l-2 border-primary/40 bg-muted/15 rounded-r-[2px] -mt-0.5 mb-0.5 animate-in fade-in duration-100">
                 <span className="text-xs text-muted-foreground">Target words per session</span>
                 <div className="flex items-center gap-1.5">
                   <div className="h-[26px] flex items-center rounded-[2px] border border-border/80 bg-background focus-within:border-primary transition-colors overflow-hidden">
@@ -316,7 +408,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
 
             {/* Timer Style (Visible only when Clock is enabled) */}
             {manifest.showClock && (
-              <div className="flex flex-col gap-1.5 pl-3 pr-1.5 py-1.5 border-l-2 border-primary/40 bg-muted/15 rounded-r-[2px] -mt-1 animate-in fade-in duration-100">
+              <div className="flex flex-col gap-1 pl-3 pr-1.5 py-1.5 border-l-2 border-primary/40 bg-muted/15 rounded-r-[2px] -mt-0.5 animate-in fade-in duration-100">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground text-xs">Timer Style</span>
                   <span className="font-bold text-foreground capitalize text-xs">
@@ -382,115 +474,11 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           <div className="border-t border-border/60" />
 
           {/* =================================================================
-              SECTION 2: MECHANICS (Aperture Slider, Page Mode, Allow Backspace)
-              ================================================================= */}
-          <div className="flex flex-col gap-3">
-            <span className="text-[11px] font-sans font-bold tracking-wider uppercase text-muted-foreground/70 select-none">
-              Mechanics
-            </span>
-
-            {/* Aperture Visible Lines Slider (1 to 10 lines) */}
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-muted-foreground">Aperture:</label>
-                <span
-                  className={`font-bold ${
-                    manifest.pageMode === 'notecard' ? 'text-muted-foreground/50' : 'text-foreground'
-                  }`}
-                >
-                  {manifest.pageMode === 'notecard'
-                    ? '10 lines'
-                    : `${manifest.activeApertureHeight} ${manifest.activeApertureHeight === 1 ? 'line' : 'lines'}`}
-                </span>
-              </div>
-              <div className="flex items-center gap-3 pt-1">
-                <span className="text-xs text-muted-foreground font-semibold">1</span>
-                <input
-                  type="range"
-                  min={1}
-                  max={10}
-                  step={1}
-                  value={manifest.pageMode === 'notecard' ? 10 : manifest.activeApertureHeight}
-                  disabled={manifest.pageMode === 'notecard'}
-                  onChange={(e) => {
-                    if (manifest.pageMode === 'notecard') return;
-                    const val = Number(e.target.value) as ApertureHeight;
-                    onUpdateHeight(val);
-                  }}
-                  className={`w-full square-slider ${
-                    manifest.pageMode === 'notecard' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
-                  }`}
-                  aria-label="Aperture slider"
-                />
-                <span className="text-xs text-muted-foreground font-semibold">10</span>
-              </div>
-            </div>
-
-            {/* Page Mode */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-muted-foreground">Page Mode:</label>
-              <div className="grid grid-cols-2 gap-1.5">
-                {(['scroll', 'notecard'] as PageMode[]).map((mode) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => {
-                      const pageSize = mode === 'scroll' ? 999999 : 10;
-                      onUpdateManifest({ pageMode: mode, pageSize });
-                    }}
-                    className={`py-1.5 px-0.5 rounded-[2px] border text-center transition-all cursor-pointer capitalize text-xs truncate ${
-                      (manifest.pageMode || 'scroll') === mode
-                        ? 'border-primary bg-primary text-primary-foreground font-bold shadow-xs'
-                        : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground'
-                    }`}
-                  >
-                    <span className="truncate">{mode}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Allow backspace */}
-            <div
-              className="flex items-center justify-between cursor-pointer"
-              onClick={() => onUpdateManifest({ allowStrikeout: !allowStrikeout })}
-            >
-              <span className="text-muted-foreground">Allow backspace</span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={allowStrikeout}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onUpdateManifest({ allowStrikeout: !allowStrikeout });
-                }}
-                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[2px] border transition-colors duration-150 ease-in-out focus:outline-hidden ${
-                  allowStrikeout ? 'bg-primary border-primary' : 'bg-muted/70 border-border/80'
-                }`}
-                aria-label="Allow backspace"
-              >
-                <span
-                  className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-[1px] shadow-xs transition-transform duration-150 ease-in-out ${
-                    allowStrikeout ? 'translate-x-4 bg-primary-foreground' : 'translate-x-0.5 bg-muted-foreground/70'
-                  }`}
-                />
-              </button>
-            </div>
-          </div>
-
-          {/* Section Divider */}
-          <div className="border-t border-border/60" />
-
-          {/* =================================================================
               SECTION 3: INTERFACE (Text Size, Theme Grid, Typing Sounds)
               ================================================================= */}
-          <div className="flex flex-col gap-3">
-            <span className="text-[11px] font-sans font-bold tracking-wider uppercase text-muted-foreground/70 select-none">
-              Interface
-            </span>
-
+          <div className="flex flex-col gap-2.5">
             {/* Text Size ([S] [M] [L] [XL]) */}
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1">
               <div className="flex items-center justify-between">
                 <label className="text-muted-foreground">Text Size:</label>
                 <span className="font-bold text-foreground">
@@ -526,7 +514,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
             </div>
 
             {/* Color Schemes */}
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1">
               <label className="text-muted-foreground">Theme:</label>
               <div className="grid grid-cols-2 gap-2">
                 {[
@@ -701,9 +689,9 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           </div>
 
           {/* Version Footer */}
-          <div className="pt-3 pb-1 text-center border-t border-border/40">
+          <div className="pt-2.5 pb-0.5 text-center border-t border-border/40">
             <span className="text-xs font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.10.23 · by timfromtheborder
+              Minitype v0.9.10.24 · by timfromtheborder
             </span>
           </div>
         </div>
