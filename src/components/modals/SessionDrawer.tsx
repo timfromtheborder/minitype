@@ -294,7 +294,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
 
     if (archivingSessionId) {
       setJustClosedSessionId(archivingSessionId);
-      setTimeout(() => setJustClosedSessionId(null), 320);
+      setTimeout(() => setJustClosedSessionId(null), 700);
     }
 
     await useTypingStore.getState().startNewSession();
@@ -316,7 +316,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
     setIsConfirmingCloseCompile(false);
     if (activeSession) {
       setJustClosedSessionId(activeSession.id);
-      setTimeout(() => setJustClosedSessionId(null), 320);
+      setTimeout(() => setJustClosedSessionId(null), 700);
     }
     await useTypingStore.getState().closeActiveSession();
   };
@@ -336,7 +336,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
     setIsConfirmingCloseCompile(false);
     if (activeSession) {
       setJustClosedSessionId(activeSession.id);
-      setTimeout(() => setJustClosedSessionId(null), 320);
+      setTimeout(() => setJustClosedSessionId(null), 700);
     }
     await useTypingStore.getState().closeActiveSession();
     setIsCompileOpen(true);
@@ -559,7 +559,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                     key={session.id}
                     data-session-card="true"
                     data-session-folder="true"
-                    className={`border rounded-[2px] overflow-hidden ${
+                    className={`relative border rounded-[2px] overflow-hidden ${
                       isSpotlight ? 'bg-zinc-900/90' : 'bg-card'
                     } ${
                       isJustClosed

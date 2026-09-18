@@ -1625,7 +1625,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
 
     // After decay duration, the flash state resets
     await act(async () => {
-      await new Promise((r) => setTimeout(r, 400));
+      await new Promise((r) => setTimeout(r, 750));
     });
     expect(archivedSession1?.className).not.toContain('animate-archive-flash');
 
