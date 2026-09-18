@@ -391,5 +391,26 @@ describe('ChronoSuite & Clock Formatter', () => {
       // Should have advanced 50 seconds in realtime (24:10)
       expect(badgeBtn?.textContent).toBe('24:10');
     });
+
+    it('seamlessly toggles showClock between true and false without React hook errors', async () => {
+      const root = createRoot(container);
+      // 1. Initial render with showClock = true
+      await act(async () => {
+        root.render(<ChronoSuite showClock={true} timerStyle="pomodoro" />);
+      });
+      expect(container.querySelector('button[aria-label*="time"]')).not.toBeNull();
+
+      // 2. Toggle showClock to false (must not throw React hook count error)
+      await act(async () => {
+        root.render(<ChronoSuite showClock={false} timerStyle="pomodoro" />);
+      });
+      expect(container.children.length).toBe(0);
+
+      // 3. Toggle back to true
+      await act(async () => {
+        root.render(<ChronoSuite showClock={true} timerStyle="pomodoro" />);
+      });
+      expect(container.querySelector('button[aria-label*="time"]')).not.toBeNull();
+    });
   });
 });

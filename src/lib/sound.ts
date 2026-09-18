@@ -23,24 +23,24 @@ class TypewriterAudio {
         this.isMuted = true;
       }
 
-      // iOS Safari Web Audio user gesture unlock
+      // iOS / iPadOS Safari Web Audio user gesture unlock
       const unlock = () => {
-        if (!this.ctx) {
-          const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-          if (AudioCtx) {
-            this.ctx = new AudioCtx();
-            this.initAudioPipeline(this.ctx);
-            this.initNoisePools(this.ctx);
-          }
-        }
-        if (this.ctx && this.ctx.state === 'suspended') {
-          this.ctx.resume().catch(() => {});
+        this.unlockAudio();
+        if (this.ctx && this.ctx.state === 'running') {
+          removeListeners();
         }
       };
 
-      window.addEventListener('touchstart', unlock, { once: true, passive: true });
-      window.addEventListener('pointerdown', unlock, { once: true, passive: true });
-      window.addEventListener('keydown', unlock, { once: true });
+      const events = ['touchend', 'pointerup', 'click', 'keydown'] as const;
+      const removeListeners = () => {
+        for (const ev of events) {
+          window.removeEventListener(ev, unlock);
+        }
+      };
+
+      for (const ev of events) {
+        window.addEventListener(ev, unlock, { passive: true });
+      }
 
       // Auto-resume AudioContext if browser suspended it during tab switch, backgrounding, or sleep
       const resumeAudio = () => {
@@ -141,6 +141,22 @@ class TypewriterAudio {
     return this.ctx;
   }
 
+  public unlockAudio() {
+    if (typeof window === 'undefined') return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+    try {
+      const buffer = ctx.createBuffer(1, 1, 22050);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start(0);
+    } catch {}
+  }
+
   public setMuted(muted: boolean) {
     this.isMuted = muted;
     if (typeof window !== 'undefined') {
@@ -156,6 +172,10 @@ class TypewriterAudio {
 
   public toggleMute(): boolean {
     this.setMuted(!this.isMuted);
+    if (!this.isMuted) {
+      this.unlockAudio();
+      this.playKeyClick();
+    }
     return this.isMuted;
   }
 

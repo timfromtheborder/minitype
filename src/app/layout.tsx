@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Courier_Prime, Inter_Tight } from "next/font/google";
 import "./globals.css";
 
@@ -52,8 +53,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${interTight.variable} ${courierPrime.variable} h-full antialiased font-sans`}
     >
       <head>
-        <script
+        <Script
           id="minitype-zero-fouc"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               (function() {

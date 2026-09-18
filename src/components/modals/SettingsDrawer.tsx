@@ -314,15 +314,15 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                           setIsPhosphorPickerOpen(false);
                         }
                       }}
-                      className={`w-full py-2 px-3 rounded-[2px] border text-left flex items-center justify-between transition-colors duration-100 cursor-pointer ${
+                      className={`w-full py-2 px-3 rounded-[2px] border text-left flex items-center justify-between transition-colors duration-100 cursor-pointer focus:outline-hidden ${
                         isSelected
-                          ? 'border-primary ring-1 ring-primary bg-primary/10 text-foreground font-semibold shadow-xs'
+                          ? 'border-primary bg-primary/15 text-foreground font-semibold'
                           : 'border-border/80 hover:bg-muted/60 text-muted-foreground hover:text-foreground'
                       }`}
                     >
                       <div className="flex items-center gap-2">
                         <span
-                          className="w-4 h-4 rounded-[2px] border shadow-xs flex items-center justify-center text-[8px] font-mono font-bold shrink-0"
+                          className="w-4 h-4 rounded-[2px] border flex items-center justify-center text-[8px] font-mono font-bold shrink-0"
                           style={{
                             backgroundColor: scheme.bg,
                             color: scheme.fg,
@@ -594,7 +594,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.10.4 · by timfromtheborder
+              Minitype v0.9.10.5 · by timfromtheborder
             </span>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { useTypingStore } from '@/stores/typingStore';
 import { HistoricalLine } from './HistoricalLine';
 import { ActiveLine } from './ActiveLine';
 import { MobileKeyboardBridge, MobileKeyboardBridgeHandle } from './MobileKeyboardBridge';
+import { typewriterAudio } from '@/lib/sound';
 
 interface ApertureFrameProps {
   lines?: LineRecord[];
@@ -125,6 +126,7 @@ export const ApertureFrame: React.FC<ApertureFrameProps> = React.memo(function A
   };
 
   const handleFrameTap = () => {
+    typewriterAudio.unlockAudio();
     if (!isPaused && !isLocked) {
       bridgeRef.current?.focus();
     }

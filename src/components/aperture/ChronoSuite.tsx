@@ -61,6 +61,19 @@ export function formatPomodoroTime(totalSeconds: number): string {
   return `${minutes}:${seconds}`;
 }
 
+function getBreakBadgeStyle(scheme: ColorScheme): string {
+  switch (scheme) {
+    case 'typewriter':
+      return 'bg-card text-card-foreground border-none';
+    case 'high-contrast':
+      return 'bg-[#1A1A1A] text-white border-none';
+    case 'low-contrast':
+      return 'bg-[#58626E] text-white border-none';
+    default:
+      return 'bg-foreground text-background border-none';
+  }
+}
+
 export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
   showClock = true,
   timerStyle = 'snapshot',
@@ -209,23 +222,7 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
           ? 'font-mono tracking-tight'
           : 'font-mono';
 
-  // Pomodoro break badge appearance:
-  // - manuscript (typewriter): matches platen bg (#EFE9DE) with dark text, no border
-  // - paperwhite (high-contrast): 10% gray (#1A1A1A) with white text, no border
-  // - newsprint (low-contrast): slate-blue gray (#58626E) with white text to match theme color, no border
-  // - others: inverted bg-foreground text-background, no border
-  const breakBadgeStyle = useMemo(() => {
-    switch (effectiveColorScheme) {
-      case 'typewriter':
-        return 'bg-card text-card-foreground border-none';
-      case 'high-contrast':
-        return 'bg-[#1A1A1A] text-white border-none';
-      case 'low-contrast':
-        return 'bg-[#58626E] text-white border-none';
-      default:
-        return 'bg-foreground text-background border-none';
-    }
-  }, [effectiveColorScheme]);
+  const breakBadgeStyle = getBreakBadgeStyle(effectiveColorScheme);
 
   // Pomodoro styling:
   // - Work phase: matches snapshot, flashes when <= 1 minute left
