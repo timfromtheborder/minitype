@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import Home from '@/app/page';
-import { useTypingStore } from '@/stores/typingStore';
+import { useTypingStore, DEFAULT_MANIFEST } from '@/stores/typingStore';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -340,5 +340,24 @@ describe('Strategy A - Persistent Elevated Deck & Modal Linking', () => {
     expect(footer?.className).toContain('opacity-0');
     // Save indicator is still rendered in DOM outside the faded footer
     expect(container.querySelector('[data-testid="save-state-indicator"]')).not.toBeNull();
+  });
+
+  it('verifies bottom deck buttons have no title tooltips', async () => {
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(<Home />);
+    });
+
+    const buttons = container.querySelectorAll('footer button');
+    expect(buttons.length).toBe(4);
+    buttons.forEach((btn) => {
+      expect(btn.getAttribute('title')).toBeNull();
+    });
+  });
+
+  it('verifies clean startup default settings (showClock off, snapshot timer, pomodoro sound off)', () => {
+    expect(DEFAULT_MANIFEST.showClock).toBe(false);
+    expect(DEFAULT_MANIFEST.timerStyle).toBe('snapshot');
+    expect(DEFAULT_MANIFEST.pomodoroSoundEnabled).toBe(false);
   });
 });

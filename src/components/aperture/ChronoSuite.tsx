@@ -75,9 +75,9 @@ function getBreakBadgeStyle(scheme: ColorScheme): string {
 }
 
 export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
-  showClock = true,
+  showClock = false,
   timerStyle = 'snapshot',
-  pomodoroSoundEnabled = true,
+  pomodoroSoundEnabled = false,
   typeface = 'courier-prime',
   colorScheme = 'typewriter',
   isPaused = false,

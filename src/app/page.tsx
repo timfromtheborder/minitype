@@ -179,7 +179,7 @@ export default function Home() {
         <ChronoSuite
           showClock={manifest.showClock}
           timerStyle={manifest.timerStyle}
-          pomodoroSoundEnabled={manifest.pomodoroSoundEnabled ?? true}
+          pomodoroSoundEnabled={manifest.pomodoroSoundEnabled ?? false}
           typeface={manifest.typeface}
           colorScheme={colorScheme}
           isPaused={isAnyModalOpen}
@@ -222,7 +222,6 @@ export default function Home() {
             className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 touch-manipulation text-[11px] sm:text-xs whitespace-nowrap ${getDeckButtonClass(
               isSessionOpen
             )}`}
-            title="Document"
             aria-label="Document"
             aria-pressed={isSessionOpen}
           >
@@ -237,7 +236,6 @@ export default function Home() {
             className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 touch-manipulation text-[11px] sm:text-xs whitespace-nowrap ${getDeckButtonClass(
               isProjectOpen
             )}`}
-            title="Project"
             aria-label="Project"
             aria-pressed={isProjectOpen}
           >
@@ -252,7 +250,6 @@ export default function Home() {
             className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 touch-manipulation text-[11px] sm:text-xs whitespace-nowrap ${getDeckButtonClass(
               isSettingsOpen
             )}`}
-            title="Settings"
             aria-label="Settings"
             aria-pressed={isSettingsOpen}
           >
@@ -267,7 +264,6 @@ export default function Home() {
             className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[2px] border font-sans font-medium transition-all cursor-pointer shadow-xs active:scale-95 touch-manipulation text-[11px] sm:text-xs whitespace-nowrap ${getDeckButtonClass(
               isHelpOpen
             )}`}
-            title="Help"
             aria-label="Help"
             aria-pressed={isHelpOpen}
           >

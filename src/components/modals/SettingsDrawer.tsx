@@ -512,23 +512,23 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                         onClick={() => {
                           if (isSnapshot) return;
                           onUpdateManifest({
-                            pomodoroSoundEnabled: !(manifest.pomodoroSoundEnabled ?? true),
+                            pomodoroSoundEnabled: !(manifest.pomodoroSoundEnabled ?? false),
                           });
                         }}
                         className={`h-6.5 w-6.5 flex items-center justify-center rounded-[2px] border transition-colors shrink-0 touch-manipulation ${
                           isSnapshot
                             ? 'opacity-30 border-border/40 bg-muted/20 text-muted-foreground/40 cursor-not-allowed'
-                            : manifest.pomodoroSoundEnabled ?? true
+                            : manifest.pomodoroSoundEnabled ?? false
                             ? 'border-primary bg-primary text-primary-foreground shadow-xs cursor-pointer'
                             : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-muted-foreground cursor-pointer'
                         }`}
                         aria-label={
-                          manifest.pomodoroSoundEnabled ?? true
+                          manifest.pomodoroSoundEnabled ?? false
                             ? 'Mute Pomodoro audio alerts'
                             : 'Enable Pomodoro audio alerts'
                         }
                       >
-                        {(manifest.pomodoroSoundEnabled ?? true) && !isSnapshot ? (
+                        {(manifest.pomodoroSoundEnabled ?? false) && !isSnapshot ? (
                           <Volume2 className="w-3.5 h-3.5" />
                         ) : (
                           <VolumeX className="w-3.5 h-3.5" />
@@ -598,7 +598,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.10.10 · by timfromtheborder
+              Minitype v0.9.10.11 · by timfromtheborder
             </span>
           </div>
         </div>

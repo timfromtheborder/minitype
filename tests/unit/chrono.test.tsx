@@ -224,7 +224,7 @@ describe('ChronoSuite & Clock Formatter', () => {
 
       const root = createRoot(container);
       await act(async () => {
-        root.render(<ChronoSuite showClock={true} timerStyle="pomodoro" />);
+        root.render(<ChronoSuite showClock={true} timerStyle="pomodoro" pomodoroSoundEnabled={true} />);
       });
 
       const clockBtn = container.querySelector('button[aria-label*="time"]');
