@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useTypingEngine } from '@/hooks/useTypingEngine';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import { useTypingStore } from '@/stores/typingStore';
@@ -21,6 +21,48 @@ export default function Home() {
   const [isProjectOpen, setIsProjectOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const isAnyModalOpen = isSessionOpen || isProjectOpen || isSettingsOpen || isHelpOpen;
+
+  // Option A Deck Auto-Dim / Auto-Hide: Fades deck during typing, restores after 2.5s pause or on mouse/touch
+  const [isTypingActive, setIsTypingActive] = useState(false);
+  const typingTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    const handleUserInteraction = () => {
+      setIsTypingActive(false);
+      if (typingTimerRef.current) {
+        clearTimeout(typingTimerRef.current);
+        typingTimerRef.current = null;
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isAnyModalOpen) return;
+      if (['Control', 'Alt', 'Meta', 'Shift', 'CapsLock', 'Tab'].includes(e.key)) return;
+
+      setIsTypingActive(true);
+      if (typingTimerRef.current) {
+        clearTimeout(typingTimerRef.current);
+      }
+      typingTimerRef.current = setTimeout(() => {
+        setIsTypingActive(false);
+      }, 2500);
+    };
+
+    window.addEventListener('keydown', handleKeyDown, { passive: true });
+    window.addEventListener('mousemove', handleUserInteraction, { passive: true });
+    window.addEventListener('touchstart', handleUserInteraction, { passive: true });
+    window.addEventListener('pointerdown', handleUserInteraction, { passive: true });
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('mousemove', handleUserInteraction);
+      window.removeEventListener('touchstart', handleUserInteraction);
+      window.removeEventListener('pointerdown', handleUserInteraction);
+      if (typingTimerRef.current) {
+        clearTimeout(typingTimerRef.current);
+      }
+    };
+  }, [isAnyModalOpen]);
 
   useTypingEngine({ isPaused: isAnyModalOpen });
 
@@ -167,7 +209,11 @@ export default function Home() {
       </section>
 
       {/* UTILITY DECK: Viewport Base, centered and elevated above modal backdrops */}
-      <footer className="fixed bottom-0 left-0 right-0 z-[60] flex justify-center items-center pb-[max(0.75rem,env(safe-area-inset-bottom))] px-2.5 sm:px-6 select-none text-xs pointer-events-none">
+      <footer
+        className={`fixed bottom-0 left-0 right-0 z-[60] flex justify-center items-center pb-[max(0.75rem,env(safe-area-inset-bottom))] px-2.5 sm:px-6 select-none text-xs pointer-events-none transition-opacity duration-300 ${
+          !isAnyModalOpen && isTypingActive ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'
+        }`}
+      >
         <div className="flex items-center justify-center gap-1.5 sm:gap-2.5 pointer-events-auto">
           {/* Document Button */}
           <button

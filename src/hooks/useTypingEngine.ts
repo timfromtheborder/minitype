@@ -38,6 +38,7 @@ export function useTypingEngine(options?: UseTypingEngineOptions) {
       const target = e.target as HTMLElement | null;
       if (
         target &&
+        typeof target.getAttribute === 'function' &&
         target.getAttribute('data-proxy-bridge') !== 'true' &&
         (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
       ) {

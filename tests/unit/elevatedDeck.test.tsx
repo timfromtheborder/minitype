@@ -242,12 +242,71 @@ describe('Strategy A - Persistent Elevated Deck & Modal Linking', () => {
       settingsBtn.click();
     });
 
-    const pomodoroSoundBtn = container.querySelector('button[aria-label="Mute Pomodoro audio alerts"], button[aria-label="Enable Pomodoro audio alerts"]');
+    const pomodoroSoundBtn = container.querySelector('button[aria-label="Mute Pomodoro audio alerts"], button[aria-label="Enable Pomodoro audio alerts"]') as HTMLButtonElement;
     expect(pomodoroSoundBtn).not.toBeNull();
     expect(pomodoroSoundBtn?.className).toContain('h-6.5');
+    expect(pomodoroSoundBtn.disabled).toBe(true);
+    expect(pomodoroSoundBtn.className).toContain('opacity-30');
+    expect(pomodoroSoundBtn.className).toContain('cursor-not-allowed');
+    expect(pomodoroSoundBtn.title).toContain('Audio alerts unavailable in snapshot timer mode');
 
     const timerStyleBtn = container.querySelector('button.capitalize.text-\\[11px\\]');
     expect(timerStyleBtn).not.toBeNull();
     expect(timerStyleBtn?.className).toContain('h-6.5');
+  });
+
+  it('auto-dims deck when typing starts and restores after inactivity or user pointer movement', async () => {
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(<Home />);
+    });
+
+    const footer = container.querySelector('footer');
+    expect(footer).not.toBeNull();
+    expect(footer?.className).toContain('opacity-100');
+
+    // Simulate typing keystroke
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    });
+
+    // Deck must be hidden while typing
+    expect(footer?.className).toContain('opacity-0');
+    expect(footer?.className).toContain('pointer-events-none');
+
+    // Simulate mouse movement
+    await act(async () => {
+      window.dispatchEvent(new MouseEvent('mousemove'));
+    });
+
+    // Deck must immediately restore visibility on interaction
+    expect(footer?.className).toContain('opacity-100');
+  });
+
+  it('protects against camera island obstruction with safe-area-inset-top on backdrops and inner containers', async () => {
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(<Home />);
+    });
+
+    const docBtn = container.querySelector('button[aria-label="Document"]') as HTMLButtonElement;
+    await act(async () => {
+      docBtn.click();
+    });
+
+    const dialog = container.querySelector('div[role="dialog"]') as HTMLElement;
+    expect(dialog).not.toBeNull();
+    expect(dialog.className).toContain('pt-[max(0.75rem,env(safe-area-inset-top))]');
+
+    const card = dialog.firstElementChild as HTMLElement;
+    expect(card.className).toContain('max-h-[calc(100dvh-max(5.5rem,72px)-env(safe-area-inset-top))]');
+  });
+
+  it('verifies session-box-burst animation is defined in globals.css', () => {
+    const cssPath = path.resolve(__dirname, '../../src/app/globals.css');
+    const cssContent = fs.readFileSync(cssPath, 'utf-8');
+
+    expect(cssContent).toContain('@keyframes session-box-burst');
+    expect(cssContent).toContain('.session-box-burst');
   });
 });

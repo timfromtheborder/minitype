@@ -654,13 +654,14 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
       root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
     });
 
-    // Active session must render in a dedicated demarcated card
+    // Active session must render in a dedicated demarcated card with active banner
     const activeCard = container.querySelector('[data-active-session="true"]');
     expect(activeCard).not.toBeNull();
-    // Banner displays locked message with wordcount
-    expect(activeCard?.textContent).toContain('[ 5 words drafted · Locked until session closed ]');
-    // Raw active text should NOT be rendered in the document modal while active
-    expect(container.textContent).not.toContain('Drafting in progress right now.');
+    expect(activeCard?.textContent).toContain('Session 1');
+    expect(activeCard?.textContent).toContain('Active');
+    expect(activeCard?.textContent).toContain('5 words');
+    // Active text is displayed in the active session section
+    expect(activeCard?.textContent).toContain('Drafting in progress right now.');
 
     // Click Close Session button to finalize active session
     const buttons = Array.from(container.querySelectorAll('button'));
@@ -749,9 +750,9 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     expect(activeCard).not.toBeNull();
     expect(activeCard?.textContent).toContain('Session 2');
     expect(activeCard?.textContent).toContain('Active');
-    expect(activeCard?.textContent).toContain('[ 4 words drafted · Locked until session closed ]');
-    // Active draft text is hidden
-    expect(container.textContent).not.toContain(activeText);
+    expect(activeCard?.textContent).toContain('4 words');
+    // Active draft text is visible in the active session card
+    expect(activeCard?.textContent).toContain(activeText);
 
     // When closed, session joins the body, and with Show Sessions off, neither session has a divider
     const buttons = Array.from(container.querySelectorAll('button'));

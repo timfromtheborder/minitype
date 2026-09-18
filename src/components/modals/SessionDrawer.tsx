@@ -11,7 +11,6 @@ import {
   Sparkles,
   Type,
   BookOpen,
-  Lock,
   Download,
   FileText,
   ChevronUp,
@@ -342,13 +341,13 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
       role="dialog"
       aria-modal="true"
       aria-label="Document"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 pb-[max(3.5rem,56px)] sm:p-4 sm:pb-16 animate-in fade-in duration-75"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(3.5rem,56px)] px-2 sm:p-4 sm:pb-16 animate-in fade-in duration-75"
       onClick={handleModalClose}
     >
       <div
         ref={modalRef}
         tabIndex={-1}
-        className="w-full max-w-3xl h-[calc(100dvh-max(5.5rem,72px))] max-h-[calc(100dvh-max(5.5rem,72px))] landscape:h-[calc(100dvh-max(4.5rem,68px))] landscape:max-h-[calc(100dvh-max(4.5rem,68px))] sm:h-[620px] sm:max-h-[calc(100dvh-max(5.5rem,72px))] my-auto rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-col select-none relative overflow-hidden p-3 sm:p-5 gap-2.5 sm:gap-3 focus:outline-none"
+        className="w-full max-w-3xl h-[calc(100dvh-max(5.5rem,72px)-env(safe-area-inset-top))] max-h-[calc(100dvh-max(5.5rem,72px)-env(safe-area-inset-top))] landscape:h-[calc(100dvh-max(4.5rem,68px))] landscape:max-h-[calc(100dvh-max(4.5rem,68px))] sm:h-[620px] sm:max-h-[calc(100dvh-max(5.5rem,72px))] my-auto rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-col select-none relative overflow-hidden p-3 sm:p-5 gap-2.5 sm:gap-3 focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header: Breadcrumb Title Input + Return Button */}
@@ -662,10 +661,9 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                 <div
                   data-session-card="true"
                   data-active-session="true"
-                  className={`border border-card-foreground/15 bg-card-foreground/5 rounded-[2px] p-3.5 sm:p-4 text-center select-none shadow-2xs transition-all duration-200 ${
-                    completedSessions.length > 0 ? 'mt-6' : 'mt-2'
-                  } ${isPulsingActive ? 'bg-card-foreground/12 ring-1 ring-card-foreground/30' : ''}`}
+                  className={completedSessions.length > 0 ? 'mt-4 sm:mt-6' : 'mt-1'}
                 >
+                  {/* Active Session Header: Always visible regardless of showDividers */}
                   {(() => {
                     const isActiveTargetMet = Boolean(
                       sessionWordTarget && sessionWordTarget > 0 && activeSession.wordCount >= sessionWordTarget
@@ -698,11 +696,38 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                       </div>
                     );
                   })()}
-                  <div className="flex items-center justify-center gap-2 py-3 px-2 text-xs sm:text-sm font-mono text-card-foreground/75">
-                    <Lock className="w-3.5 h-3.5 shrink-0 opacity-70" />
-                    <span>
-                      [ {activeSession.wordCount.toLocaleString()} {activeSession.wordCount === 1 ? 'word' : 'words'} drafted · Locked until session closed ]
-                    </span>
+
+                  {/* Active Session Text: Faint highlight around active drafting text */}
+                  <div
+                    className={`border-l-2 border-primary/50 pl-3 py-1 bg-primary/[0.03] rounded-r-[2px] transition-all duration-300 ${
+                      isPulsingActive ? 'bg-primary/[0.08] border-primary ring-1 ring-primary/30' : ''
+                    }`}
+                  >
+                    <div
+                      className={`whitespace-pre-wrap select-text py-0.5 ${
+                        viewMode === 'typewriter'
+                          ? 'font-mono text-xs sm:text-sm leading-relaxed'
+                          : 'font-manuscript-serif text-sm sm:text-base leading-relaxed'
+                      }`}
+                    >
+                      {activeSession.text.length === 0 ? (
+                        <span className="text-muted-foreground/40 italic font-mono text-xs">
+                          No text in this active session yet.
+                        </span>
+                      ) : viewMode === 'manuscript' ? (
+                        activeSession.text.split('\n').map((para, pIdx) =>
+                          para.length === 0 ? (
+                            <div key={pIdx} className="h-3 sm:h-4" />
+                          ) : (
+                            <p key={pIdx} className="indent-8 leading-relaxed mb-0">
+                              {para}
+                            </p>
+                          )
+                        )
+                      ) : (
+                        activeSession.text
+                      )}
+                    </div>
                   </div>
                 </div>
               )}

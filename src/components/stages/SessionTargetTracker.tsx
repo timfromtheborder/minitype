@@ -14,13 +14,17 @@ export const SessionTargetTracker: React.FC = React.memo(function SessionTargetT
   }, [activeSessions, totalProjectWords]);
 
   const boxCount = 100;
-  const filledCount = target && target > 0
+  const rawFilledCount = target && target > 0
     ? Math.min(boxCount, Math.floor((currentSessionWords / target) * boxCount))
     : 0;
 
-  // Track the most recently filled box index to trigger a brief flash animation
-  const prevFilledRef = useRef(filledCount);
-  const [justFilledIdx, setJustFilledIdx] = useState<number | null>(null);
+  // Track the displayed filled count, debounced by 2 seconds of typing pause
+  const [displayedFilledCount, setDisplayedFilledCount] = useState(rawFilledCount);
+  const [burstRange, setBurstRange] = useState<{ start: number; end: number } | null>(null);
+
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const burstTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const prevTargetRef = useRef(target);
 
   // Measure container width so contiguous 100 boxes strictly maintain 1:2 height:width
   const containerRef = useRef<HTMLDivElement>(null);
@@ -45,18 +49,54 @@ export const SessionTargetTracker: React.FC = React.memo(function SessionTargetT
     return () => ro.disconnect();
   }, [activeColumnLimit]);
 
+  // Synchronously sync if target changes or project resets
   useEffect(() => {
-    if (filledCount > prevFilledRef.current) {
-      setJustFilledIdx(filledCount - 1);
-      const timer = setTimeout(() => {
-        setJustFilledIdx(null);
-      }, 300);
-      prevFilledRef.current = filledCount;
-      return () => clearTimeout(timer);
-    } else {
-      prevFilledRef.current = filledCount;
+    if (prevTargetRef.current !== target) {
+      prevTargetRef.current = target;
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      if (burstTimerRef.current) clearTimeout(burstTimerRef.current);
+      setDisplayedFilledCount(rawFilledCount);
+      setBurstRange(null);
     }
-  }, [filledCount]);
+  }, [target, rawFilledCount]);
+
+  // Debounce visual tracker progress updates until typing has paused for 2 seconds
+  useEffect(() => {
+    if (rawFilledCount === displayedFilledCount) return;
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      setDisplayedFilledCount((currentDisplayed) => {
+        if (rawFilledCount > currentDisplayed) {
+          // Illuminate all boxes that filled in during this typing burst
+          setBurstRange({ start: currentDisplayed, end: rawFilledCount - 1 });
+          if (burstTimerRef.current) clearTimeout(burstTimerRef.current);
+          burstTimerRef.current = setTimeout(() => {
+            setBurstRange(null);
+          }, 800);
+        } else {
+          setBurstRange(null);
+        }
+        return rawFilledCount;
+      });
+    }, 2000);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [rawFilledCount, displayedFilledCount]);
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      if (burstTimerRef.current) clearTimeout(burstTimerRef.current);
+    };
+  }, []);
 
   // Only visible when enabled in settings AND an active wordcount target is set
   if (!showTracker || !target || target <= 0) return null;
@@ -73,15 +113,15 @@ export const SessionTargetTracker: React.FC = React.memo(function SessionTargetT
       className="w-full flex flex-row items-stretch gap-0 border border-border/60 rounded-t-[2px] overflow-hidden bg-background/30 pointer-events-none select-none"
     >
       {Array.from({ length: boxCount }).map((_, idx) => {
-        const isFilled = idx < filledCount;
-        const isFlashing = idx === justFilledIdx;
+        const isFilled = idx < displayedFilledCount;
+        const isBursting = burstRange !== null && idx >= burstRange.start && idx <= burstRange.end;
 
         return (
           <div
             key={idx}
             className={`flex-1 h-full transition-colors duration-150 ${
               isFilled
-                ? `session-box-filled bg-primary/25 ${isFlashing ? 'session-box-flash' : ''}`
+                ? `session-box-filled bg-primary/25 ${isBursting ? 'session-box-burst' : ''}`
                 : 'bg-transparent'
             }`}
           />

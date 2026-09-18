@@ -119,12 +119,12 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
       role="dialog"
       aria-modal="true"
       aria-label="Settings"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 pb-[max(3.5rem,56px)] sm:p-4 sm:pb-16 animate-in fade-in duration-75"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(3.5rem,56px)] px-2 sm:p-4 sm:pb-16 animate-in fade-in duration-75"
       onClick={handleClose}
     >
       <div
         ref={drawerRef}
-        className="w-full max-w-md max-h-[calc(100dvh-max(4.5rem,68px))] sm:max-h-[calc(100dvh-5rem)] overflow-y-auto square-scrollbar p-4 sm:p-6 rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-col gap-4 sm:gap-5 select-none"
+        className="w-full max-w-md max-h-[calc(100dvh-max(4.5rem,68px)-env(safe-area-inset-top))] sm:max-h-[calc(100dvh-5rem)] overflow-y-auto square-scrollbar p-4 sm:p-6 rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-col gap-4 sm:gap-5 select-none"
         onClick={(e) => {
           e.stopPropagation();
           setIsPhosphorPickerOpen(false);
@@ -503,35 +503,46 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                       </button>
                     ))}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onUpdateManifest({
-                        pomodoroSoundEnabled: !(manifest.pomodoroSoundEnabled ?? true),
-                      })
-                    }
-                    className={`h-6.5 w-6.5 flex items-center justify-center rounded-[2px] border transition-colors cursor-pointer shrink-0 touch-manipulation ${
-                      manifest.pomodoroSoundEnabled ?? true
-                        ? 'border-primary bg-primary text-primary-foreground shadow-xs'
-                        : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-muted-foreground'
-                    }`}
-                    title={
-                      manifest.pomodoroSoundEnabled ?? true
-                        ? 'Mute Pomodoro audio alerts'
-                        : 'Enable Pomodoro audio alerts'
-                    }
-                    aria-label={
-                      manifest.pomodoroSoundEnabled ?? true
-                        ? 'Mute Pomodoro audio alerts'
-                        : 'Enable Pomodoro audio alerts'
-                    }
-                  >
-                    {(manifest.pomodoroSoundEnabled ?? true) ? (
-                      <Volume2 className="w-3.5 h-3.5" />
-                    ) : (
-                      <VolumeX className="w-3.5 h-3.5" />
-                    )}
-                  </button>
+                  {(() => {
+                    const isSnapshot = (manifest.timerStyle || 'snapshot') === 'snapshot';
+                    return (
+                      <button
+                        type="button"
+                        disabled={isSnapshot}
+                        onClick={() => {
+                          if (isSnapshot) return;
+                          onUpdateManifest({
+                            pomodoroSoundEnabled: !(manifest.pomodoroSoundEnabled ?? true),
+                          });
+                        }}
+                        className={`h-6.5 w-6.5 flex items-center justify-center rounded-[2px] border transition-colors shrink-0 touch-manipulation ${
+                          isSnapshot
+                            ? 'opacity-30 border-border/40 bg-muted/20 text-muted-foreground/40 cursor-not-allowed'
+                            : manifest.pomodoroSoundEnabled ?? true
+                            ? 'border-primary bg-primary text-primary-foreground shadow-xs cursor-pointer'
+                            : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-muted-foreground cursor-pointer'
+                        }`}
+                        title={
+                          isSnapshot
+                            ? 'Audio alerts unavailable in snapshot timer mode'
+                            : manifest.pomodoroSoundEnabled ?? true
+                            ? 'Mute Pomodoro audio alerts'
+                            : 'Enable Pomodoro audio alerts'
+                        }
+                        aria-label={
+                          manifest.pomodoroSoundEnabled ?? true
+                            ? 'Mute Pomodoro audio alerts'
+                            : 'Enable Pomodoro audio alerts'
+                        }
+                      >
+                        {(manifest.pomodoroSoundEnabled ?? true) && !isSnapshot ? (
+                          <Volume2 className="w-3.5 h-3.5" />
+                        ) : (
+                          <VolumeX className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    );
+                  })()}
                 </div>
               </div>
             )}
@@ -594,7 +605,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.10.6 · by timfromtheborder
+              Minitype v0.9.10.7 · by timfromtheborder
             </span>
           </div>
         </div>

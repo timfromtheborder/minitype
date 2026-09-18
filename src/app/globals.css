@@ -548,6 +548,25 @@ html[data-page-mode="notecard"],
   animation: session-box-pulse 200ms ease-out forwards;
 }
 
+@keyframes session-box-burst {
+  0% {
+    filter: brightness(2.2) drop-shadow(0 0 3px currentColor);
+    opacity: 1;
+  }
+  40% {
+    filter: brightness(1.6);
+    opacity: 0.95;
+  }
+  100% {
+    filter: brightness(1);
+    opacity: 0.85;
+  }
+}
+
+.session-box-burst {
+  animation: session-box-burst 750ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 @keyframes platen-notecard-flash {
   0% {
     opacity: 0.04;
@@ -576,7 +595,8 @@ html[data-page-mode="notecard"],
 }
 
 [data-theme="spotlight"] .session-box-filled,
-[data-theme="spotlight"] .session-box-flash {
+[data-theme="spotlight"] .session-box-flash,
+[data-theme="spotlight"] .session-box-burst {
   background-color: rgba(237, 237, 237, 0.65) !important;
 }
 
@@ -584,7 +604,8 @@ html[data-page-mode="notecard"],
   background-color: rgba(237, 237, 237, 0.35) !important;
 }
 
-[data-theme="phosphor"] .session-box-flash {
+[data-theme="phosphor"] .session-box-flash,
+[data-theme="phosphor"] .session-box-burst {
   background-color: rgba(237, 237, 237, 0.75) !important;
 }
 
@@ -594,7 +615,9 @@ html[data-page-mode="notecard"],
 }
 
 [data-theme="dark-amber"] .session-box-flash,
-[data-theme="dark-amber"][data-phosphor="amber"] .session-box-flash {
+[data-theme="dark-amber"][data-phosphor="amber"] .session-box-flash,
+[data-theme="dark-amber"] .session-box-burst,
+[data-theme="dark-amber"][data-phosphor="amber"] .session-box-burst {
   background-color: rgba(255, 176, 0, 0.95) !important;
 }
 
@@ -602,7 +625,8 @@ html[data-page-mode="notecard"],
   background-color: rgba(51, 255, 51, 0.25) !important;
 }
 
-[data-theme="dark-amber"][data-phosphor="green"] .session-box-flash {
+[data-theme="dark-amber"][data-phosphor="green"] .session-box-flash,
+[data-theme="dark-amber"][data-phosphor="green"] .session-box-burst {
   background-color: rgba(51, 255, 51, 0.95) !important;
 }
 
@@ -610,7 +634,8 @@ html[data-page-mode="notecard"],
   background-color: rgba(0, 229, 255, 0.25) !important;
 }
 
-[data-theme="dark-amber"][data-phosphor="blue"] .session-box-flash {
+[data-theme="dark-amber"][data-phosphor="blue"] .session-box-flash,
+[data-theme="dark-amber"][data-phosphor="blue"] .session-box-burst {
   background-color: rgba(0, 229, 255, 0.95) !important;
 }
 
@@ -618,7 +643,8 @@ html[data-page-mode="notecard"],
   background-color: rgba(255, 26, 13, 0.25) !important;
 }
 
-[data-theme="dark-amber"][data-phosphor="red"] .session-box-flash {
+[data-theme="dark-amber"][data-phosphor="red"] .session-box-flash,
+[data-theme="dark-amber"][data-phosphor="red"] .session-box-burst {
   background-color: rgba(255, 26, 13, 0.95) !important;
 }
 
