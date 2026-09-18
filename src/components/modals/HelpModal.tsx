@@ -122,7 +122,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
             </button>
             {openSections.saving && (
               <div className="p-3 sm:p-4 pt-2.5 border-t border-border/50 flex flex-col gap-2 animate-in fade-in duration-150">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                   <div className="p-2.5 rounded-[2px] border border-border/70 bg-muted/20 flex flex-col gap-1">
                     <span className="font-semibold text-foreground">Local Auto-Save</span>
                     <span className="text-foreground/75 leading-normal">
@@ -132,13 +132,13 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
                   <div className="p-2.5 rounded-[2px] border border-border/70 bg-muted/20 flex flex-col gap-1">
                     <span className="font-semibold text-foreground">Exporting</span>
                     <span className="text-foreground/75 leading-normal">
-                      Download clean <code className="font-mono text-[10px]">.txt</code> plaintext from Document or Project modals. Struck-out text is cleaned up and omitted from final exports and Document view. Download full <code className="font-mono text-[10px]">.json</code> backups from Project.
+                      Download clean <code className="font-mono text-[0.85em]">.txt</code> plaintext from Document or Project modals. Struck-out text is cleaned up and omitted from final exports and Document view. Download full <code className="font-mono text-[0.85em]">.json</code> backups from Project.
                     </span>
                   </div>
                   <div className="p-2.5 rounded-[2px] border border-border/70 bg-muted/20 flex flex-col gap-1">
                     <span className="font-semibold text-foreground">Importing</span>
                     <span className="text-foreground/75 leading-normal">
-                      Restore previously exported <code className="font-mono text-[10px]">.json</code> project/library backups or import <code className="font-mono text-[10px]">.txt</code> files from the Project modal.
+                      Restore previously exported <code className="font-mono text-[0.85em]">.json</code> project/library backups or import <code className="font-mono text-[0.85em]">.txt</code> files from the Project modal.
                     </span>
                   </div>
                 </div>
@@ -166,7 +166,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
             </button>
             {openSections.settings && (
               <div className="p-3 sm:p-4 pt-2.5 border-t border-border/50 flex flex-col gap-2 animate-in fade-in duration-150">
-                <div className="border border-border/70 rounded-[2px] divide-y divide-border/50 text-[11px]">
+                <div className="border border-border/70 rounded-[2px] divide-y divide-border/50 text-xs">
                   <div className="p-2 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
                     <span className="font-semibold text-foreground sm:w-40 shrink-0">Aperture</span>
                     <span className="text-foreground/75">Number of visible drafting lines shown on screen (1 to 10 lines).</span>
@@ -229,7 +229,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
             {openSections.shortcuts && (
               <div className="p-3 sm:p-4 pt-2.5 border-t border-border/50 flex flex-col gap-2 animate-in fade-in duration-150">
                 <div className="border border-border/70 rounded-[2px] overflow-hidden">
-                  <table className="w-full text-left text-[11px]">
+                  <table className="w-full text-left text-xs">
                     <thead className="bg-muted/40 border-b border-border/70 text-foreground/80 font-semibold">
                       <tr>
                         <th className="p-2">Action</th>

@@ -105,4 +105,24 @@ describe('HelpModal', () => {
     expect(settingsBtn?.getAttribute('aria-expanded')).toBe('true');
     expect(container.textContent).toContain('Aperture');
   });
+
+  it('uses relative text-xs and em typography allowing fluid root-font text scaling without hardcoded pixel sizes', async () => {
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(<HelpModal isOpen={true} onClose={vi.fn()} />);
+    });
+
+    const allElements = Array.from(container.querySelectorAll('*'));
+    const elementsWithFixedPxText = allElements.filter((el) => {
+      const className = el.getAttribute('class') || '';
+      return /text-\[\d+px\]/.test(className);
+    });
+
+    // Ensure no hardcoded static pixel font sizes remain in HelpModal
+    expect(elementsWithFixedPxText).toHaveLength(0);
+
+    // Verify relative text-xs classes are applied to tables and containers
+    const table = container.querySelector('table');
+    expect(table?.className).toContain('text-xs');
+  });
 });
