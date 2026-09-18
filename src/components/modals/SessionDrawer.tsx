@@ -257,6 +257,10 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
     });
   }, [resolvedSessions]);
 
+  const reversedCompletedSessions = useMemo(() => {
+    return [...completedSessions].reverse();
+  }, [completedSessions]);
+
   const activeSession = useMemo(() => {
     if (resolvedSessions.length === 0) return null;
     const latest = resolvedSessions[resolvedSessions.length - 1];
@@ -286,7 +290,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
     setTimeout(() => {
       if (scrollContainerRef.current) {
         scrollContainerRef.current.scrollTo({
-          top: scrollContainerRef.current.scrollHeight,
+          top: 0,
           behavior: 'smooth',
         });
       }
@@ -439,8 +443,78 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
             </div>
           ) : (
             <>
-              {/* Completed Historical Sessions */}
-              {completedSessions.map((session) => {
+              {/* Active Session Demarcation Folder (Newest Session at Top) */}
+              {activeSession && (() => {
+                const isActiveTargetMet = Boolean(
+                  sessionWordTarget && sessionWordTarget > 0 && activeSession.wordCount >= sessionWordTarget
+                );
+                const isActiveExpanded = !isCollapsedActive;
+
+                return (
+                  <div
+                    data-session-card="true"
+                    data-session-folder="true"
+                    data-active-session="true"
+                    className={`border border-primary/40 rounded-[2px] overflow-hidden bg-card transition-all ${
+                      isPulsingActive ? 'ring-1 ring-primary/50' : ''
+                    }`}
+                  >
+                    {/* Active Folder Tab Header Button */}
+                    <button
+                      type="button"
+                      onClick={() => setIsCollapsedActive(!isCollapsedActive)}
+                      aria-expanded={isActiveExpanded}
+                      className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-mono select-none cursor-pointer transition-colors text-left ${
+                        isActiveExpanded
+                          ? 'bg-primary/[0.08] border-b border-primary/30 text-card-foreground/95'
+                          : 'bg-primary/[0.04] hover:bg-primary/[0.08] text-card-foreground/80'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0 pr-2">
+                        <ChevronRight
+                          className={`w-3.5 h-3.5 shrink-0 text-primary/80 transition-transform duration-150 ${
+                            isActiveExpanded ? 'rotate-90' : ''
+                          }`}
+                        />
+                        <span className="font-semibold text-card-foreground/95 shrink-0">
+                          #{activeSession.sessionNumber}
+                        </span>
+                        <span className="text-card-foreground/30 shrink-0">•</span>
+                        <span className="truncate text-card-foreground/60 text-[11px]">
+                          {formatSessionDateTime(activeSession.startedAt)} - Present
+                        </span>
+                      </div>
+                      <span
+                        className={`shrink-0 text-right text-[11px] ${
+                          isActiveTargetMet
+                            ? 'font-bold text-card-foreground'
+                            : 'font-medium text-card-foreground/65'
+                        }`}
+                      >
+                        {activeSession.wordCount.toLocaleString()} words
+                      </span>
+                    </button>
+
+                    {/* Active Folder Body */}
+                    {isActiveExpanded && (
+                      <div className="p-2.5 sm:p-3 bg-card border-l-2 border-primary/50">
+                        <div className="whitespace-pre-wrap select-text font-mono text-xs sm:text-sm leading-[1.0] tracking-[-0.1em] text-card-foreground/90">
+                          {activeSession.text.length === 0 ? (
+                            <span className="text-muted-foreground/40 italic">
+                              No text in this active session yet.
+                            </span>
+                          ) : (
+                            activeSession.text
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Completed Historical Sessions (Newest to Oldest) */}
+              {reversedCompletedSessions.map((session) => {
                 const isExpanded = expandedSessionIds.has(session.id);
                 const isTargetMet = Boolean(session.targetReached);
                 let timeRange: string;
@@ -480,7 +554,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                           }`}
                         />
                         <span className="font-semibold text-card-foreground/90 shrink-0">
-                          Session {session.sessionNumber}
+                          #{session.sessionNumber}
                         </span>
                         <span className="text-card-foreground/30 shrink-0">•</span>
                         <span className="truncate text-card-foreground/60 text-[11px]">
@@ -501,7 +575,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                     {/* Collapsible Folder Body */}
                     {isExpanded && (
                       <div className="p-2.5 sm:p-3 bg-card">
-                        <div className="whitespace-pre-wrap select-text font-mono text-xs sm:text-sm leading-[1.12] tracking-[-0.035em] text-card-foreground/85">
+                        <div className="whitespace-pre-wrap select-text font-mono text-xs sm:text-sm leading-[1.0] tracking-[-0.1em] text-card-foreground/85">
                           {sessionText.length === 0 ? (
                             <span className="text-muted-foreground/40 italic">
                               No text in this session.
@@ -515,80 +589,6 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                   </div>
                 );
               })}
-
-              {/* Active Session Demarcation Folder */}
-              {activeSession && (() => {
-                const isActiveTargetMet = Boolean(
-                  sessionWordTarget && sessionWordTarget > 0 && activeSession.wordCount >= sessionWordTarget
-                );
-                const isActiveExpanded = !isCollapsedActive;
-
-                return (
-                  <div
-                    data-session-card="true"
-                    data-session-folder="true"
-                    data-active-session="true"
-                    className={`border border-primary/40 rounded-[2px] overflow-hidden bg-card transition-all ${
-                      isPulsingActive ? 'ring-1 ring-primary/50' : ''
-                    }`}
-                  >
-                    {/* Active Folder Tab Header Button */}
-                    <button
-                      type="button"
-                      onClick={() => setIsCollapsedActive(!isCollapsedActive)}
-                      aria-expanded={isActiveExpanded}
-                      className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-mono select-none cursor-pointer transition-colors text-left ${
-                        isActiveExpanded
-                          ? 'bg-primary/[0.08] border-b border-primary/30 text-card-foreground/95'
-                          : 'bg-primary/[0.04] hover:bg-primary/[0.08] text-card-foreground/80'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0 pr-2">
-                        <ChevronRight
-                          className={`w-3.5 h-3.5 shrink-0 text-primary/80 transition-transform duration-150 ${
-                            isActiveExpanded ? 'rotate-90' : ''
-                          }`}
-                        />
-                        <span className="font-semibold text-card-foreground/95 shrink-0">
-                          Session {activeSession.sessionNumber}
-                        </span>
-                        <span className="flex items-center gap-1 text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 rounded-[1px] shrink-0 font-sans ml-0.5 select-none">
-                          <Sparkles className="w-2.5 h-2.5" />
-                          <span>Active</span>
-                        </span>
-                        <span className="text-card-foreground/30 shrink-0">•</span>
-                        <span className="truncate text-card-foreground/60 text-[11px]">
-                          {formatSessionDateTime(activeSession.startedAt)} - Present
-                        </span>
-                      </div>
-                      <span
-                        className={`shrink-0 text-right text-[11px] ${
-                          isActiveTargetMet
-                            ? 'font-bold text-card-foreground'
-                            : 'font-medium text-card-foreground/65'
-                        }`}
-                      >
-                        {activeSession.wordCount.toLocaleString()} words
-                      </span>
-                    </button>
-
-                    {/* Active Folder Body */}
-                    {isActiveExpanded && (
-                      <div className="p-2.5 sm:p-3 bg-card border-l-2 border-primary/50">
-                        <div className="whitespace-pre-wrap select-text font-mono text-xs sm:text-sm leading-[1.12] tracking-[-0.035em] text-card-foreground/90">
-                          {activeSession.text.length === 0 ? (
-                            <span className="text-muted-foreground/40 italic">
-                              No text in this active session yet.
-                            </span>
-                          ) : (
-                            activeSession.text
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
             </>
           )}
         </div>
@@ -627,7 +627,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                 aria-label="Close active drafting session and compile"
               >
                 <BookOpen className="w-3.5 h-3.5" />
-                <span>Close active session to compile</span>
+                <span>Close active session and compile</span>
               </button>
               <button
                 type="button"

@@ -337,12 +337,13 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     };
 
     let sessionSpans = getSessionWordSpans();
-    // Session 1 (targetReached: true): bold
-    expect(sessionSpans[0].isBold).toBe(true);
+    // In reversed order: [0] = Session 3 (active), [1] = Session 2, [2] = Session 1
+    // Session 3 (active, 4 words, target 5): not bold
+    expect(sessionSpans[0].isBold).toBe(false);
     // Session 2 (targetReached: false, 4 words): not bold (even though 4 is close to 5)
     expect(sessionSpans[1].isBold).toBe(false);
-    // Session 3 (active, 4 words, target 5): not bold
-    expect(sessionSpans[2].isBold).toBe(false);
+    // Session 1 (targetReached: true): bold
+    expect(sessionSpans[2].isBold).toBe(true);
 
     // Now CHANGE sessionWordTarget to 2 (drastically lower target)
     // Historical targetReached must stay invariant
@@ -352,11 +353,11 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     });
 
     sessionSpans = getSessionWordSpans();
-    // Session 1: stays bold
+    // Session 3 (active, 4 words >= 2 target): dynamically turns bold
     expect(sessionSpans[0].isBold).toBe(true);
     // Session 2: MUST STILL BE NOT BOLD!
     expect(sessionSpans[1].isBold).toBe(false);
-    // Session 3 (active, 4 words >= 2 target): dynamically turns bold
+    // Session 1: stays bold
     expect(sessionSpans[2].isBold).toBe(true);
 
     // Now CHANGE sessionWordTarget to 100 (drastically higher target)
@@ -368,12 +369,12 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     });
 
     sessionSpans = getSessionWordSpans();
-    // Session 1: MUST REMAIN BOLD!
-    expect(sessionSpans[0].isBold).toBe(true);
+    // Session 3 (active, 4 words < 100 target): unbolds
+    expect(sessionSpans[0].isBold).toBe(false);
     // Session 2: stays not bold
     expect(sessionSpans[1].isBold).toBe(false);
-    // Session 3 (active, 4 words < 100 target): unbolds
-    expect(sessionSpans[2].isBold).toBe(false);
+    // Session 1: MUST REMAIN BOLD!
+    expect(sessionSpans[2].isBold).toBe(true);
 
     await act(async () => {
       root.unmount();
@@ -482,7 +483,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     // Folder tab header exists and contains session number and word count
     const card = container.querySelector('[data-session-card="true"]');
     expect(card).not.toBeNull();
-    expect(card?.textContent).toContain('Session 1');
+    expect(card?.textContent).toContain('#1');
     expect(card?.textContent).toContain('4 words');
 
     // Click folder tab to expand
@@ -496,8 +497,8 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     const textEl = container.querySelector('.whitespace-pre-wrap');
     expect(textEl).not.toBeNull();
     expect(textEl?.textContent).toContain('First session text content.');
-    expect(textEl?.className).toContain('leading-[1.12]');
-    expect(textEl?.className).toContain('tracking-[-0.035em]');
+    expect(textEl?.className).toContain('leading-[1.0]');
+    expect(textEl?.className).toContain('tracking-[-0.1em]');
     expect(textEl?.className).toContain('text-xs sm:text-sm');
 
     // Click folder tab again to collapse
@@ -578,16 +579,16 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     // Both sessions render slim file folders
     const folders = container.querySelectorAll('[data-session-folder="true"]');
     expect(folders.length).toBe(2);
-    expect(container.textContent).toContain('Session 1');
-    expect(container.textContent).toContain('Session 2');
+    expect(container.textContent).toContain('#1');
+    expect(container.textContent).toContain('#2');
 
     // Verify binder triangle SVG polygon is completely removed
     const binderTriangles = container.querySelectorAll('polygon[points="0,0 10,6 0,12"]');
     expect(binderTriangles.length).toBe(0);
 
-    // Historical Session 1 is collapsed by default; Active Session 2 is expanded by default
-    expect(folders[0].querySelector('.whitespace-pre-wrap')).toBeNull();
-    expect(folders[1].querySelector('.whitespace-pre-wrap')?.textContent).toContain('Second session content.');
+    // Reversed order: Active Session 2 is at index 0 (top); Historical Session 1 is at index 1 (bottom)
+    expect(folders[0].querySelector('.whitespace-pre-wrap')?.textContent).toContain('Second session content.');
+    expect(folders[1].querySelector('.whitespace-pre-wrap')).toBeNull();
 
     await act(async () => {
       root.unmount();
@@ -719,11 +720,10 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
       root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
     });
 
-    // Active session must render in a dedicated demarcated card with active banner
+    // Active session must render in a dedicated demarcated card
     const activeCard = container.querySelector('[data-active-session="true"]');
     expect(activeCard).not.toBeNull();
-    expect(activeCard?.textContent).toContain('Session 1');
-    expect(activeCard?.textContent).toContain('Active');
+    expect(activeCard?.textContent).toContain('#1');
     expect(activeCard?.textContent).toContain('5 words');
     // Active text is displayed in the active session section
     expect(activeCard?.textContent).toContain('Drafting in progress right now.');
@@ -813,8 +813,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     // Active session card remains distinctly demarcated beneath the body
     const activeCard = container.querySelector('[data-active-session="true"]');
     expect(activeCard).not.toBeNull();
-    expect(activeCard?.textContent).toContain('Session 2');
-    expect(activeCard?.textContent).toContain('Active');
+    expect(activeCard?.textContent).toContain('#2');
     expect(activeCard?.textContent).toContain('4 words');
     // Active draft text is visible in the active session card
     expect(activeCard?.textContent).toContain(activeText);
@@ -1081,7 +1080,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     });
 
     // Should open CompileModal directly without asking confirmation
-    expect(container.textContent).not.toContain('Close active session to compile');
+    expect(container.textContent).not.toContain('Close active session and compile');
     expect(container.querySelector('[aria-label="Compile Manuscript"]')).not.toBeNull();
 
     await act(async () => {
@@ -1130,12 +1129,12 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     );
     expect(compileBtn2).not.toBeUndefined();
 
-    // Click Compile -> button expands and says 'Close active session to compile'
+    // Click Compile -> button expands and says 'Close active session and compile'
     await act(async () => {
       compileBtn2?.click();
     });
 
-    expect(container.textContent).toContain('Close active session to compile');
+    expect(container.textContent).toContain('Close active session and compile');
     expect(container.textContent).toContain('Cancel');
 
     // Test reversion 1: Cancel reverts button back to 'Compile'
@@ -1147,7 +1146,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     await act(async () => {
       cancelBtn?.click();
     });
-    expect(container.textContent).not.toContain('Close active session to compile');
+    expect(container.textContent).not.toContain('Close active session and compile');
     expect(container.textContent).toContain('Compile');
 
     // Expand button again
@@ -1157,11 +1156,11 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     await act(async () => {
       compileBtn3?.click();
     });
-    expect(container.textContent).toContain('Close active session to compile');
+    expect(container.textContent).toContain('Close active session and compile');
 
-    // Test execution: Clicking 'Close active session to compile'
+    // Test execution: Clicking 'Close active session and compile'
     const closeAndCompileBtn = Array.from(container.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Close active session to compile')
+      b.textContent?.includes('Close active session and compile')
     );
     expect(closeAndCompileBtn).not.toBeUndefined();
 
@@ -1171,7 +1170,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     });
 
     expect(closeSessionSpy).toHaveBeenCalled();
-    expect(container.textContent).not.toContain('Close active session to compile');
+    expect(container.textContent).not.toContain('Close active session and compile');
     expect(container.querySelector('[aria-label="Compile Manuscript"]')).not.toBeNull();
 
     await act(async () => {
