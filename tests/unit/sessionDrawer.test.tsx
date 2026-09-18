@@ -1549,5 +1549,91 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     });
     testContainer.remove();
   });
+
+  it('triggers the archive flash animation on newly archived session when Start New Session is pressed', async () => {
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+    const testContainer = document.createElement('div');
+    document.body.appendChild(testContainer);
+    const root = createRoot(testContainer);
+
+    const now = new Date().toISOString();
+    const activeText = 'Drafting content in active session one.';
+
+    useTypingStore.setState({
+      manifest: {
+        ...useTypingStore.getState().manifest,
+        id: 'new-session-flash-doc',
+        title: 'Flash Test Doc',
+      },
+      historicalPages: [],
+      currentPageNumber: 1,
+      currentPageLines: [
+        {
+          id: 'p1-line-0',
+          lineIndex: 0,
+          cells: Array.from(activeText).map((ch, i) => ({
+            id: `p1-l0-c${i}`,
+            char: ch,
+            state: 'standard',
+            colIndex: i,
+            lineIndex: 0,
+          })),
+          isCommitted: false,
+        },
+      ],
+      activeSessions: [
+        {
+          id: 'new-session-flash-doc-session-1',
+          projectId: 'new-session-flash-doc',
+          sessionNumber: 1,
+          startedAt: now,
+          completedAt: null,
+          text: activeText,
+          wordCount: 6,
+        },
+      ],
+    });
+
+    await act(async () => {
+      root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
+    });
+
+    // Verify session 1 is currently active
+    const activeCard = testContainer.querySelector('[data-active-session="true"]');
+    expect(activeCard).not.toBeNull();
+    expect(activeCard?.textContent).toContain('#1');
+
+    // Click "Start New Session"
+    const startBtn = Array.from(testContainer.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Start New Session')
+    );
+    expect(startBtn).toBeDefined();
+
+    await act(async () => {
+      startBtn?.click();
+      await new Promise((r) => setTimeout(r, 100));
+    });
+
+    // The newly archived session 1 should be in completed sessions and have the archive flash animation
+    const completedFolders = Array.from(testContainer.querySelectorAll('[data-session-folder="true"]'));
+    const archivedSession1 = completedFolders.find(
+      (folder) => folder.textContent?.includes('#1') && !folder.hasAttribute('data-active-session')
+    );
+    expect(archivedSession1).toBeDefined();
+    expect(archivedSession1?.className).toContain('animate-archive-flash');
+    expect(archivedSession1?.className).toContain('ring-2 ring-primary');
+
+    // After decay duration, the flash state resets
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 400));
+    });
+    expect(archivedSession1?.className).not.toContain('animate-archive-flash');
+
+    await act(async () => {
+      root.unmount();
+    });
+    testContainer.remove();
+  });
 });
+
 
