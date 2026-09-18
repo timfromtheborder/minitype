@@ -18,12 +18,12 @@ export const SessionTargetTracker: React.FC = React.memo(function SessionTargetT
     ? Math.min(boxCount, Math.floor((currentSessionWords / target) * boxCount))
     : 0;
 
-  // Track the displayed filled count, debounced by 2 seconds of typing pause
+  // Track the displayed filled count, debounced by 1.5 seconds of typing pause
   const [displayedFilledCount, setDisplayedFilledCount] = useState(rawFilledCount);
-  const [burstRange, setBurstRange] = useState<{ start: number; end: number } | null>(null);
+  const [justFilledIdx, setJustFilledIdx] = useState<number | null>(null);
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const burstTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const flashTimerRef = useRef<NodeJS.Timeout | null>(null);
   const prevTargetRef = useRef(target);
 
   // Measure container width so contiguous 100 boxes strictly maintain 1:2 height:width
@@ -66,16 +66,16 @@ export const SessionTargetTracker: React.FC = React.memo(function SessionTargetT
         clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = null;
       }
-      if (burstTimerRef.current) {
-        clearTimeout(burstTimerRef.current);
-        burstTimerRef.current = null;
+      if (flashTimerRef.current) {
+        clearTimeout(flashTimerRef.current);
+        flashTimerRef.current = null;
       }
       setDisplayedFilledCount(rawFilledCount);
-      setBurstRange(null);
+      setJustFilledIdx(null);
     }
   }, [currentSessionId, target, rawFilledCount, displayedFilledCount]);
 
-  // Debounce visual tracker progress updates until typing has paused for 1 second
+  // Debounce visual tracker progress updates until typing has paused for 1.5 seconds
   useEffect(() => {
     if (rawFilledCount <= displayedFilledCount) return;
 
@@ -86,18 +86,18 @@ export const SessionTargetTracker: React.FC = React.memo(function SessionTargetT
     debounceTimerRef.current = setTimeout(() => {
       setDisplayedFilledCount((currentDisplayed) => {
         if (rawFilledCount > currentDisplayed) {
-          // Illuminate all boxes that filled in during this typing burst
-          setBurstRange({ start: currentDisplayed, end: rawFilledCount - 1 });
-          if (burstTimerRef.current) clearTimeout(burstTimerRef.current);
-          burstTimerRef.current = setTimeout(() => {
-            setBurstRange(null);
-          }, 200); // 200ms burst settle
+          // Illuminate only the single last box of the tracker that filled in
+          setJustFilledIdx(rawFilledCount - 1);
+          if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+          flashTimerRef.current = setTimeout(() => {
+            setJustFilledIdx(null);
+          }, 200); // 200ms flash settle
         } else {
-          setBurstRange(null);
+          setJustFilledIdx(null);
         }
         return rawFilledCount;
       });
-    }, 1300); // 1300ms pause
+    }, 1500); // 1500ms pause
 
     return () => {
       if (debounceTimerRef.current) {
@@ -109,7 +109,7 @@ export const SessionTargetTracker: React.FC = React.memo(function SessionTargetT
   useEffect(() => {
     return () => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-      if (burstTimerRef.current) clearTimeout(burstTimerRef.current);
+      if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
     };
   }, []);
 
@@ -129,14 +129,14 @@ export const SessionTargetTracker: React.FC = React.memo(function SessionTargetT
     >
       {Array.from({ length: boxCount }).map((_, idx) => {
         const isFilled = idx < displayedFilledCount;
-        const isBursting = burstRange !== null && idx >= burstRange.start && idx <= burstRange.end;
+        const isFlashing = idx === justFilledIdx;
 
         return (
           <div
             key={idx}
             className={`flex-1 h-full transition-colors duration-150 ${
               isFilled
-                ? `session-box-filled bg-primary/25 ${isBursting ? 'session-box-burst' : ''}`
+                ? `session-box-filled bg-primary/25 ${isFlashing ? 'session-box-flash' : ''}`
                 : 'bg-transparent'
             }`}
           />

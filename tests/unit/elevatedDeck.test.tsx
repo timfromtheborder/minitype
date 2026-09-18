@@ -301,11 +301,44 @@ describe('Strategy A - Persistent Elevated Deck & Modal Linking', () => {
     expect(card.className).toContain('max-h-[calc(100dvh-max(5.5rem,72px)-env(safe-area-inset-top))]');
   });
 
-  it('verifies session-box-burst animation is defined in globals.css', () => {
+  it('verifies session-box-flash and burst animations are defined in globals.css', () => {
     const cssPath = path.resolve(__dirname, '../../src/app/globals.css');
     const cssContent = fs.readFileSync(cssPath, 'utf-8');
 
+    expect(cssContent).toContain('@keyframes session-box-pulse');
+    expect(cssContent).toContain('.session-box-flash');
     expect(cssContent).toContain('@keyframes session-box-burst');
     expect(cssContent).toContain('.session-box-burst');
+  });
+
+  it('verifies save state indicator is decoupled from footer and permanently anchored in bottom-right corner', async () => {
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(<Home />);
+    });
+
+    const footer = container.querySelector('footer');
+    expect(footer).not.toBeNull();
+
+    // The save indicator must NOT be inside footer
+    const indicatorInsideFooter = footer?.querySelector('[data-testid="save-state-indicator"]');
+    expect(indicatorInsideFooter).toBeNull();
+
+    // The save indicator must exist outside footer at the root level
+    const indicator = container.querySelector('[data-testid="save-state-indicator"]') as HTMLElement;
+    expect(indicator).not.toBeNull();
+    expect(indicator.className).toContain('fixed');
+    expect(indicator.className).toContain('right-');
+    expect(indicator.className).toContain('bottom-');
+    expect(indicator.className).toContain('z-[60]');
+
+    // When typing starts, footer fades out (opacity-0), but save indicator remains unaffected
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    });
+
+    expect(footer?.className).toContain('opacity-0');
+    // Save indicator is still rendered in DOM outside the faded footer
+    expect(container.querySelector('[data-testid="save-state-indicator"]')).not.toBeNull();
   });
 });

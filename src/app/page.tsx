@@ -274,22 +274,23 @@ export default function Home() {
             <HelpCircle className={`w-3.5 h-3.5 shrink-0 ${isHelpOpen ? 'opacity-100' : 'opacity-70'}`} />
             <span>Help</span>
           </button>
-
-          {/* Save Status Icon: centered together with bottom buttons */}
-          <div
-            className="flex items-center justify-center pointer-events-none select-none text-muted-foreground w-4 h-4 ml-0.5"
-            aria-hidden="true"
-          >
-            {persistenceError || saveState === 'error' ? (
-              <span className="text-destructive font-bold leading-none text-xs">!</span>
-            ) : saveState === 'saving' || saveState === 'typing' ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-            )}
-          </div>
         </div>
       </footer>
+
+      {/* Permanent Save Status Indicator: Decoupled to bottom-right corner, always visible */}
+      <div
+        className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] sm:bottom-3.5 sm:right-4 z-[60] flex items-center justify-center pointer-events-none select-none text-muted-foreground w-4 h-4"
+        aria-hidden="true"
+        data-testid="save-state-indicator"
+      >
+        {persistenceError || saveState === 'error' ? (
+          <span className="text-destructive font-bold leading-none text-xs">!</span>
+        ) : saveState === 'saving' || saveState === 'typing' ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        ) : (
+          <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+        )}
+      </div>
 
       {/* Settings Drawer Modal */}
       {isSettingsOpen && (
