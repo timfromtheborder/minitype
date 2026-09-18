@@ -416,7 +416,13 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
       root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
     });
 
-    // Drafting ledger is permanently typewriter monospace font
+    // Expand the historical session folder to view drafting text
+    const folderTab = container.querySelector('[data-session-card="true"] button') as HTMLButtonElement;
+    await act(async () => {
+      folderTab.click();
+    });
+
+    // Drafting ledger is typewriter monospace font
     const textPreview = container.querySelector('.whitespace-pre-wrap');
     expect(textPreview?.className).toContain('font-mono');
 
@@ -441,7 +447,7 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     container.remove();
   });
 
-  it('renders sessions permanently expanded with inline faded dashed divider and without copy/delete buttons', async () => {
+  it('renders sessions as slim file folders collapsed by default, expandable individually, with anti-reading typography, and without copy/delete buttons', async () => {
     (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
     const root = createRoot(container);
 
@@ -470,22 +476,37 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     // Verify modal breadcrumb reads "Document"
     expect(container.textContent).toContain('Document');
 
-    // Card body is permanently expanded
-    const textEl = container.querySelector('.whitespace-pre-wrap');
-    expect(textEl).not.toBeNull();
-    expect(textEl?.textContent).toContain('First session text content.');
+    // Historical folder is collapsed by default (text body is not in DOM)
+    expect(container.querySelector('.whitespace-pre-wrap')).toBeNull();
 
-    // In-line header divider exists and contains session number, dashes, and word count
+    // Folder tab header exists and contains session number and word count
     const card = container.querySelector('[data-session-card="true"]');
     expect(card).not.toBeNull();
     expect(card?.textContent).toContain('Session 1');
-    expect(card?.textContent).toContain('-----');
     expect(card?.textContent).toContain('4 words');
 
-    // Verify per-session copy, delete, export, and print buttons are removed
-    const cardButtons = Array.from(card?.querySelectorAll('button') || []);
-    expect(cardButtons.length).toBe(0);
+    // Click folder tab to expand
+    const folderTab = card?.querySelector('button') as HTMLButtonElement;
+    expect(folderTab).not.toBeNull();
+    await act(async () => {
+      folderTab.click();
+    });
 
+    // Body is now expanded with anti-reading typography: tight line spacing and kerning
+    const textEl = container.querySelector('.whitespace-pre-wrap');
+    expect(textEl).not.toBeNull();
+    expect(textEl?.textContent).toContain('First session text content.');
+    expect(textEl?.className).toContain('leading-[1.12]');
+    expect(textEl?.className).toContain('tracking-[-0.035em]');
+    expect(textEl?.className).toContain('text-xs sm:text-sm');
+
+    // Click folder tab again to collapse
+    await act(async () => {
+      folderTab.click();
+    });
+    expect(container.querySelector('.whitespace-pre-wrap')).toBeNull();
+
+    // Verify per-session copy, delete, export, and print buttons are removed
     const buttons = Array.from(container.querySelectorAll('button'));
     const copyBtn = buttons.find((b) => b.title?.toLowerCase().includes('copy'));
     const deleteBtn = buttons.find((b) => b.title?.toLowerCase().includes('delete'));
@@ -507,12 +528,27 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     container.remove();
   });
 
-  it('renders permanent session dividers and solid margin indicator (▶) at session boundaries in drafting ledger', async () => {
+  it('renders slim file folders with chevron toggles and verifies removal of binder triangle', async () => {
     (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
     const root = createRoot(container);
 
     const now = new Date().toISOString();
+    const fullText = 'First session content. Second session content.';
     useTypingStore.setState({
+      currentPageLines: [
+        {
+          id: 'p1-l0',
+          lineIndex: 0,
+          cells: fullText.split('').map((char, colIndex) => ({
+            id: `p1-l0-c${colIndex}`,
+            char,
+            state: 'standard' as const,
+            colIndex,
+            lineIndex: 0,
+          })),
+          isCommitted: false,
+        },
+      ],
       activeSessions: [
         {
           id: 'doc-1-session-1',
@@ -539,15 +575,19 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
       root.render(<SessionDrawer isOpen={true} onClose={() => {}} />);
     });
 
-    // Both sessions render header dividers
+    // Both sessions render slim file folders
+    const folders = container.querySelectorAll('[data-session-folder="true"]');
+    expect(folders.length).toBe(2);
     expect(container.textContent).toContain('Session 1');
     expect(container.textContent).toContain('Session 2');
-    expect(container.textContent).toContain('-----');
 
-    // Both session headers contain the solid margin triangle SVG matching modal background
-    const triangles = container.querySelectorAll('polygon[points="0,0 10,6 0,12"]');
-    expect(triangles.length).toBe(2);
-    expect((triangles[0] as HTMLElement).getAttribute('style')).toContain('fill: var(--background)');
+    // Verify binder triangle SVG polygon is completely removed
+    const binderTriangles = container.querySelectorAll('polygon[points="0,0 10,6 0,12"]');
+    expect(binderTriangles.length).toBe(0);
+
+    // Historical Session 1 is collapsed by default; Active Session 2 is expanded by default
+    expect(folders[0].querySelector('.whitespace-pre-wrap')).toBeNull();
+    expect(folders[1].querySelector('.whitespace-pre-wrap')?.textContent).toContain('Second session content.');
 
     await act(async () => {
       root.unmount();
@@ -698,8 +738,13 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
       await new Promise((r) => setTimeout(r, 50));
     });
 
-    // Once closed, completed session is unmasked and readable in the manuscript body
+    // Once closed, active card is removed and session becomes a completed folder
     expect(container.querySelector('[data-active-session="true"]')).toBeNull();
+    // Expand the closed session folder to view text
+    const closedFolderTab = container.querySelector('[data-session-folder="true"] button') as HTMLButtonElement;
+    await act(async () => {
+      closedFolderTab.click();
+    });
     expect(container.querySelector('.whitespace-pre-wrap')?.textContent).toContain('Drafting in progress right now.');
 
     await act(async () => {
@@ -785,6 +830,11 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
     });
 
     expect(container.querySelector('[data-active-session="true"]')).toBeNull();
+    // Expand both completed folders to inspect text
+    const folderButtons = Array.from(container.querySelectorAll('[data-session-folder="true"] button')) as HTMLButtonElement[];
+    await act(async () => {
+      folderButtons.forEach((btn) => btn.click());
+    });
     expect(container.textContent).toContain(completedText);
     expect(container.textContent).toContain(activeText);
 

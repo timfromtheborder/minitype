@@ -11,6 +11,7 @@ import {
   Sparkles,
   BookOpen,
   FileText,
+  ChevronRight,
 } from 'lucide-react';
 import { CompileModal } from './CompileModal';
 import {
@@ -63,6 +64,8 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
     });
   });
   const [isPulsingActive, setIsPulsingActive] = useState<boolean>(false);
+  const [expandedSessionIds, setExpandedSessionIds] = useState<Set<string>>(() => new Set());
+  const [isCollapsedActive, setIsCollapsedActive] = useState<boolean>(false);
   const [isCompileOpen, setIsCompileOpen] = useState<boolean>(false);
   const [isConfirmingCloseCompile, setIsConfirmingCloseCompile] = useState<boolean>(false);
   const isConfirmingCloseCompileRef = useRef<boolean>(false);
@@ -88,6 +91,8 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
       if (!prevIsOpenRef.current || prevDocIdRef.current !== manifest.id) {
         setTitle(manifest.title || 'Untitled Project');
         prevDocIdRef.current = manifest.id;
+        setExpandedSessionIds(new Set());
+        setIsCollapsedActive(false);
       }
       prevIsOpenRef.current = true;
 
@@ -258,6 +263,18 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
     return !latest.completedAt ? latest : null;
   }, [resolvedSessions]);
 
+  const toggleSessionExpanded = (sessionId: string) => {
+    setExpandedSessionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(sessionId)) {
+        next.delete(sessionId);
+      } else {
+        next.add(sessionId);
+      }
+      return next;
+    });
+  };
+
   if (!isOpen) return null;
 
   const handleStartNewSession = async () => {
@@ -405,7 +422,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
           )}
         </div>
 
-        {/* Chronological Stream of Permanently Expanded Contiguous Sessions */}
+        {/* Chronological Stream of Collapsible File-Folder Sessions */}
         <div
           ref={scrollContainerRef}
           onScroll={(e) => {
@@ -414,7 +431,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
             }
           }}
           style={{ overflowAnchor: 'none' }}
-          className="flex-1 min-h-0 overflow-y-auto square-scrollbar border border-border/80 bg-card text-card-foreground p-3 sm:p-5 space-y-3 rounded-[2px] [overflow-anchor:none]"
+          className="flex-1 min-h-0 overflow-y-auto square-scrollbar border border-border/80 bg-muted/15 text-card-foreground p-2 sm:p-3 space-y-2 rounded-[2px] [overflow-anchor:none]"
         >
           {completedSessions.length === 0 && !activeSession ? (
             <div className="flex flex-col items-center justify-center h-48 p-4 text-center gap-2 text-muted-foreground font-mono">
@@ -424,6 +441,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
             <>
               {/* Completed Historical Sessions */}
               {completedSessions.map((session) => {
+                const isExpanded = expandedSessionIds.has(session.id);
                 const isTargetMet = Boolean(session.targetReached);
                 let timeRange: string;
                 if (session.isImported) {
@@ -438,28 +456,39 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                 const sessionText = session.text || '';
 
                 return (
-                  <div key={session.id} data-session-card="true" className="relative">
-                    {/* Nested In-line Header Divider with Solid Margin Triangle */}
-                    <div className="relative flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono text-card-foreground/50 select-none py-1 mb-1.5 overflow-visible -ml-3 sm:-ml-5 pl-3 sm:pl-5">
-                      {/* Solid triangle matching modal background that indents the card */}
-                      <svg
-                        className="absolute left-0 top-1/2 -translate-y-1/2 w-2.5 h-3 pointer-events-none select-none"
-                        viewBox="0 0 10 12"
-                        aria-hidden="true"
-                      >
-                        <polygon points="0,0 10,6 0,12" style={{ fill: 'var(--background)' }} />
-                      </svg>
-                      <span className="shrink-0 opacity-40 select-none ml-1">-----</span>
-                      <span className="font-semibold text-card-foreground/85 shrink-0 select-none">
-                        Session {session.sessionNumber}
-                      </span>
-                      <span className="shrink-0 opacity-40 select-none">---</span>
-                      <span className="truncate min-w-0 text-card-foreground/65 select-none">
-                        {timeRange}
-                      </span>
-                      <div className="flex-1 min-w-4 border-t border-dashed border-card-foreground/20 self-center mx-1" />
+                  <div
+                    key={session.id}
+                    data-session-card="true"
+                    data-session-folder="true"
+                    className="border border-border/70 rounded-[2px] overflow-hidden bg-card transition-all"
+                  >
+                    {/* Folder Tab Header Button */}
+                    <button
+                      type="button"
+                      onClick={() => toggleSessionExpanded(session.id)}
+                      aria-expanded={isExpanded}
+                      className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-mono select-none cursor-pointer transition-colors text-left ${
+                        isExpanded
+                          ? 'bg-muted/40 border-b border-border/60 text-card-foreground/90'
+                          : 'bg-muted/20 hover:bg-muted/35 text-card-foreground/75'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0 pr-2">
+                        <ChevronRight
+                          className={`w-3.5 h-3.5 shrink-0 text-card-foreground/60 transition-transform duration-150 ${
+                            isExpanded ? 'rotate-90' : ''
+                          }`}
+                        />
+                        <span className="font-semibold text-card-foreground/90 shrink-0">
+                          Session {session.sessionNumber}
+                        </span>
+                        <span className="text-card-foreground/30 shrink-0">•</span>
+                        <span className="truncate text-card-foreground/60 text-[11px]">
+                          {timeRange}
+                        </span>
+                      </div>
                       <span
-                        className={`shrink-0 text-right text-[10px] sm:text-[11px] ${
+                        className={`shrink-0 text-right text-[11px] ${
                           isTargetMet
                             ? 'font-bold text-card-foreground'
                             : 'font-medium text-card-foreground/65'
@@ -467,90 +496,99 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                       >
                         {session.wordCount.toLocaleString()} words
                       </span>
-                      <span className="shrink-0 opacity-40 select-none">-----</span>
-                    </div>
+                    </button>
 
-                    {/* Drafting Ledger Monospace Text: Contiguous & Permanently Expanded */}
-                    <div className="whitespace-pre-wrap select-text py-0.5 font-mono text-xs sm:text-sm leading-relaxed">
-                      {sessionText.length === 0 ? (
-                        <span className="text-muted-foreground/40 italic font-mono text-xs">
-                          No text in this session.
-                        </span>
-                      ) : (
-                        sessionText
-                      )}
-                    </div>
+                    {/* Collapsible Folder Body */}
+                    {isExpanded && (
+                      <div className="p-2.5 sm:p-3 bg-card">
+                        <div className="whitespace-pre-wrap select-text font-mono text-xs sm:text-sm leading-[1.12] tracking-[-0.035em] text-card-foreground/85">
+                          {sessionText.length === 0 ? (
+                            <span className="text-muted-foreground/40 italic">
+                              No text in this session.
+                            </span>
+                          ) : (
+                            sessionText
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
 
-              {/* Active Session Demarcation Card */}
-              {activeSession && (
-                <div
-                  data-session-card="true"
-                  data-active-session="true"
-                  className={`relative ${completedSessions.length > 0 ? 'mt-4 sm:mt-6' : 'mt-1'}`}
-                >
-                  {/* Active Session Header */}
-                  {(() => {
-                    const isActiveTargetMet = Boolean(
-                      sessionWordTarget && sessionWordTarget > 0 && activeSession.wordCount >= sessionWordTarget
-                    );
-                    return (
-                      <div className="relative flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono text-card-foreground/50 select-none py-1 mb-2 overflow-visible -ml-3 sm:-ml-5 pl-3 sm:pl-5">
-                        {/* Solid triangle matching modal background that indents the card */}
-                        <svg
-                          className="absolute left-0 top-1/2 -translate-y-1/2 w-2.5 h-3 pointer-events-none select-none"
-                          viewBox="0 0 10 12"
-                          aria-hidden="true"
-                        >
-                          <polygon points="0,0 10,6 0,12" style={{ fill: 'var(--background)' }} />
-                        </svg>
-                        <span className="shrink-0 opacity-40 select-none ml-1">-----</span>
-                        <span className="font-semibold text-card-foreground/85 shrink-0 select-none">
+              {/* Active Session Demarcation Folder */}
+              {activeSession && (() => {
+                const isActiveTargetMet = Boolean(
+                  sessionWordTarget && sessionWordTarget > 0 && activeSession.wordCount >= sessionWordTarget
+                );
+                const isActiveExpanded = !isCollapsedActive;
+
+                return (
+                  <div
+                    data-session-card="true"
+                    data-session-folder="true"
+                    data-active-session="true"
+                    className={`border border-primary/40 rounded-[2px] overflow-hidden bg-card transition-all ${
+                      isPulsingActive ? 'ring-1 ring-primary/50' : ''
+                    }`}
+                  >
+                    {/* Active Folder Tab Header Button */}
+                    <button
+                      type="button"
+                      onClick={() => setIsCollapsedActive(!isCollapsedActive)}
+                      aria-expanded={isActiveExpanded}
+                      className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-mono select-none cursor-pointer transition-colors text-left ${
+                        isActiveExpanded
+                          ? 'bg-primary/[0.08] border-b border-primary/30 text-card-foreground/95'
+                          : 'bg-primary/[0.04] hover:bg-primary/[0.08] text-card-foreground/80'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0 pr-2">
+                        <ChevronRight
+                          className={`w-3.5 h-3.5 shrink-0 text-primary/80 transition-transform duration-150 ${
+                            isActiveExpanded ? 'rotate-90' : ''
+                          }`}
+                        />
+                        <span className="font-semibold text-card-foreground/95 shrink-0">
                           Session {activeSession.sessionNumber}
                         </span>
-                        <span className="shrink-0 opacity-40 select-none">---</span>
-                        <span className="truncate min-w-0 text-card-foreground/65 select-none">
-                          {formatSessionDateTime(activeSession.startedAt)} - Present
-                        </span>
-                        <span className="flex items-center gap-1 text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 rounded-[1px] shrink-0 font-sans ml-1 select-none">
+                        <span className="flex items-center gap-1 text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 rounded-[1px] shrink-0 font-sans ml-0.5 select-none">
                           <Sparkles className="w-2.5 h-2.5" />
                           <span>Active</span>
                         </span>
-                        <div className="flex-1 min-w-4 border-t border-dashed border-card-foreground/20 self-center mx-1" />
-                        <span
-                          className={`shrink-0 text-right text-[10px] sm:text-[11px] ${
-                            isActiveTargetMet
-                              ? 'font-bold text-card-foreground'
-                              : 'font-medium text-card-foreground/65'
-                          }`}
-                        >
-                          {activeSession.wordCount.toLocaleString()} words
+                        <span className="text-card-foreground/30 shrink-0">•</span>
+                        <span className="truncate text-card-foreground/60 text-[11px]">
+                          {formatSessionDateTime(activeSession.startedAt)} - Present
                         </span>
-                        <span className="shrink-0 opacity-40 select-none">-----</span>
                       </div>
-                    );
-                  })()}
+                      <span
+                        className={`shrink-0 text-right text-[11px] ${
+                          isActiveTargetMet
+                            ? 'font-bold text-card-foreground'
+                            : 'font-medium text-card-foreground/65'
+                        }`}
+                      >
+                        {activeSession.wordCount.toLocaleString()} words
+                      </span>
+                    </button>
 
-                  {/* Active Session Text: Faint highlight around active drafting text */}
-                  <div
-                    className={`border-l-2 border-primary/50 pl-3 py-1 bg-primary/[0.03] rounded-r-[2px] transition-all duration-300 ${
-                      isPulsingActive ? 'bg-primary/[0.08] border-primary ring-1 ring-primary/30' : ''
-                    }`}
-                  >
-                    <div className="whitespace-pre-wrap select-text py-0.5 font-mono text-xs sm:text-sm leading-relaxed">
-                      {activeSession.text.length === 0 ? (
-                        <span className="text-muted-foreground/40 italic font-mono text-xs">
-                          No text in this active session yet.
-                        </span>
-                      ) : (
-                        activeSession.text
-                      )}
-                    </div>
+                    {/* Active Folder Body */}
+                    {isActiveExpanded && (
+                      <div className="p-2.5 sm:p-3 bg-card border-l-2 border-primary/50">
+                        <div className="whitespace-pre-wrap select-text font-mono text-xs sm:text-sm leading-[1.12] tracking-[-0.035em] text-card-foreground/90">
+                          {activeSession.text.length === 0 ? (
+                            <span className="text-muted-foreground/40 italic">
+                              No text in this active session yet.
+                            </span>
+                          ) : (
+                            activeSession.text
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </>
           )}
         </div>

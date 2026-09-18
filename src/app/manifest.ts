@@ -6,9 +6,8 @@ const basePath = process.env.GITHUB_PAGES === 'true' ? '/minitype' : '';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Minitype - Distraction-Free Typewriter',
+    name: 'Minitype',
     short_name: 'Minitype',
-    description: 'Distraction-free, forward-momentum writing web application modeled on mechanical typewriter constraints.',
     start_url: `${basePath}/`,
     display: 'standalone',
     background_color: '#F5F2EB',

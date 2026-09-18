@@ -18,7 +18,6 @@ const basePath = process.env.GITHUB_PAGES === "true" ? "/minitype" : "";
 
 export const metadata: Metadata = {
   title: "minitype",
-  description: "Distraction-free, forward-momentum writing web application modeled on mechanical typewriter constraints.",
   icons: {
     icon: [
       { url: `${basePath}/favicon-32x32.png`, sizes: "32x32", type: "image/png" },
