@@ -64,11 +64,11 @@ export function formatPomodoroTime(totalSeconds: number): string {
 function getBreakBadgeStyle(scheme: ColorScheme): string {
   switch (scheme) {
     case 'typewriter':
-      return 'bg-card text-card-foreground border-none';
+      return 'bg-[#4c4942] text-white border-none';
     case 'high-contrast':
       return 'bg-[#1A1A1A] text-white border-none';
     case 'low-contrast':
-      return 'bg-[#58626E] text-white border-none';
+      return 'bg-[#33373c] text-white border-none';
     default:
       return 'bg-foreground text-background border-none';
   }
@@ -243,9 +243,9 @@ export const ChronoSuite: React.FC<ChronoSuiteProps> = ({
           type="button"
           suppressHydrationWarning
           onClick={handleTimerBadgeClick}
-          className={`absolute bottom-full mb-2 left-0 text-left text-xl sm:text-2xl uppercase tracking-widest transition-all cursor-pointer border-none shadow-none outline-none whitespace-nowrap animate-timer-slide-up select-none ${
+          className={`absolute bottom-full mb-1 left-0 text-left text-xl sm:text-2xl uppercase tracking-widest transition-all cursor-pointer border-none shadow-none outline-none whitespace-nowrap animate-timer-slide-up select-none ${
             isBreakPhase
-              ? `${breakBadgeStyle} px-1.5 py-0.5 rounded-[2px] font-bold ${
+              ? `${breakBadgeStyle} w-[5.5rem] sm:w-[6.5rem] inline-flex items-center justify-center text-center tabular-nums py-0.5 rounded-[2px] font-bold ${
                   isBreakMinuteFlash ? 'opacity-50' : 'opacity-100'
                 }`
               : isPomodoroWarning

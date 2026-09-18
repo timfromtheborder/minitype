@@ -304,9 +304,9 @@ describe('ChronoSuite & Clock Formatter', () => {
       vi.setSystemTime(new Date(2026, 8, 17, 10, 0, 0));
 
       const themes = [
-        { theme: 'typewriter' as const, expectedClass: 'bg-card' },
+        { theme: 'typewriter' as const, expectedClass: 'bg-[#4c4942]' },
         { theme: 'high-contrast' as const, expectedClass: 'bg-[#1A1A1A]' },
-        { theme: 'low-contrast' as const, expectedClass: 'bg-[#58626E]' },
+        { theme: 'low-contrast' as const, expectedClass: 'bg-[#33373c]' },
         { theme: 'dark-mode' as const, expectedClass: 'bg-foreground' },
       ];
 
@@ -411,6 +411,45 @@ describe('ChronoSuite & Clock Formatter', () => {
         root.render(<ChronoSuite showClock={true} timerStyle="pomodoro" />);
       });
       expect(container.querySelector('button[aria-label*="time"]')).not.toBeNull();
+    });
+
+    it('applies mb-1 distance and fixed width with theme-specific background during pomodoro break', async () => {
+      const root = createRoot(container);
+      // Render in Manuscript theme ('typewriter')
+      await act(async () => {
+        root.render(<ChronoSuite showClock={true} timerStyle="pomodoro" colorScheme="typewriter" />);
+      });
+
+      const clockBtn = container.querySelector('button[aria-label*="time"]');
+      await act(async () => {
+        clockBtn?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      });
+
+      // Advance past 25 minutes work phase into 5 minutes break phase
+      await act(async () => {
+        vi.advanceTimersByTime(25 * 60 * 1000 + 1000);
+      });
+
+      const breakBtn = container.querySelector('button[aria-label*="Pomodoro break"]');
+      expect(breakBtn).not.toBeNull();
+      // Distance from clock is mb-1 (divided in half from mb-2)
+      expect(breakBtn?.className).toContain('mb-1');
+      // Fixed width to accommodate serif digits without resizing
+      expect(breakBtn?.className).toContain('w-[5.5rem]');
+      expect(breakBtn?.className).toContain('sm:w-[6.5rem]');
+      // Manuscript theme background: #4c4942 with white text
+      expect(breakBtn?.className).toContain('bg-[#4c4942]');
+      expect(breakBtn?.className).toContain('text-white');
+
+      // Now switch to Newsprint theme ('low-contrast')
+      await act(async () => {
+        root.render(<ChronoSuite showClock={true} timerStyle="pomodoro" colorScheme="low-contrast" />);
+      });
+
+      const newsprintBreakBtn = container.querySelector('button[aria-label*="Pomodoro break"]');
+      // Newsprint theme background: #33373c with white text
+      expect(newsprintBreakBtn?.className).toContain('bg-[#33373c]');
+      expect(newsprintBreakBtn?.className).toContain('text-white');
     });
   });
 });

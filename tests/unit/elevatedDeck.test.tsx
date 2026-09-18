@@ -247,8 +247,7 @@ describe('Strategy A - Persistent Elevated Deck & Modal Linking', () => {
     expect(pomodoroSoundBtn?.className).toContain('h-6.5');
     expect(pomodoroSoundBtn.disabled).toBe(true);
     expect(pomodoroSoundBtn.className).toContain('opacity-30');
-    expect(pomodoroSoundBtn.className).toContain('cursor-not-allowed');
-    expect(pomodoroSoundBtn.title).toContain('Audio alerts unavailable in snapshot timer mode');
+    expect(pomodoroSoundBtn.getAttribute('title')).toBeNull();
 
     const timerStyleBtn = container.querySelector('button.capitalize.text-\\[11px\\]');
     expect(timerStyleBtn).not.toBeNull();

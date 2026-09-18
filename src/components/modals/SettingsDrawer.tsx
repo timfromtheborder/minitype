@@ -522,13 +522,6 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                             ? 'border-primary bg-primary text-primary-foreground shadow-xs cursor-pointer'
                             : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-muted-foreground cursor-pointer'
                         }`}
-                        title={
-                          isSnapshot
-                            ? 'Audio alerts unavailable in snapshot timer mode'
-                            : manifest.pomodoroSoundEnabled ?? true
-                            ? 'Mute Pomodoro audio alerts'
-                            : 'Enable Pomodoro audio alerts'
-                        }
                         aria-label={
                           manifest.pomodoroSoundEnabled ?? true
                             ? 'Mute Pomodoro audio alerts'
@@ -605,7 +598,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {/* Version Footer */}
           <div className="pt-3 pb-1 text-center border-t border-border/40">
             <span className="text-[10px] font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.10.7 · by timfromtheborder
+              Minitype v0.9.10.8 · by timfromtheborder
             </span>
           </div>
         </div>

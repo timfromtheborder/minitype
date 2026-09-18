@@ -49,20 +49,35 @@ export const SessionTargetTracker: React.FC = React.memo(function SessionTargetT
     return () => ro.disconnect();
   }, [activeColumnLimit]);
 
-  // Synchronously sync if target changes or project resets
+  const lastActiveSession = activeSessions.length > 0 ? activeSessions[activeSessions.length - 1] : null;
+  const currentSessionId = lastActiveSession?.id ?? null;
+  const prevSessionIdRef = useRef(currentSessionId);
+
+  // Synchronously reset/clear if target changes, project resets, a new session begins, or count drops
   useEffect(() => {
-    if (prevTargetRef.current !== target) {
+    const isNewSession = prevSessionIdRef.current !== currentSessionId;
+    const isTargetChanged = prevTargetRef.current !== target;
+    const isCountReset = rawFilledCount < displayedFilledCount;
+
+    if (isNewSession || isTargetChanged || isCountReset) {
+      prevSessionIdRef.current = currentSessionId;
       prevTargetRef.current = target;
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-      if (burstTimerRef.current) clearTimeout(burstTimerRef.current);
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+      if (burstTimerRef.current) {
+        clearTimeout(burstTimerRef.current);
+        burstTimerRef.current = null;
+      }
       setDisplayedFilledCount(rawFilledCount);
       setBurstRange(null);
     }
-  }, [target, rawFilledCount]);
+  }, [currentSessionId, target, rawFilledCount, displayedFilledCount]);
 
-  // Debounce visual tracker progress updates until typing has paused for 2 seconds
+  // Debounce visual tracker progress updates until typing has paused for 1 second
   useEffect(() => {
-    if (rawFilledCount === displayedFilledCount) return;
+    if (rawFilledCount <= displayedFilledCount) return;
 
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
@@ -76,13 +91,13 @@ export const SessionTargetTracker: React.FC = React.memo(function SessionTargetT
           if (burstTimerRef.current) clearTimeout(burstTimerRef.current);
           burstTimerRef.current = setTimeout(() => {
             setBurstRange(null);
-          }, 800);
+          }, 350); // Fast settle into normal fill color
         } else {
           setBurstRange(null);
         }
         return rawFilledCount;
       });
-    }, 2000);
+    }, 1000); // 1-second pause
 
     return () => {
       if (debounceTimerRef.current) {
