@@ -143,15 +143,15 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
     >
       <div
         ref={drawerRef}
-        className="w-full max-w-md max-h-[calc(100dvh-max(4.5rem,68px)-env(safe-area-inset-top))] sm:max-h-[calc(100dvh-5rem)] overflow-y-auto square-scrollbar p-4 sm:p-5 rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-col gap-3.5 sm:gap-4 select-none"
+        className="w-full max-w-md max-h-[calc(100dvh-max(4.5rem,68px)-env(safe-area-inset-top))] sm:max-h-[calc(100dvh-5rem)] overflow-y-auto square-scrollbar p-3.5 sm:p-4 rounded-[2px] border border-border bg-background text-foreground shadow-2xl flex flex-col gap-2.5 sm:gap-3 select-none"
         onClick={(e) => {
           e.stopPropagation();
           setIsPhosphorPickerOpen(false);
         }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border/60 pb-2 sm:pb-3 gap-2 shrink-0">
-          <div className="flex items-center gap-2.5">
+        <div className="flex items-center justify-between border-b border-border/60 pb-2 gap-2 shrink-0">
+          <div className="flex items-center gap-2">
             <Sliders className="w-4 h-4 text-muted-foreground shrink-0" />
             <span className="text-xs font-sans font-bold tracking-widest uppercase text-muted-foreground shrink-0">
               Settings
@@ -160,21 +160,21 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="flex items-center gap-1 px-2 py-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-border/60 transition-colors cursor-pointer touch-manipulation text-xs"
+            className="flex items-center gap-1 px-2 py-0.5 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-muted border border-border/60 transition-colors cursor-pointer touch-manipulation text-xs"
             aria-label="Return to writing in aperture"
           >
-            <CornerUpLeft className="w-4 h-4 shrink-0" />
+            <CornerUpLeft className="w-3.5 h-3.5 shrink-0" />
             <span className="hidden sm:inline font-sans text-xs font-semibold">Return</span>
           </button>
         </div>
 
-        <div className="flex flex-col gap-3 sm:gap-3.5 text-xs font-sans">
+        <div className="flex flex-col gap-2 text-xs font-sans">
           {/* =================================================================
-              SECTION 1: MECHANICS (Aperture Slider, Page Mode, Typing Sounds, Allow Backspace)
+              SECTION 1: MECHANICS (Aperture Slider, Page Mode, Allow Backspace, Typing Sounds)
               ================================================================= */}
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-0.5">
             {/* Aperture Visible Lines Slider (1 to 10 lines) */}
-            <div className="flex flex-col gap-1 px-2 py-1 -mx-2">
+            <div className="flex flex-col gap-0.5 px-2 py-0.5 -mx-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Sliders className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
@@ -214,12 +214,12 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
             </div>
 
             {/* Page Mode */}
-            <div className="flex flex-col gap-1 px-2 py-1 -mx-2">
+            <div className="flex flex-col gap-0.5 px-2 py-0.5 -mx-2">
               <div className="flex items-center gap-2">
                 <Scroll className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                 <label className="font-medium text-foreground">Page Mode:</label>
               </div>
-              <div className="grid grid-cols-2 gap-1.5">
+              <div className="grid grid-cols-2 gap-1.5 pt-0.5">
                 {(['scroll', 'notecard'] as PageMode[]).map((mode) => (
                   <button
                     key={mode}
@@ -228,10 +228,10 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                       const pageSize = mode === 'scroll' ? 999999 : 10;
                       onUpdateManifest({ pageMode: mode, pageSize });
                     }}
-                    className={`py-1.5 px-0.5 rounded-[2px] border text-center transition-all cursor-pointer capitalize text-xs truncate ${
+                    className={`py-1 px-0.5 rounded-[2px] border text-center transition-all cursor-pointer capitalize text-xs truncate ${
                       (manifest.pageMode || 'scroll') === mode
                         ? 'border-primary bg-primary text-primary-foreground font-bold shadow-xs'
-                        : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground'
+                        : 'border-border/80 bg-muted/30 hover:bg-muted text-foreground'
                     }`}
                   >
                     <span className="truncate">{mode}</span>
@@ -240,43 +240,9 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
               </div>
             </div>
 
-            {/* Typing sounds */}
-            <div
-              className="flex items-center justify-between px-2 py-1.5 -mx-2 rounded-[2px] hover:bg-muted/40 transition-colors cursor-pointer"
-              onClick={handleToggleMute}
-            >
-              <div className="flex items-center gap-2">
-                {!isMuted ? (
-                  <Volume2 className="w-3.5 h-3.5 text-primary shrink-0" />
-                ) : (
-                  <VolumeX className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />
-                )}
-                <span className="font-medium text-foreground">Typing sounds</span>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={!isMuted}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleToggleMute();
-                }}
-                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[2px] border transition-colors duration-150 ease-in-out focus:outline-hidden ${
-                  !isMuted ? 'bg-primary border-primary' : 'bg-muted/70 border-border/80'
-                }`}
-                aria-label="Typing sounds"
-              >
-                <span
-                  className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-[1px] shadow-xs transition-transform duration-150 ease-in-out ${
-                    !isMuted ? 'translate-x-4 bg-primary-foreground' : 'translate-x-0.5 bg-muted-foreground/70'
-                  }`}
-                />
-              </button>
-            </div>
-
             {/* Allow backspace */}
             <div
-              className="flex items-center justify-between px-2 py-1.5 -mx-2 rounded-[2px] hover:bg-muted/40 transition-colors cursor-pointer"
+              className="flex items-center justify-between px-2 py-1 -mx-2 rounded-[2px] hover:bg-muted transition-colors cursor-pointer"
               onClick={() => onUpdateManifest({ allowStrikeout: !allowStrikeout })}
             >
               <div className="flex items-center gap-2">
@@ -307,18 +273,52 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 />
               </button>
             </div>
+
+            {/* Typing sounds */}
+            <div
+              className="flex items-center justify-between px-2 py-1 -mx-2 rounded-[2px] hover:bg-muted transition-colors cursor-pointer"
+              onClick={handleToggleMute}
+            >
+              <div className="flex items-center gap-2">
+                {!isMuted ? (
+                  <Volume2 className="w-3.5 h-3.5 text-primary shrink-0" />
+                ) : (
+                  <VolumeX className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />
+                )}
+                <span className="font-medium text-foreground">Typing sounds</span>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={!isMuted}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToggleMute();
+                }}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[2px] border transition-colors duration-150 ease-in-out focus:outline-hidden ${
+                  !isMuted ? 'bg-primary border-primary' : 'bg-muted/70 border-border/80'
+                }`}
+                aria-label="Typing sounds"
+              >
+                <span
+                  className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-[1px] shadow-xs transition-transform duration-150 ease-in-out ${
+                    !isMuted ? 'translate-x-4 bg-primary-foreground' : 'translate-x-0.5 bg-muted-foreground/70'
+                  }`}
+                />
+              </button>
+            </div>
           </div>
 
           {/* Section Divider */}
-          <div className="border-t border-border/60" />
+          <div className="border-t border-border/60 my-0.5" />
 
           {/* =================================================================
               SECTION 2: TOOLS (Stats, Session Target, Clock & Timer)
               ================================================================= */}
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-0.5">
             {/* Show document stats */}
             <div
-              className="flex items-center justify-between px-2 py-1.5 -mx-2 rounded-[2px] hover:bg-muted/40 transition-colors cursor-pointer"
+              className="flex items-center justify-between px-2 py-1 -mx-2 rounded-[2px] hover:bg-muted transition-colors cursor-pointer"
               onClick={() => onUpdateManifest({ showStats: !showStats })}
             >
               <div className="flex items-center gap-2">
@@ -352,7 +352,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
 
             {/* Session target tracker */}
             <div
-              className="flex items-center justify-between px-2 py-1.5 -mx-2 rounded-[2px] hover:bg-muted/40 transition-colors cursor-pointer"
+              className="flex items-center justify-between px-2 py-1 -mx-2 rounded-[2px] hover:bg-muted transition-colors cursor-pointer"
               onClick={() => onUpdateManifest({ showSessionTargetTracker: !showSessionTargetTracker })}
             >
               <div className="flex items-center gap-2">
@@ -386,7 +386,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
 
             {/* Session target words stepper (beneath session target tracker) */}
             {showSessionTargetTracker && (
-              <div className="flex items-center justify-between pl-3 pr-1.5 py-1 border-l-2 border-primary/40 bg-muted/15 rounded-r-[2px] -mt-0.5 mb-0.5 animate-in fade-in duration-100">
+              <div className="flex items-center justify-between pl-3 pr-1.5 py-1 border-l-2 border-primary/40 bg-muted/20 rounded-r-[2px] my-0.5 animate-in fade-in duration-100">
                 <span className="text-xs text-muted-foreground">Target words per session</span>
                 <div className="flex items-center gap-1.5">
                   <div className="h-[26px] flex items-center rounded-[2px] border border-border/80 bg-background focus-within:border-primary transition-colors overflow-hidden">
@@ -456,7 +456,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
 
             {/* Show clock */}
             <div
-              className="flex items-center justify-between px-2 py-1.5 -mx-2 rounded-[2px] hover:bg-muted/40 transition-colors cursor-pointer"
+              className="flex items-center justify-between px-2 py-1 -mx-2 rounded-[2px] hover:bg-muted transition-colors cursor-pointer"
               onClick={() => onUpdateManifest({ showClock: !manifest.showClock })}
             >
               <div className="flex items-center gap-2">
@@ -490,7 +490,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
 
             {/* Timer Style (Visible only when Clock is enabled) */}
             {manifest.showClock && (
-              <div className="flex flex-col gap-1 pl-3 pr-1.5 py-1.5 border-l-2 border-primary/40 bg-muted/15 rounded-r-[2px] -mt-0.5 animate-in fade-in duration-100">
+              <div className="flex flex-col gap-1 pl-3 pr-1.5 py-1 border-l-2 border-primary/40 bg-muted/20 rounded-r-[2px] my-0.5 animate-in fade-in duration-100">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground text-xs">Timer Style</span>
                   <span className="font-bold text-foreground capitalize text-xs">
@@ -507,7 +507,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                         className={`h-6.5 flex items-center justify-center px-1 rounded-[2px] border text-center transition-all cursor-pointer capitalize text-[11px] touch-manipulation ${
                           (manifest.timerStyle || 'snapshot') === style
                             ? 'border-primary bg-primary text-primary-foreground font-bold shadow-xs'
-                            : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground font-medium'
+                            : 'border-border/80 bg-muted/30 hover:bg-muted text-foreground font-medium'
                         }`}
                       >
                         {style}
@@ -531,7 +531,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                             ? 'opacity-30 border-border/40 bg-muted/20 text-muted-foreground/40 cursor-not-allowed'
                             : manifest.pomodoroSoundEnabled ?? false
                             ? 'border-primary bg-primary text-primary-foreground shadow-xs cursor-pointer'
-                            : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-muted-foreground cursor-pointer'
+                            : 'border-border/80 bg-muted/30 hover:bg-muted text-muted-foreground cursor-pointer'
                         }`}
                         aria-label={
                           manifest.pomodoroSoundEnabled ?? false
@@ -553,14 +553,14 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           </div>
 
           {/* Section Divider */}
-          <div className="border-t border-border/60" />
+          <div className="border-t border-border/60 my-0.5" />
 
           {/* =================================================================
               SECTION 3: INTERFACE (Text Size, Theme Grid)
               ================================================================= */}
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
             {/* Text Size ([S] [M] [L] [XL]) */}
-            <div className="flex flex-col gap-1 px-2 py-1 -mx-2">
+            <div className="flex flex-col gap-0.5 px-2 py-0.5 -mx-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Type className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
@@ -576,7 +576,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                     : 'Default (M)'}
                 </span>
               </div>
-              <div className="grid grid-cols-4 gap-1.5">
+              <div className="grid grid-cols-4 gap-1 pt-0.5">
                 {(['s', 'm', 'l', 'xl'] as TextSize[]).map((size) => {
                   const isSelected = (manifest.textSize || 'm') === size;
                   const label = size.toUpperCase();
@@ -585,10 +585,10 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                       key={size}
                       type="button"
                       onClick={() => onUpdateManifest({ textSize: size })}
-                      className={`py-1.5 rounded-[2px] border text-center transition-all cursor-pointer font-bold text-xs sm:text-sm ${
+                      className={`py-1 rounded-[2px] border text-center transition-all cursor-pointer font-bold text-xs sm:text-sm ${
                         isSelected
                           ? 'border-primary bg-primary text-primary-foreground shadow-xs'
-                          : 'border-border/80 bg-muted/30 hover:bg-muted/70 text-foreground'
+                          : 'border-border/80 bg-muted/30 hover:bg-muted text-foreground'
                       }`}
                     >
                       {label}
@@ -599,12 +599,12 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
             </div>
 
             {/* Color Schemes */}
-            <div className="flex flex-col gap-1.5 px-2 py-1 -mx-2">
+            <div className="flex flex-col gap-1 px-2 py-0.5 -mx-2">
               <div className="flex items-center gap-2">
                 <Palette className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                 <label className="font-medium text-foreground">Theme:</label>
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-1.5 pt-0.5">
                 {[
                   {
                     id: 'typewriter',
@@ -668,10 +668,10 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                             setIsPhosphorPickerOpen(false);
                           }
                         }}
-                        className={`w-full py-2 px-3 rounded-[2px] border text-left flex items-center justify-between transition-colors duration-100 cursor-pointer focus:outline-hidden ${
+                        className={`w-full py-1.5 px-2.5 rounded-[2px] border text-left flex items-center justify-between transition-colors duration-100 cursor-pointer focus:outline-hidden ${
                           isSelected
                             ? 'border-primary bg-primary text-primary-foreground font-semibold shadow-xs'
-                            : 'border-border/80 hover:bg-muted/60 text-muted-foreground hover:text-foreground'
+                            : 'border-border/80 hover:bg-muted text-muted-foreground hover:text-foreground'
                         }`}
                       >
                         <div className="flex items-center gap-2">
@@ -750,9 +750,9 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           </div>
 
           {/* Version Footer */}
-          <div className="pt-2.5 pb-0.5 text-center border-t border-border/40">
+          <div className="pt-2 pb-0.5 text-center border-t border-border/40">
             <span className="text-xs font-mono tracking-widest text-muted-foreground/60 uppercase select-none">
-              Minitype v0.9.10.25 · by timfromtheborder
+              Minitype v0.9.10.26 · by timfromtheborder
             </span>
           </div>
         </div>
