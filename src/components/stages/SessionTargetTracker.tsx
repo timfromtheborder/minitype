@@ -91,13 +91,13 @@ export const SessionTargetTracker: React.FC = React.memo(function SessionTargetT
           if (burstTimerRef.current) clearTimeout(burstTimerRef.current);
           burstTimerRef.current = setTimeout(() => {
             setBurstRange(null);
-          }, 350); // Fast settle into normal fill color
+          }, 200); // 200ms burst settle
         } else {
           setBurstRange(null);
         }
         return rawFilledCount;
       });
-    }, 1000); // 1-second pause
+    }, 1300); // 1300ms pause
 
     return () => {
       if (debounceTimerRef.current) {
