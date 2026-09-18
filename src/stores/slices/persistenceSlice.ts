@@ -217,6 +217,8 @@ export async function finalizeAndSaveCurrentProject(get: any, set: any): Promise
   set({ activeSessions: sessions, isProjectDirty: false });
 }
 
+let rehydrationPromise: Promise<void> | null = null;
+
 export const createPersistenceSlice: StateCreator<
   TypingStore,
   [],
@@ -265,7 +267,10 @@ export const createPersistenceSlice: StateCreator<
   },
 
   rehydrate: async () => {
-    if (typeof window !== 'undefined') {
+    if (typeof window === 'undefined') return;
+    if (rehydrationPromise) return rehydrationPromise;
+
+    rehydrationPromise = (async () => {
       // 1. Rehydrate global settings from synchronous stores & IndexedDB
       let currentManifest = get().manifest;
       const syncSettings = readSynchronousSettings();
@@ -350,7 +355,7 @@ export const createPersistenceSlice: StateCreator<
 
         if (!projectData) {
           // No project in IndexedDB -> create fresh initial project
-          await get().newProject();
+          await get().newProject(true);
           set({ isHydrated: true });
           return;
         }
@@ -453,6 +458,10 @@ export const createPersistenceSlice: StateCreator<
         console.error('Failed to rehydrate project from IndexedDB:', e);
         set({ isHydrated: true });
       }
-    }
+    })().finally(() => {
+      rehydrationPromise = null;
+    });
+
+    return rehydrationPromise;
   },
 });

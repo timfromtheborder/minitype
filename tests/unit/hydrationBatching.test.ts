@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import 'fake-indexeddb/auto';
-import { db, savePages, saveSessions, getPagesForManuscript, getSessionsForProject } from '@/db';
+import { db, savePages, saveSessions, getPagesForManuscript, getSessionsForProject, getAllManuscripts } from '@/db';
 import { hydrateProjectSnapshot } from '@/lib/importer';
 import { pruneZeroContentSessions } from '@/lib/projectSerializer';
 import { notifyDraftingActivity } from '@/stores/draftingPipeline';
+import { useTypingStore, DEFAULT_MANIFEST, ACTIVE_PROJECT_KEY } from '@/stores/typingStore';
 import { ManuscriptManifest, PageRecord, SessionRecord } from '@/types';
 
 describe('Storage Architecture, Hydrator Consolidation & Batching (Tier 2 Pass B / v0.9.7.6.1)', () => {
@@ -339,6 +340,38 @@ describe('Storage Architecture, Hydrator Consolidation & Batching (Tier 2 Pass B
       expect(removedIds).toEqual(['s-2']);
       expect(pruned.length).toBe(1);
       expect(pruned[0].id).toBe('s-1');
+    });
+
+    it('initializes exactly ONE Untitled Project on a clean private tab startup with concurrent rehydrate calls', async () => {
+      localStorage.clear();
+      await db.manuscripts.clear();
+      await db.pages.clear();
+      await db.sessions.clear();
+      await db.settings.clear();
+
+      useTypingStore.setState({
+        manifest: { ...DEFAULT_MANIFEST },
+        isHydrated: false,
+        activeSessions: [],
+        historicalPages: [],
+        currentPageLines: [],
+      });
+
+      // Simulate concurrent rehydration calls on initial mount (React StrictMode / double mount)
+      await Promise.all([
+        useTypingStore.getState().rehydrate(),
+        useTypingStore.getState().rehydrate(),
+      ]);
+
+      const all = await getAllManuscripts();
+      expect(all.length).toBe(1);
+      expect(all[0].title).toBe('Untitled Project');
+      expect(all[0].id).not.toBe('default-manuscript');
+
+      const activeId = localStorage.getItem(ACTIVE_PROJECT_KEY);
+      expect(activeId).toBe(all[0].id);
+      expect(useTypingStore.getState().manifest.id).toBe(all[0].id);
+      expect(useTypingStore.getState().isHydrated).toBe(true);
     });
   });
 });

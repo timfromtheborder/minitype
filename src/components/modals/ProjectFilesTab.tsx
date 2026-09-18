@@ -37,9 +37,14 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
   const activeTitle = useTypingStore((state) => state.manifest.title);
   const [files, setFiles] = useState<ManuscriptManifest[]>(() => {
     const currentManifest = useTypingStore.getState().manifest;
-    return currentManifest && currentManifest.id ? [currentManifest] : [];
+    return currentManifest && currentManifest.id && currentManifest.id !== 'default-manuscript'
+      ? [currentManifest]
+      : [];
   });
-  const [loading, setLoading] = useState<boolean>(() => !useTypingStore.getState().manifest?.id);
+  const [loading, setLoading] = useState<boolean>(() => {
+    const id = useTypingStore.getState().manifest?.id;
+    return !id || id === 'default-manuscript';
+  });
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState<string>('');
@@ -60,7 +65,7 @@ export const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({
       const list = await getAllManuscripts();
       const currentManifest = useTypingStore.getState().manifest;
       let mergedList = [...list];
-      if (currentManifest && currentManifest.id) {
+      if (currentManifest && currentManifest.id && currentManifest.id !== 'default-manuscript') {
         const idx = mergedList.findIndex((m) => m.id === currentManifest.id);
         if (idx >= 0) {
           mergedList[idx] = {

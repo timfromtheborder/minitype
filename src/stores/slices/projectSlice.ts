@@ -196,6 +196,7 @@ export interface ProjectSlice {
 }
 
 let debouncedSaveManuscriptTimer: ReturnType<typeof setTimeout> | null = null;
+let newProjectPromise: Promise<void> | null = null;
 
 export const createProjectSlice: StateCreator<
   TypingStore,
@@ -273,99 +274,107 @@ export const createProjectSlice: StateCreator<
   },
 
   newProject: async (skipSaveCurrent = false) => {
-    if (!skipSaveCurrent) {
-      await finalizeAndSaveCurrentProject(get, set);
-    }
-    const state = get();
+    if (newProjectPromise) return newProjectPromise;
 
-    const newId = `manuscript-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    newProjectPromise = (async () => {
+      if (!skipSaveCurrent) {
+        await finalizeAndSaveCurrentProject(get, set);
+      }
+      const state = get();
 
-    // Calculate unique title with incremental duplicate counter if 'Untitled Project' exists
-    const existing = await getAllManuscripts().catch(() => []);
-    let title = 'Untitled Project';
-    const untitledRegex = /^Untitled Project(?:\s*\((\d+)\))?$/i;
-    const existingNumbers = new Set<number>();
-    let hasBaseUntitled = false;
+      const newId = `manuscript-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
-    for (const m of existing) {
-      const match = (m.title || '').trim().match(untitledRegex);
-      if (match) {
-        if (match[1] === undefined) {
-          hasBaseUntitled = true;
-        } else {
-          existingNumbers.add(parseInt(match[1], 10));
+      // Calculate unique title with incremental duplicate counter if 'Untitled Project' exists
+      const existing = await getAllManuscripts().catch(() => []);
+      let title = 'Untitled Project';
+      const untitledRegex = /^Untitled Project(?:\s*\((\d+)\))?$/i;
+      const existingNumbers = new Set<number>();
+      let hasBaseUntitled = false;
+
+      for (const m of existing) {
+        const match = (m.title || '').trim().match(untitledRegex);
+        if (match) {
+          if (match[1] === undefined) {
+            hasBaseUntitled = true;
+          } else {
+            existingNumbers.add(parseInt(match[1], 10));
+          }
         }
       }
-    }
 
-    if (hasBaseUntitled) {
-      let num = 2;
-      while (existingNumbers.has(num)) {
-        num++;
+      if (hasBaseUntitled) {
+        let num = 2;
+        while (existingNumbers.has(num)) {
+          num++;
+        }
+        title = `Untitled Project (${num})`;
       }
-      title = `Untitled Project (${num})`;
-    }
 
-    const globalSettings = extractSettings(readSynchronousSettings() || state.manifest);
-    const updatedManifest: ManuscriptManifest = {
-      ...state.manifest, // retains global settings
-      ...globalSettings,
-      id: newId,
-      title,
-      mode: 'local',
-      outboxCount: 0,
-      lastPrintedCharIndex: 0,
-      printedPagesCount: 0,
-      activeSessionId: undefined,
-      sessionCount: 0,
-      totalWordCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+      const globalSettings = extractSettings(readSynchronousSettings() || state.manifest);
+      const updatedManifest: ManuscriptManifest = {
+        ...state.manifest, // retains global settings
+        ...globalSettings,
+        id: newId,
+        title,
+        mode: 'local',
+        outboxCount: 0,
+        lastPrintedCharIndex: 0,
+        printedPagesCount: 0,
+        activeSessionId: undefined,
+        sessionCount: 0,
+        totalWordCount: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
 
-    if (typeof document !== 'undefined') {
-      if (updatedManifest.colorScheme) {
-        document.documentElement.setAttribute('data-theme', updatedManifest.colorScheme);
+      if (typeof document !== 'undefined') {
+        if (updatedManifest.colorScheme) {
+          document.documentElement.setAttribute('data-theme', updatedManifest.colorScheme);
+        }
+        if (updatedManifest.textSize) {
+          document.documentElement.setAttribute('data-text-size', updatedManifest.textSize);
+        }
+        if (updatedManifest.activeApertureHeight) {
+          document.documentElement.setAttribute('data-aperture-height', String(updatedManifest.activeApertureHeight));
+        }
       }
-      if (updatedManifest.textSize) {
-        document.documentElement.setAttribute('data-text-size', updatedManifest.textSize);
+
+      await saveManuscript(updatedManifest).catch(console.error);
+      await savePage({
+        id: `${newId}-page-1`,
+        manuscriptId: newId,
+        pageNumber: 1,
+        lines: [createEmptyLine(1, 0)],
+        completedAt: null,
+      }).catch(console.error);
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(ACTIVE_PROJECT_KEY, newId);
       }
-      if (updatedManifest.activeApertureHeight) {
-        document.documentElement.setAttribute('data-aperture-height', String(updatedManifest.activeApertureHeight));
-      }
-    }
 
-    await saveManuscript(updatedManifest).catch(console.error);
-    await savePage({
-      id: `${newId}-page-1`,
-      manuscriptId: newId,
-      pageNumber: 1,
-      lines: [createEmptyLine(1, 0)],
-      completedAt: null,
-    }).catch(console.error);
-
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(ACTIVE_PROJECT_KEY, newId);
-    }
-
-    set({
-      currentPageNumber: 1,
-      historicalPages: [],
-      currentPageLines: [createEmptyLine(1, 0)],
-      activeLineIndex: 0,
-      activeColIndex: 0,
-      isHighlighting: false,
-      highlightHead: null,
-      isLocked: false,
-      lockReason: null,
-      pendingWrappedCells: null,
-      activeSessions: [],
-      manifest: updatedManifest,
-      saveState: 'saved',
-      sessionCommittedLines: 0,
-      isProjectDirty: false,
-      committedDocWords: 0,
+      set({
+        currentPageNumber: 1,
+        historicalPages: [],
+        currentPageLines: [createEmptyLine(1, 0)],
+        activeLineIndex: 0,
+        activeColIndex: 0,
+        isHighlighting: false,
+        highlightHead: null,
+        isLocked: false,
+        lockReason: null,
+        pendingWrappedCells: null,
+        activeSessions: [],
+        manifest: updatedManifest,
+        saveState: 'saved',
+        sessionCommittedLines: 0,
+        isProjectDirty: false,
+        committedDocWords: 0,
+      });
+    })().finally(() => {
+      newProjectPromise = null;
     });
+
+    return newProjectPromise;
   },
 
   loadProject: async (id: string, skipSaveCurrent: boolean = false) => {
