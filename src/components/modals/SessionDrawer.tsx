@@ -8,7 +8,6 @@ import {
   CornerUpLeft,
   Plus,
   CheckCircle,
-  Sparkles,
   BookOpen,
   FileText,
   ChevronRight,
@@ -64,6 +63,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
     });
   });
   const [isPulsingActive, setIsPulsingActive] = useState<boolean>(false);
+  const [justClosedSessionId, setJustClosedSessionId] = useState<string | null>(null);
   const [expandedSessionIds, setExpandedSessionIds] = useState<Set<string>>(() => new Set());
   const [isCollapsedActive, setIsCollapsedActive] = useState<boolean>(false);
   const [isCompileOpen, setIsCompileOpen] = useState<boolean>(false);
@@ -299,6 +299,10 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
 
   const handleCloseActiveSession = async () => {
     setIsConfirmingCloseCompile(false);
+    if (activeSession) {
+      setJustClosedSessionId(activeSession.id);
+      setTimeout(() => setJustClosedSessionId(null), 1400);
+    }
     await useTypingStore.getState().closeActiveSession();
   };
 
@@ -315,6 +319,10 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
 
   const handleConfirmCloseAndCompile = async () => {
     setIsConfirmingCloseCompile(false);
+    if (activeSession) {
+      setJustClosedSessionId(activeSession.id);
+      setTimeout(() => setJustClosedSessionId(null), 1400);
+    }
     await useTypingStore.getState().closeActiveSession();
     setIsCompileOpen(true);
   };
@@ -415,15 +423,6 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
               </div>
             ) : null}
           </div>
-
-          {activeSession && (
-            <div className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground">
-              <span className="flex items-center gap-1 text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 rounded-[1px] shrink-0 font-sans">
-                <Sparkles className="w-2.5 h-2.5" />
-                <span>Session {activeSession.sessionNumber} Active</span>
-              </span>
-            </div>
-          )}
         </div>
 
         {/* Chronological Stream of Collapsible File-Folder Sessions */}
@@ -515,6 +514,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
 
               {/* Completed Historical Sessions (Newest to Oldest) */}
               {reversedCompletedSessions.map((session) => {
+                const isJustClosed = session.id === justClosedSessionId;
                 const isExpanded = expandedSessionIds.has(session.id);
                 const isTargetMet = Boolean(session.targetReached);
                 let timeRange: string;
@@ -534,7 +534,11 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                     key={session.id}
                     data-session-card="true"
                     data-session-folder="true"
-                    className="border border-border/70 rounded-[2px] overflow-hidden bg-card transition-all"
+                    className={`border rounded-[2px] overflow-hidden bg-card transition-all duration-300 ${
+                      isJustClosed
+                        ? 'border-primary ring-2 ring-primary bg-primary/[0.08] animate-pulse'
+                        : 'border-border/70'
+                    }`}
                   >
                     {/* Folder Tab Header Button */}
                     <button
@@ -542,7 +546,9 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
                       onClick={() => toggleSessionExpanded(session.id)}
                       aria-expanded={isExpanded}
                       className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-mono select-none cursor-pointer transition-colors text-left ${
-                        isExpanded
+                        isJustClosed
+                          ? 'bg-primary/20 text-card-foreground font-semibold'
+                          : isExpanded
                           ? 'bg-muted/40 border-b border-border/60 text-card-foreground/90'
                           : 'bg-muted/20 hover:bg-muted/35 text-card-foreground/75'
                       }`}

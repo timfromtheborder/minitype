@@ -738,10 +738,13 @@ describe('SessionDrawer and ProjectFilesModal Invariants', () => {
       await new Promise((r) => setTimeout(r, 50));
     });
 
-    // Once closed, active card is removed and session becomes a completed folder
+    // Once closed, active card is removed and session becomes a completed folder with pulse animation
     expect(container.querySelector('[data-active-session="true"]')).toBeNull();
+    const closedFolder = container.querySelector('[data-session-folder="true"]');
+    expect(closedFolder?.className).toContain('animate-pulse');
+
     // Expand the closed session folder to view text
-    const closedFolderTab = container.querySelector('[data-session-folder="true"] button') as HTMLButtonElement;
+    const closedFolderTab = closedFolder?.querySelector('button') as HTMLButtonElement;
     await act(async () => {
       closedFolderTab.click();
     });
